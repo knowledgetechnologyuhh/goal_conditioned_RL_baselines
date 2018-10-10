@@ -1,3 +1,4 @@
+import wtm_envs.register_envs
 import os
 import sys
 
@@ -176,7 +177,7 @@ def launch(
 
 
 @click.command()
-@click.option('--env', type=str, default='FetchPickAndPlace-v1', help='the name of the OpenAI Gym environment that you want to train on')
+@click.option('--env', type=str, default='FetchBuildTowerEnv-dense-gripper_random-o3-h1-2-v1', help='the name of the OpenAI Gym environment that you want to train on')
 @click.option('--logdir', type=str, default=None, help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/')
 @click.option('--n_epochs', type=int, default=50, help='the number of training epochs to run')
 @click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)')
