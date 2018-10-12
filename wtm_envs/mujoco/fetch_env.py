@@ -55,6 +55,7 @@ class FetchEnv(robot_env.RobotEnv):
         self.min_tower_height = min_tower_height
         self.max_tower_height = max_tower_height
 
+        self.goal = []
         self.goal_size = (n_objects * 3)
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
@@ -219,8 +220,6 @@ class FetchEnv(robot_env.RobotEnv):
         else:
             obs['achieved_goal'] = obs['observation'][3:self.goal_size+3]
 
-        # HACKY TEST> REMOVE !!!
-        obs['desired_goal'] = np.append(obs['desired_goal'], np.zeros(9))
         return obs
 
     def _viewer_setup(self):
@@ -239,7 +238,7 @@ class FetchEnv(robot_env.RobotEnv):
         obj_goal_start_idx = 0
         if self.gripper_goal != 'gripper_none':
             gripper_target_site_id = self.sim.model.site_name2id('final_arm_target')
-            gripper_tgt_size = (np.ones(3) * 0.02) + (np.ones(3) * 0.5)
+            gripper_tgt_size = (np.ones(3) * 0.02)
             self.sim.model.site_size[gripper_target_site_id] = gripper_tgt_size
             gripper_tgt_goal = self.goal[0:3] - sites_offset[0]
             # gripper_tgt_goal = self.initial_gripper_xpos[:3] * (np.ones(3) - self.goal_mask[0:3]) + gripper_tgt_goal
@@ -248,9 +247,10 @@ class FetchEnv(robot_env.RobotEnv):
 
         for n in range(self.n_objects):
             o_target_site_id = self.sim.model.site_name2id('target{}'.format(n))
-            o_tgt_size = (np.ones(3) * 0.02) + (np.ones(3) * 0.5)
+            o_tgt_size = (np.ones(3) * 0.02)
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
-            o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
+            dummy = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3]
+            o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[1]
             self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
             obj_goal_start_idx += 3
 
@@ -273,15 +273,79 @@ class FetchEnv(robot_env.RobotEnv):
         return True
 
     def _sample_goal(self):
-        if self.n_objects > 0:
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
-            goal += self.target_offset
-            goal[2] = self.height_offset
-            if self.target_in_the_air and self.np_random.uniform() < 0.5:
-                goal[2] += self.np_random.uniform(0, 0.45)
+        obs = self._get_obs()
+        target_goal = None
+        if obs is not None:
+            if self.gripper_goal != 'gripper_none':
+                goal = obs['observation'].copy()[:self.goal_size]
+            else:
+                goal = obs['observation'].copy()[3:self.goal_size + 3]
+
+            if self.gripper_goal != 'gripper_none' and self.n_objects > 0:
+                target_goal_start_idx = 3
+            else:
+                target_goal_start_idx = 0
+
+            stack_tower = (self.max_tower_height - self.min_tower_height + 1) == self.n_objects
+
+            if not stack_tower:
+                if self.n_objects > 0:
+                    target_range = self.n_objects
+                else:
+                    target_range = 1
+                for n_o in range(target_range):
+                    # too_close = True
+                    while True:
+                        target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range,
+                                                                                             self.target_range,
+                                                                                             size=3)
+                        target_goal += self.target_offset
+                        rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
+                        self.goal_tower_height = rnd_height
+                        target_goal[2] = self.table_height + (rnd_height * self.obj_height) - (self.obj_height / 2)
+                        too_close = False
+                        for i in range(0, target_goal_start_idx, 3):
+                            other_loc = goal[i:i + 3]
+                            dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
+                            if dist < 0.1:
+                                too_close = True
+                        if too_close is False:
+                            break
+
+                    goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
+                    target_goal_start_idx += 3
+            else:
+                target_goal_xy = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.target_range,
+                                                                                        self.target_range,
+                                                                                        size=2)
+                self.goal_tower_height = self.n_objects
+                for n_o in range(self.n_objects):
+                    height = n_o + 1
+                    target_z = self.table_height + (height * self.obj_height) - (self.obj_height / 2)
+                    target_goal = np.concatenate((target_goal_xy, [target_z]))
+                    goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
+                    target_goal_start_idx += 3
+
+            # Final gripper position
+            if self.gripper_goal != 'gripper_none':
+                gripper_goal_pos = goal.copy()[-3:]
+                if self.gripper_goal == 'gripper_above':
+                    gripper_goal_pos[2] += (3 * self.obj_height)
+                elif self.gripper_goal == 'gripper_random':
+                    too_close = True
+                    while too_close:
+                        gripper_goal_pos = self.initial_gripper_xpos[:3] + \
+                                           self.np_random.uniform(-self.target_range,
+                                                                  self.target_range, size=3)
+                        gripper_goal_pos[0] += 0.25
+                        gripper_goal_pos[2] += 0.14
+                        if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
+                            too_close = False
+                goal[:3] = gripper_goal_pos
+
+            return goal.copy()
         else:
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
-        return goal.copy()
+            return []
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)

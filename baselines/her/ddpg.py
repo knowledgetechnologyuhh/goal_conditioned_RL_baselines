@@ -10,13 +10,13 @@ from baselines.her.util import (
 from baselines.her.normalizer import Normalizer
 from baselines.her.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
-
+from baselines.template.policy import Policy
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class DDPG(object):
+class DDPG(Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
@@ -51,26 +51,33 @@ class DDPG(object):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
+        Policy.__init__(self, input_dims, buffer_size, T, rollout_batch_size, **kwargs)
+
+        self.hidden = hidden
+        self.layers = layers
+        self.max_u = max_u
+        self.network_class = network_class
+        self.sample_transitions = sample_transitions
+        self.scope = scope
+        self.subtract_goals = subtract_goals
+        self.relative_goals = relative_goals
+        self.clip_obs = clip_obs
+        self.Q_lr = Q_lr
+        self.pi_lr = pi_lr
+        self.batch_size = batch_size
+        self.buffer_size = buffer_size
+        self.clip_pos_returns = clip_pos_returns
+        self.gamma = gamma
+        self.polyak = polyak
+        self.clip_return = clip_return
+        self.norm_eps = norm_eps
+        self.norm_clip = norm_clip
+        self.action_l2 = action_l2
+
         if self.clip_return is None:
             self.clip_return = np.inf
 
         self.create_actor_critic = import_function(self.network_class)
-
-        input_shapes = dims_to_shapes(self.input_dims)
-        self.dimo = self.input_dims['o']
-        self.dimg = self.input_dims['g']
-        self.dimu = self.input_dims['u']
-
-        # Prepare staging area for feeding data to the model.
-        stage_shapes = OrderedDict()
-        for key in sorted(self.input_dims.keys()):
-            if key.startswith('info_'):
-                continue
-            stage_shapes[key] = (None, *input_shapes[key])
-        for key in ['o', 'g']:
-            stage_shapes[key + '_2'] = stage_shapes[key]
-        stage_shapes['r'] = (None,)
-        self.stage_shapes = stage_shapes
 
         # Create network.
         with tf.variable_scope(self.scope):
@@ -84,8 +91,8 @@ class DDPG(object):
             self._create_network(reuse=reuse)
 
         # Configure the replay buffer.
-        buffer_shapes = {key: (self.T if key != 'o' else self.T+1, *input_shapes[key])
-                         for key, val in input_shapes.items()}
+        buffer_shapes = {key: (self.T if key != 'o' else self.T+1, *self.input_shapes[key])
+                         for key, val in self.input_shapes.items()}
         buffer_shapes['g'] = (buffer_shapes['g'][0], self.dimg)
         buffer_shapes['ag'] = (self.T+1, self.dimg)
 

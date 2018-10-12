@@ -1,4 +1,3 @@
-import wtm_envs.register_envs
 import os
 import sys
 
@@ -10,9 +9,9 @@ from mpi4py import MPI
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
-import baselines.her.experiment.config as config
-from baselines.her.rollout import RolloutWorker
-from baselines.her.util import mpi_fork
+import baselines.random_dummy.experiment.config as config
+from baselines.random_dummy.rollout import RolloutWorker
+from baselines.template.util import mpi_fork
 
 from subprocess import CalledProcessError
 
@@ -39,7 +38,7 @@ def train(policy, rollout_worker, evaluator,
     for epoch in range(n_epochs):
         # train
         rollout_worker.clear_history()
-        policy = rollout_worker.generate_rollouts_update(n_cycles, n_batches)
+        rollout_worker.generate_rollouts_update(n_cycles, n_batches)
 
         # test
         evaluator.clear_history()
@@ -172,7 +171,7 @@ def launch(
 
 
 @click.command()
-@click.option('--env', type=str, default='MultiFetchBuildTowerEnv-dense-gripper_above-o3-h1-5-v1', help='the name of the OpenAI Gym environment that you want to train on')
+@click.option('--env', type=str, default='FetchPickAndPlace-v1', help='the name of the OpenAI Gym environment that you want to train on')
 @click.option('--logdir', type=str, default=None, help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/')
 @click.option('--n_epochs', type=int, default=50, help='the number of training epochs to run')
 @click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)')
