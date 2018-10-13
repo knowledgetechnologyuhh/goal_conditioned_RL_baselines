@@ -15,6 +15,8 @@ import experiment.click_options as main_linker
 from subprocess import CalledProcessError
 import subprocess
 
+import wtm_envs.register_envs
+
 def mpi_average(value):
     if value == []:
         value = [0.]
