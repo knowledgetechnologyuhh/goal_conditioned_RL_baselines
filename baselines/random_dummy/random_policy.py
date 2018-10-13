@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import numpy as np
 from baselines.template.util import store_args, logger
 from baselines.template.policy import Policy
@@ -10,12 +8,12 @@ def dims_to_shapes(input_dims):
 
 class RandomPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, buffer_size, T, rollout_batch_size, **kwargs):
+    def __init__(self, input_dims, T, rollout_batch_size, **kwargs):
         """ Just a random dummy. Does not learn anything
         """
-        Policy.__init__(self, input_dims, buffer_size, T, rollout_batch_size, **kwargs)
+        Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
-    def get_actions(self, o, ag, g, policy_action_params):
+    def get_actions(self, o, ag, g, policy_action_params=None):
         # This is important for the rollout (Achieved through policy). DUMMY RETURN ZEROS
         EMPTY = 0
         u = np.random.randn(o.size // self.dimo, self.dimu)

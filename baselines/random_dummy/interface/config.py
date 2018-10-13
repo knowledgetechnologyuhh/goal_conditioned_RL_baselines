@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+import pickle
 
 from baselines import logger
 from baselines.random_dummy.random_policy import RandomPolicy
@@ -13,15 +14,33 @@ DEFAULT_ENV_PARAMS = {
 
 
 DEFAULT_PARAMS = {
-    # env
-    'max_u': 1.,  # max absolute value of actions on different coordinates
     # training
     'n_cycles': 50,  # per epoch
     'rollout_batch_size': 1,  # per mpi thread
+    'n_batches': 40,  # training batches per cycle
+    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
+
 }
 
+POLICY_ACTION_PARAMS = {
+
+    }
 
 CACHED_ENVS = {}
+
+ROLLOUT_PARAMS = {
+        'T': 50,
+        'policy_action_params': {}
+    }
+
+EVAL_PARAMS = {
+        'policy_action_params': {}
+    }
+
+OVERRIDE_PARAMS_LIST = ['rollout_batch_size']
+
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -37,7 +56,7 @@ def cached_make_env(make_env):
 
 
 def prepare_params(kwargs):
-    # DDPG params
+    # policy params
     ddpg_params = dict()
 
     env_name = kwargs['env_name']
@@ -49,22 +68,7 @@ def prepare_params(kwargs):
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
-    kwargs['gamma'] = 1. - 1. / kwargs['T']
-    if 'lr' in kwargs:
-        kwargs['pi_lr'] = kwargs['lr']
-        kwargs['Q_lr'] = kwargs['lr']
-        del kwargs['lr']
-    for name in ['buffer_size', 'hidden', 'layers',
-                 'network_class',
-                 'polyak',
-                 'batch_size', 'Q_lr', 'pi_lr',
-                 'norm_eps', 'norm_clip', 'max_u',
-                 'action_l2', 'clip_obs', 'scope', 'relative_goals']:
-        ddpg_params[name] = kwargs[name]
-        kwargs['_' + name] = kwargs[name]
-        del kwargs[name]
-    kwargs['ddpg_params'] = ddpg_params
+    kwargs['policy_params'] = ddpg_params
 
     return kwargs
 
@@ -79,33 +83,29 @@ def simple_goal_subtract(a, b):
     return a - b
 
 
-def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True):
+def configure_policy(dims, params):
 
-    # Extract relevant parameters.
-    gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
-    ddpg_params = params['ddpg_params']
-
+    policy_params = params['policy_params']
     input_dims = dims.copy()
 
-    # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
-    ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
+    policy_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
-                        'clip_pos_returns': True,  # clip positive returns
-                        'clip_return': (1. / (1. - gamma)) if clip_return else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
-                        'subtract_goals': simple_goal_subtract,
-                        'gamma': gamma,
-                        'sample_transitions': None
                         })
-    ddpg_params['info'] = {
+    policy_params['info'] = {
         'env_name': params['env_name'],
     }
-    policy = RandomPolicy(reuse=reuse, **ddpg_params, use_mpi=use_mpi)
+    policy = RandomPolicy(**policy_params)
     return policy
 
+def load_policy(restore_policy_file, params):
+    # Load policy.
+    with open(restore_policy_file, 'rb') as f:
+        policy = pickle.load(f)
+    return policy
 
 def configure_dims(params):
     env = cached_make_env(params['make_env'])

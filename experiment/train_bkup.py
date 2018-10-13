@@ -1,8 +1,5 @@
-import wtm_envs.register_envs
-
 import os
 import sys
-import pickle
 import click
 import numpy as np
 import json
@@ -12,14 +9,23 @@ import time
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
-import baselines.her.experiment.config as config
-from baselines.her.rollout import RolloutWorker
-from baselines.her.util import mpi_fork
-from baselines.her.experiment.config import configure_her
+
+# import baselines.her.interface.config as config
+# from baselines.her.rollout import RolloutWorker
+# from baselines.her.util import mpi_fork
+# # from baselines.her.experiment.plot import load_results
+#
+# import experiment.click_options as main_linker
+# import baselines.her.interface.click_options as policy_linker
+
+
+import baselines.random_dummy.interface.config as config
+from baselines.random_dummy.rollout import RolloutWorker
+from baselines.util import mpi_fork
 # from baselines.her.experiment.plot import load_results
 
 import experiment.click_options as main_linker
-import baselines.her.interface.click_options as policy_linker
+import baselines.random_dummy.interface.click_options as policy_linker
 
 from subprocess import CalledProcessError
 import subprocess
@@ -45,6 +51,7 @@ def train(rollout_worker, evaluator,
     success_rates = []
     # if the std dev of the success rate of the last epochs is larger than X do early stopping.
     n_epochs_avg_for_early_stop = 4
+
     # avg_success_for_early_stop = 0.95
     for epoch in range(n_epochs):
         # train
@@ -56,7 +63,6 @@ def train(rollout_worker, evaluator,
         # eval
         logger.info("Evaluating epoch {}".format(epoch))
         evaluator.clear_history()
-        policy, time_durations = evaluator.generate_rollouts_update(n_batches, n_cycles)
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
 
@@ -105,9 +111,7 @@ def train(rollout_worker, evaluator,
 
 
 def launch(
-    env, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_save_interval, clip_return, restore_policy,
-    override_params={}, save_policies=True, **kwargs
-):
+    env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
         try:
@@ -139,10 +143,10 @@ def launch(
     # Prepare params.
     params = config.DEFAULT_PARAMS
     params['env_name'] = env
-    params['replay_strategy'] = replay_strategy
     params['n_cycles'] = kwargs['n_train_rollout_cycles']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
+    params.update(**kwargs)
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
@@ -161,45 +165,30 @@ def launch(
         logger.warn('****************')
         logger.warn()
 
-    if env.find("HLMG") == 0:
-        dims = config.configure_masked_dims(params)
-    else:
-        dims = config.configure_dims(params)
+    # if env.find("HLMG") == 0:
+    #     dims = config.configure_masked_dims(params)
+    # else:
+    #     dims = config.configure_dims(params)
 
+    dims = config.configure_dims(params)
     if restore_policy is None:
-        policy = config.configure_ddpg(dims=dims, params=params, clip_return=clip_return)
+        policy = config.configure_policy(dims=dims, params=params)
     else:
-        # Load policy.
-        with open(restore_policy, 'rb') as f:
-            policy = pickle.load(f)
-        # Set sample transitions (required for loading a policy only).
-        policy.sample_transitions = configure_her(params)
-        policy.buffer.sample_transitions = policy.sample_transitions
+        policy = config.load_policy(restore_policy_file = restore_policy,  params=params)
         loaded_env_name = policy.info['env_name']
         assert loaded_env_name == env
 
-    # params['n_cycles'] = 5
-    rollout_params = {
-        'exploit': False,
-        # 'use_target_net': False,
-        # 'use_demo_states': True,
-        'compute_Q': False,
-        'T': params['T'],
-        'render': bool(kwargs['render']),
-    }
+    # Rollout and evaluation parameters
+    rollout_params = config.ROLLOUT_PARAMS
+    rollout_params['render'] = bool(kwargs['render'])
 
-    eval_params = {
-        'exploit': True,
-        # 'use_target_net': params['test_with_polyak'],
-        # 'use_demo_states': False,
-        'compute_Q': False,
-        'T': params['T'],
-        'render': bool(kwargs['render']),
-    }
+    eval_params = config.EVAL_PARAMS
+    eval_params['render'] = bool(kwargs['render'])
 
-    for name in ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'goldilocks_sampling', 'mask_at_observation', '_replay_strategy', 'env_name']:
+    for name in config.ROLLOUT_PARAMS_LIST:
         rollout_params[name] = params[name]
         eval_params[name] = params[name]
+
 
     rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
     rollout_worker.seed(rank_seed)
@@ -225,7 +214,7 @@ def launch(
 def main(**kwargs):
     print(kwargs)
     kwargs['batch_size'] = kwargs['train_batch_size']
-    override_params = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'goldilocks_sampling', 'replay_k', 'mask_at_observation', 'replay_strategy']
+    override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
     for op in override_params:
         kwargs['override_params'][op] = kwargs[op]
@@ -289,7 +278,6 @@ def main(**kwargs):
         launch(**kwargs)
 
 if __name__ == '__main__':
-
     # print(main_linker.click_main())
     # main.add_command(main_linker.click_main)
     # main.add_command(her_linker.click_her())

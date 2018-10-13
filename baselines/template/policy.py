@@ -9,7 +9,7 @@ def dims_to_shapes(input_dims):
 
 class Policy(object):
     @store_args
-    def __init__(self, input_dims, buffer_size, T, rollout_batch_size, **kwargs):
+    def __init__(self, input_dims, T, rollout_batch_size, **kwargs):
         """The Abstract class for any policy.
 
         Args:
@@ -38,7 +38,7 @@ class Policy(object):
         stage_shapes['r'] = (None,)
         self.stage_shapes = stage_shapes
 
-    def get_actions(self, o, ag, g, policy_action_params):
+    def get_actions(self, o, ag, g, policy_action_params=None):
         raise NotImplementedError
 
     def store_episode(self, episode_batch, update_stats=True):
