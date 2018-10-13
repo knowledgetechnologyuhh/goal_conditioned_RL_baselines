@@ -250,7 +250,7 @@ class FetchEnv(robot_env.RobotEnv):
             o_tgt_size = (np.ones(3) * 0.02)
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
             dummy = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3]
-            o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[1]
+            o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
             self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
             obj_goal_start_idx += 3
 
@@ -350,7 +350,7 @@ class FetchEnv(robot_env.RobotEnv):
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
 
-        # TODO (fabawi): make sure all success are measured before returning is success
+        # TODO (fabawi): return subgoal successes depending on subgoals as well
 
         return (d < self.distance_threshold).astype(np.float32)
 

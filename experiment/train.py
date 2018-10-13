@@ -1,8 +1,5 @@
-import wtm_envs.register_envs
-
 import os
 import sys
-import pickle
 import click
 import numpy as np
 import json
@@ -12,14 +9,8 @@ import time
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
-import baselines.her.interface.config as config
-from baselines.her.rollout import RolloutWorker
-from baselines.her.util import mpi_fork
-from baselines.her.experiment.config import configure_her
-# from baselines.her.experiment.plot import load_results
-
+from baselines.util import mpi_fork
 import experiment.click_options as main_linker
-import baselines.her.interface.click_options as policy_linker
 
 from subprocess import CalledProcessError
 import subprocess
@@ -151,7 +142,7 @@ def launch(
         logger.warn()
         logger.warn('*** Warning ***')
         logger.warn(
-            'You are running HER with just a single MPI worker. This will work, but the ' +
+            'You are running ' + kwargs['algorithm'] +' with just a single MPI worker. This will work, but the HER ' +
             'experiments that we report in Plappert et al. (2018, https://arxiv.org/abs/1802.09464) ' +
             'were obtained with --num_cpu 19. This makes a significant difference and if you ' +
             'are looking to reproduce those results, be aware of this. Please also refer to ' +
@@ -204,8 +195,15 @@ def launch(
 
 @click.command()
 @main_linker.click_main
-@policy_linker.click_main
-def main(**kwargs):
+@click.pass_context
+def main(ctx,**kwargs):
+    global config, RolloutWorker, policy_linker
+    config, RolloutWorker, policy_linker = main_linker.import_creator(kwargs['algorithm'])
+
+    ctx.forward(main_linker.get_policy_click)
+    policy_args = ctx.invoke(main_linker.get_policy_click)
+    kwargs.update(policy_args)
+
     print(kwargs)
     kwargs['batch_size'] = kwargs['train_batch_size']
     override_params = config.OVERRIDE_PARAMS_LIST
@@ -270,6 +268,7 @@ def main(**kwargs):
     if do_train:
         print("Launching training")
         launch(**kwargs)
+
 
 if __name__ == '__main__':
     # print(main_linker.click_main())

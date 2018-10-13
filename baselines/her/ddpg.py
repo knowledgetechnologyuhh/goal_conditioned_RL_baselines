@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
 
 from baselines import logger
-from baselines.her.util import (
+from baselines.util import (
     import_function, store_args, flatten_grads, transitions_in_episode_batch)
 from baselines.her.normalizer import Normalizer
 from baselines.her.replay_buffer import ReplayBuffer
@@ -51,7 +51,7 @@ class DDPG(Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
-        Policy.__init__(self, input_dims, buffer_size, T, rollout_batch_size, **kwargs)
+        Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
         self.layers = layers

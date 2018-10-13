@@ -11,7 +11,7 @@ from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
 import baselines.her.experiment.config as config
 from baselines.her.rollout import RolloutWorker
-from baselines.her.util import mpi_fork
+from baselines.util import mpi_fork
 
 from subprocess import CalledProcessError
 
