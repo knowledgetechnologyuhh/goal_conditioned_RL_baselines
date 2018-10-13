@@ -259,15 +259,29 @@ class FetchEnv(robot_env.RobotEnv):
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
 
-        # Randomize start position of object.
-        if self.n_objects > 0:
+        # Randomize start position of objects.
+        for o in range(self.n_objects):
+            oname = 'object{}'.format(o)
             object_xpos = self.initial_gripper_xpos[:2]
-            while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1:
-                object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
-            object_qpos = self.sim.data.get_joint_qpos('object0:joint')
+            close = True
+            while close:
+                object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
+                                                                                     size=2)
+                close = False
+                dist_to_nearest = np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2])
+                # Iterate through all previously placed boxes and select closest:
+                for o_other in range(o):
+                    other_xpos = self.sim.data.get_joint_qpos('object{}:joint'.format(o_other))[:2]
+                    dist = np.linalg.norm(object_xpos - other_xpos)
+                    dist_to_nearest = min(dist, dist_to_nearest)
+                if dist_to_nearest < 0.1:
+                    close = True
+
+            object_qpos = self.sim.data.get_joint_qpos('{}:joint'.format(oname))
             assert object_qpos.shape == (7,)
             object_qpos[:2] = object_xpos
-            self.sim.data.set_joint_qpos('object0:joint', object_qpos)
+            object_qpos[2] = self.table_height + (self.obj_height / 2) * self.obj_height * 1.05
+            self.sim.data.set_joint_qpos('{}:joint'.format(oname), object_qpos)
 
         self.sim.forward()
         return True
