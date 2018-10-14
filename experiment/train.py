@@ -133,7 +133,7 @@ def launch(
     params['n_cycles'] = kwargs['n_train_rollout_cycles']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
-    params.update(**kwargs)
+    params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
@@ -200,12 +200,10 @@ def launch(
 @click.pass_context
 def main(ctx,**kwargs):
     global config, RolloutWorker, policy_linker
-    config, RolloutWorker, policy_linker = main_linker.import_creator(kwargs['algorithm'])
-    ctx.forward(main_linker.get_policy_click)
-    policy_args = ctx.invoke(main_linker.get_policy_click)
+    config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
+    policy_args = ctx.forward(main_linker.get_policy_click)
     kwargs.update(policy_args)
 
-    print(kwargs)
     kwargs['batch_size'] = kwargs['train_batch_size']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
