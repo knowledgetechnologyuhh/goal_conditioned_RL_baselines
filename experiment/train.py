@@ -201,7 +201,6 @@ def launch(
 def main(ctx,**kwargs):
     global config, RolloutWorker, policy_linker
     config, RolloutWorker, policy_linker = main_linker.import_creator(kwargs['algorithm'])
-
     ctx.forward(main_linker.get_policy_click)
     policy_args = ctx.invoke(main_linker.get_policy_click)
     kwargs.update(policy_args)
@@ -270,7 +269,6 @@ def main(ctx,**kwargs):
     if do_train:
         print("Launching training")
         launch(**kwargs)
-
 
 if __name__ == '__main__':
     # print(main_linker.click_main())
