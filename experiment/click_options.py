@@ -1,15 +1,6 @@
 import click
 import importlib
 
-import baselines.her.interface.click_options as her_click_option
-import baselines.random_dummy.interface.click_options as random_dummy_click_options
-# TODO (fabawi): imports everything. This is a quick workaround but shall not suffice in the long run
-@click.command()
-@random_dummy_click_options.click_main
-@her_click_option.click_main
-def get_policy_click(**kwargs):
-    return kwargs
-
 _global_options = [
 click.option('--env', type=str, default='MultiFetchBuildTowerEnv-sparse-gripper_random-o3-h1-3-v1', help='the name of the OpenAI Gym environment that you want to train on'),
 click.option('--algorithm', type=str, default='baselines.her', help='the name of the algothim to be used'),
@@ -30,14 +21,19 @@ click.option('--try_start_idx', type=int, default=100, help='Index for first try
 click.option('--early_stop_success_rate', type=int, default=95, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping')
 ]
 
-def import_creator(library_path):
-    global policy_linker
+@click.command()
+@click.pass_context
+def get_policy_click(ctx, **kwargs):
+    policy_linker = importlib.import_module(kwargs['algorithm'] + ".interface.click_options", package=__package__)
+    policy_args = ctx.invoke(policy_linker.get_click_option)
+    return policy_args
 
+def import_creator(library_path):
     config = importlib.import_module(library_path + ".interface.config", package=__package__)
     RolloutWorker = getattr(importlib.import_module(library_path + ".rollout", package=__package__), "RolloutWorker")
-    policy_linker = importlib.import_module(library_path + ".interface.click_options", package=__package__)
+    # policy_linker = importlib.import_module(library_path + ".interface.click_options", package=__package__)
     # from baselines.her.experiment.plot import load_results
-    return config, RolloutWorker, policy_linker
+    return config, RolloutWorker
 
 
 def click_main(func):
