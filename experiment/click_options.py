@@ -1,11 +1,18 @@
 import click
 import importlib
 
-import baselines.template.click_options as policy_linker
+import baselines.her.interface.click_options as her_click_option
+import baselines.random_dummy.interface.click_options as random_dummy_click_options
+# TODO (fabawi): imports everything. This is a quick workaround but shall not suffice in the long run
+@click.command()
+@random_dummy_click_options.click_main
+@her_click_option.click_main
+def get_policy_click(**kwargs):
+    return kwargs
 
 _global_options = [
 click.option('--env', type=str, default='MultiFetchBuildTowerEnv-sparse-gripper_random-o3-h1-3-v1', help='the name of the OpenAI Gym environment that you want to train on'),
-click.option('--algorithm', type=str, default='baselines.her', help='the name of the algorithm to be used'),
+click.option('--algorithm', type=str, default='baselines.her', help='the name of the algothim to be used'),
 click.option('--base_logdir', type=str, default='storage2/data/baselines/logs', help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/'),
 click.option('--n_epochs', type=int, default=300, help='the max. number of training epochs to run'),
 click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)'),
@@ -22,12 +29,6 @@ click.option('--max_try_idx', type=int, default=199, help='Max. number of tries 
 click.option('--try_start_idx', type=int, default=100, help='Index for first try.'),
 click.option('--early_stop_success_rate', type=int, default=95, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping')
 ]
-
-@click.command()
-@policy_linker.click_main
-def get_policy_click(**kwargs):
-    # ctx.invoke('abc', content=ctx.forward('123'))
-    return kwargs
 
 def import_creator(library_path):
     global policy_linker

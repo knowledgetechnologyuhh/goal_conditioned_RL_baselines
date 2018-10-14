@@ -81,9 +81,10 @@ EVAL_PARAMS = {
                                  }
     }
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'goldilocks_sampling',
+                        'replay_k', 'mask_at_observation', 'replay_strategy']
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'goldilocks_sampling', 'mask_at_observation', '_replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
