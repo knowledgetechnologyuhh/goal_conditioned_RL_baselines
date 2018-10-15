@@ -21,11 +21,14 @@ click.option('--try_start_idx', type=int, default=100, help='Index for first try
 click.option('--early_stop_success_rate', type=int, default=95, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping')
 ]
 
-@click.command()
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+    allow_extra_args=True,
+))
 @click.pass_context
 def get_policy_click(ctx, **kwargs):
     policy_linker = importlib.import_module(kwargs['algorithm'] + ".interface.click_options", package=__package__)
-    policy_args = ctx.invoke(policy_linker.get_click_option)
+    policy_args = ctx.forward(policy_linker.get_click_option)
     return policy_args
 
 def import_creator(library_path):

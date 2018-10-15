@@ -195,13 +195,17 @@ def launch(
     print("Done training")
 
 
-@click.command()
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+    allow_extra_args=True,
+))
 @main_linker.click_main
 @click.pass_context
 def main(ctx,**kwargs):
     global config, RolloutWorker, policy_linker
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
+    policy_args.update({ctx.args[i][0:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
     kwargs.update(policy_args)
 
     kwargs['batch_size'] = kwargs['train_batch_size']
