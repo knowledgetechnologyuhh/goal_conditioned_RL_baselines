@@ -273,7 +273,4 @@ def main(ctx, **kwargs):
         launch(**kwargs)
 
 if __name__ == '__main__':
-    # print(main_linker.click_main())
-    # main.add_command(main_linker.click_main)
-    # main.add_command(her_linker.click_her())
     main()
