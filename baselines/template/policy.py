@@ -38,6 +38,8 @@ class Policy(object):
         stage_shapes['r'] = (None,)
         self.stage_shapes = stage_shapes
 
+
+
     def get_actions(self, o, ag, g, policy_action_params=None):
         raise NotImplementedError
 
