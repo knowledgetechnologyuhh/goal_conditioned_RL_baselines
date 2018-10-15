@@ -63,11 +63,8 @@ class RobotEnv(gym.GoalEnv):
 
         done = False
         is_success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
-        # subgoal_successes = [self._is_success(np.array([obs['achieved_goal'][i]]), np.array([self.goal[i]]))
-        #                             for i in range(len(self.goal))]
         info = {
-            'is_success': is_success,
-            # 'subgoal_successes': subgoal_successes
+            'is_success': is_success
         }
         reward = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], info)
         return obs, reward, done, info
