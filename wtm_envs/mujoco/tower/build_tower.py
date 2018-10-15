@@ -1,8 +1,8 @@
 from gym import utils
-from wtm_envs.mujoco import fetch_env
+from wtm_envs.mujoco import tower_env
 
 
-class MultiFetchBuildTowerEnv(fetch_env.FetchEnv, utils.EzPickle):
+class BuildTowerMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
                  n_objects=3, min_tower_height=1, max_tower_height=3):
         initial_qpos = {
@@ -15,7 +15,7 @@ class MultiFetchBuildTowerEnv(fetch_env.FetchEnv, utils.EzPickle):
             'object3:joint': [0.4, 0.0, 0.05, 1., 0., 0., 0.],
             'object4:joint': [0.5, 0.0, 0.05, 1., 0., 0., 0.],
         }
-        fetch_env.FetchEnv.__init__(
+        tower_env.TowerEnv.__init__(
             self, 'fetch/build_tower.xml', block_gripper=False, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
             obj_range=0.15, target_range=0.15, distance_threshold=0.05,

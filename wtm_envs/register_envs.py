@@ -14,9 +14,9 @@ for n_objects in range(-1, 5):
                     max_ep_steps = 50 * (n_objects +1)
 
                     register(
-                        id='MultiFetchBuildTowerEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
+                        id='BuildTowerMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
                                                                              kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.mujoco.fetch.build_tower:MultiFetchBuildTowerEnv',
+                        entry_point='wtm_envs.mujoco.tower.build_tower:BuildTowerMujocoEnv',
                         kwargs=kwargs,
                         max_episode_steps=max_ep_steps,
                     )
