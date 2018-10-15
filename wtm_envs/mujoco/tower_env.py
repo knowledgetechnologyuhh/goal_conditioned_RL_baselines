@@ -10,7 +10,7 @@ def goal_distance(goal_a, goal_b):
     return np.linalg.norm(goal_a - goal_b, axis=-1)
 
 
-class FetchEnv(robot_env.RobotEnv):
+class TowerEnv(robot_env.RobotEnv):
     """Superclass for all Fetch environments.
     """
 
@@ -61,7 +61,7 @@ class FetchEnv(robot_env.RobotEnv):
             self.goal_size += 3
         self.gripper_has_target = (gripper_goal != 'gripper_none')
 
-        super(FetchEnv, self).__init__(
+        super(TowerEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
