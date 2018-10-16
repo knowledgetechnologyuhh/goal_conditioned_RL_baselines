@@ -44,7 +44,7 @@ def train(rollout_worker, evaluator,
         # train
         logger.info("Training epoch {}".format(epoch))
         rollout_worker.clear_history()
-        policy, time_durations = rollout_worker.generate_rollouts_update(n_batches, n_cycles)
+        policy, time_durations = rollout_worker.generate_rollouts_update(n_cycles, n_batches)
         logger.info('Time for epoch {}: {:.2f}. Rollout time: {:.2f}, Training time: {:.2f}'.format(epoch, time_durations[0], time_durations[1], time_durations[2]))
 
         # eval
@@ -78,16 +78,11 @@ def train(rollout_worker, evaluator,
             logger.info('Saving periodic policy to {} ...'.format(policy_path))
             evaluator.save_policy(policy_path)
         if len(success_rates) > n_epochs_avg_for_early_stop:
-            # stddev = np.std(success_rates[-n_epochs_avg_for_early_stop:])
             avg = np.mean(success_rates[-n_epochs_avg_for_early_stop:])
             logger.info('Mean of success rate of last {} epochs: {}'.format(n_epochs_avg_for_early_stop, avg))
             if avg >= kwargs['early_stop_success_rate'] and kwargs['early_stop_success_rate'] != 0:
                 logger.info('Policy is good enough now, early stopping')
                 break
-            # if stddev < n_epochs_avg_for_early_stop:
-            #     logger.info(
-            #         'Not getting any better, early stopping')
-            #     break
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -95,7 +90,6 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
-
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
@@ -130,7 +124,7 @@ def launch(
     # Prepare params.
     params = config.DEFAULT_PARAMS
     params['env_name'] = env
-    params['n_cycles'] = kwargs['n_train_rollout_cycles']
+    params['n_cycles'] = kwargs['n_train_rollouts']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
     params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
@@ -151,11 +145,6 @@ def launch(
             'https://github.com/openai/baselines/issues/314 for further details.')
         logger.warn('****************')
         logger.warn()
-
-    # if env.find("HLMG") == 0:
-    #     dims = config.configure_masked_dims(params)
-    # else:
-    #     dims = config.configure_dims(params)
 
     dims = config.configure_dims(params)
     if restore_policy is None:
@@ -205,14 +194,15 @@ def main(ctx, **kwargs):
     global config, RolloutWorker, policy_linker
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
-    policy_args.update({ctx.args[i][0:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
+    # policy_args.update({ctx.args[i][0:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
     kwargs.update(policy_args)
 
     kwargs['batch_size'] = kwargs['train_batch_size']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
     for op in override_params:
-        kwargs['override_params'][op] = kwargs[op]
+        if op in kwargs.keys():
+            kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
     try:
         git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
@@ -240,8 +230,6 @@ def main(ctx, **kwargs):
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
 
-    # Check if training is necessary. It is not if the last run for this configuration did not achieve at least 40% success rate.
-    min_succ_rate = 0.08
     do_train = True
     trial_no = ctr - 1
     print("Trying this config for {}th time. ".format(trial_no))
@@ -253,6 +241,8 @@ def main(ctx, **kwargs):
         do_train = True
     else:
         try:
+            # Check if training is necessary. It is not if the last run for this configuration did not achieve at least X% success rate.
+            min_succ_rate = 0.08
             pass
             # last_res = load_results(last_res_file)
             # if len(last_res['test/success_rate']) == kwargs['n_epochs']:
@@ -273,7 +263,4 @@ def main(ctx, **kwargs):
         launch(**kwargs)
 
 if __name__ == '__main__':
-    # print(main_linker.click_main())
-    # main.add_command(main_linker.click_main)
-    # main.add_command(her_linker.click_her())
     main()

@@ -12,8 +12,8 @@ click.option('--policy_save_interval', type=int, default=5, help='the interval w
 
 click.option('--restore_policy', type=str, default=None, help='The pretrained policy file to start with to avoid learning from scratch again. Useful for interrupting and restoring training sessions.'),
 click.option('--rollout_batch_size', type=int, default=1, help='The number of simultaneous rollouts.'),
-click.option('--n_train_rollout_cycles', type=int, default=50, help='The number of rollout cycles for training.'),
-click.option('--n_batches', type=int, default=40, help='The number of batches for training. For each rollout batch, perform gradient descent n_batches times.'),
+click.option('--n_train_rollouts', type=int, default=50, help='The number of rollouts for training.'),
+click.option('--n_batches', type=int, default=40, help='The number of batches for model training.'),
 click.option('--train_batch_size', type=int, default=256, help='The number of state transitions processed during network training.'),
 click.option('--render', type=int, default=1, help='Whether or not to render the rollouts.'),
 click.option('--max_try_idx', type=int, default=199, help='Max. number of tries for this training config.'),
