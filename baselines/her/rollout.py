@@ -9,8 +9,7 @@ class RolloutWorker(Rollout):
 
     @store_args
     def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
-                 exploit=False, use_target_net=False, compute_Q=False, noise_eps=0,
-                 random_eps=0, history_len=100, render=False, **kwargs):
+                 exploit=False, history_len=100, render=False, **kwargs):
         """Rollout worker generates experience by interacting with one or many environments.
 
         Args:
@@ -65,11 +64,3 @@ class RolloutWorker(Rollout):
 
         return logger(logs, prefix)
 
-    """
-    policy_output = self.policy.get_actions(
-                o, ag, self.g,
-                compute_Q=self.compute_Q,
-                noise_eps=self.noise_eps if not self.exploit else 0.,
-                random_eps=self.random_eps if not self.exploit else 0.,
-                use_target_net=self.use_target_net)
-                """

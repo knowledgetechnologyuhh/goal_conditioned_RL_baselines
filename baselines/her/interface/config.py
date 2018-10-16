@@ -57,29 +57,32 @@ POLICY_ACTION_PARAMS = {
 CACHED_ENVS = {}
 
 ROLLOUT_PARAMS = {
-        'exploit': False,
-        # 'use_target_net': False,
         'use_demo_states': True,
-        'compute_Q': False,
         'T': 50,
-        'policy_action_params': {'compute_Q': False,
+        'policy_action_params': {'exploit': False,
+                                 'compute_Q': False,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
                                  'use_target_net': False}
     }
 
 EVAL_PARAMS = {
-        'exploit': True,
         'use_demo_states': False,
-        'compute_Q': True,
         'T': 50,
-        'policy_action_params': {'compute_Q': True,
+        'policy_action_params': {'exploit': True,
+                                 'compute_Q': True,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
                                  'use_target_net': False
                                  # 'use_target_net': params['test_with_polyak'],
                                  }
     }
+"""
+compute_Q=self.compute_Q,
+noise_eps=self.noise_eps if not self.exploit else 0.,
+random_eps=self.random_eps if not self.exploit else 0.,
+use_target_net=self.use_target_net)
+"""
 
 OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 
