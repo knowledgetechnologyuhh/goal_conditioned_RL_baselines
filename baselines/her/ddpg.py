@@ -114,7 +114,10 @@ class DDPG(Policy):
         return o, g
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
-                    compute_Q=False):
+                    compute_Q=False, exploit=True):
+        noise_eps = noise_eps if not exploit else 0.
+        random_eps = random_eps if not exploit else 0.
+
         o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
         # values to compute
