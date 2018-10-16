@@ -23,7 +23,6 @@ class Rollout:
             noise_eps (float): scale of the additive Gaussian noise
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
-
         """
         self.policy = policy
         self.dims = dims
