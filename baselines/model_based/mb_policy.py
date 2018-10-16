@@ -4,6 +4,7 @@ from tensorflow.contrib.staging import StagingArea
 import numpy as np
 from baselines import logger
 from baselines.template.policy import Policy
+from baselines.model_based.model_rnn import ModelRNN
 
 from collections import OrderedDict
 # from baselines.model_based.replay_buffer import ReplayBuffer
@@ -21,6 +22,7 @@ class MBPolicy(Policy):
     def __init__(self, input_dims, model_buffer_size, model_network_class, scope, T, rollout_batch_size, **kwargs):
 
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
+        self.buffer_size=10
         self.scope = scope
         self.create_model = import_function(self.model_network_class)
         #
@@ -29,11 +31,11 @@ class MBPolicy(Policy):
             self.staging_tf = StagingArea(
                 dtypes=[tf.float32 for _ in self.stage_shapes.keys()],
                 shapes=list(self.stage_shapes.values()))
-            # self.buffer_ph_tf = [
-            #     tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
-        #     self.stage_op = self.staging_tf.put(self.buffer_ph_tf)
+            self.buffer_ph_tf = [
+                tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
+            self.stage_op = self.staging_tf.put(self.buffer_ph_tf)
         #
-        #     self._create_network(reuse=False)
+            self._create_network(reuse=False)
         #
         # # Configure the replay buffer.
         # input_shapes = dims_to_shapes(self.input_dims)
@@ -67,11 +69,13 @@ class MBPolicy(Policy):
         batch = self.staging_tf.get()
         batch_tf = OrderedDict([(key, batch[i])
                                 for i, key in enumerate(self.stage_shapes.keys())])
-        batch_tf['r'] = tf.reshape(batch_tf['r'], [-1, 1])
+        # batch_tf['r'] = tf.reshape(batch_tf['r'], [-1, 1])
         #
         # # networks
         with tf.variable_scope('model') as ms:
-            self.model = self.create_model(batch_tf)
+            # self.model = self.create_model(batch_tf)
+            self.prediction_model = ModelRNN(batch_tf)
+            ms.reuse_variables()
         # with tf.variable_scope('main') as vs:
         #     if reuse:
         #         vs.reuse_variables()
@@ -89,7 +93,7 @@ class MBPolicy(Policy):
         # assert len(self._vars("main")) == len(self._vars("target"))
         #
         # # loss functions
-        obs_loss = self.model.output - batch_tf['o']
+        # obs_loss = self.model.output - batch_tf['o']
         # target_Q_pi_tf = self.target.Q_pi_tf
         # clip_range = (-self.clip_return, 0. if self.clip_pos_returns else np.inf)
         # target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
@@ -119,7 +123,7 @@ class MBPolicy(Policy):
         #     map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]), zip(self.target_vars, self.main_vars)))
         #
         # # initialize all variables
-        # tf.variables_initializer(self._global_vars('')).run()
+        tf.variables_initializer(self._global_vars('')).run()
         # self._sync_optimizers()
         # self._init_target_net()
 
@@ -166,4 +170,38 @@ class MBPolicy(Policy):
             return [(prefix + '/' + key, val) for key, val in logs]
         else:
             return logs
+
+    def _global_vars(self, scope):
+        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
+        return res
+
+    def __getstate__(self):
+        """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        # [print(key, ": ", item) for key, item in self.__dict__.items()]
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
+                             'prediction_model', 'target', 'lock', 'env', 'sample_transitions',
+                             'stage_shapes', 'create_model']
+
+        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
+        state['buffer_size'] = self.buffer_size
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name])
+        return state
+
+    def __setstate__(self, state):
+        if 'sample_transitions' not in state:
+            # We don't need this for playing the policy.
+            state['sample_transitions'] = None
+
+        self.__init__(**state)
+        # set up stats (they are overwritten in __init__)
+        for k, v in state.items():
+            if k[-6:] == '_stats':
+                self.__dict__[k] = v
+        # load TF variables
+        vars = [x for x in self._global_vars('') if 'buffer' not in x.name]
+        assert (len(vars) == len(state["tf"]))
+        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        self.sess.run(node)
+
 
