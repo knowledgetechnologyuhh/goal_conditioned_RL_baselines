@@ -32,14 +32,12 @@ class CGM(object):
 
         self._subgoal_successes = [deque(maxlen=glr_avg_hist_len) for _ in range(self._goal_size)]
 
-
-        self.params = {'gm_successes': self._gm_successes,
+        self._params = {'gm_successes': self._gm_successes,
                         'subgoal_successes': self._subgoal_successes,
                         'curriculum_sampling': 'none'
-                       }
+                        }
 
         self._mask = None
-
 
     def compute_successes(self, is_success_func, achieved_goal, desired_goal, observation, last_time_step=False):
         # Masking at observation
@@ -54,19 +52,16 @@ class CGM(object):
 
         # Update the subgoals
         subgoal_success = [is_success_func(np.array([achieved_goal[i] * self._mask[i]]),
-                                                   np.array([desired_goal[i]  * self._mask[i]]))
-                                   for i in range(len(desired_goal))]
-
-
+                                           np.array([desired_goal[i] * self._mask[i]]))
+                           for i in range(len(desired_goal))]
 
         if last_time_step:
             [self._subgoal_successes[idx].append(subgoal_success[idx]) for idx in
-         range(len(subgoal_success)) if self._mask[idx] == 1]
+             range(len(subgoal_success)) if self._mask[idx] == 1]
             goal_mask_str = ''.join(map(str, self._mask))
             self._gm_successes[goal_mask_str].append(is_success)
         # update the desired goal to the mask on observation
         desired_goal = goal
-
 
         return is_success, achieved_goal, desired_goal, observation
 
@@ -77,23 +72,23 @@ class CGM(object):
         #         for env in self.training_rollout_worker.envs:
         #             env.env.update_params({'subgoal_successes': self.subgoal_successes})
 
-        self.params.update({'gm_successes': self._gm_successes,
+        self._params.update({'gm_successes': self._gm_successes,
                              'subgoal_successes': self._subgoal_successes,
                              'curriculum_sampling': self._curriculum_sampling
-                            })
+                             })
 
     def sample_mask(self):
-        if self.params['curriculum_sampling'] == 'none':
+        if self._params['curriculum_sampling'] == 'none':
             curriculum_mask_idx = "1" * self._goal_size
-        elif self.params['curriculum_sampling'].find('stochastic3_') != -1:
-            sorted_keys = sorted(self.params['gm_successes'].keys())
+        elif self._params['curriculum_sampling'].find('stochastic3_') != -1:
+            sorted_keys = sorted(self._params['gm_successes'].keys())
             avg_gm_success_rate = {}
             avg_dist_from_tgt_rate = {}
-            tgt_success_rate = float(self.params['curriculum_sampling'].split("_")[1]) / 100
+            tgt_success_rate = float(self._params['curriculum_sampling'].split("_")[1]) / 100
             # sigma = 0.05
             # rnd_tgt_succ_rate = np.random.normal(tgt_success_rate, sigma)
 
-            subgoal_success = self.params['subgoal_successes']
+            subgoal_success = self._params['subgoal_successes']
             # Default slot rate is such that the product of all slot rates is the target success rate.
             default_slot_rate = pow(tgt_success_rate, (1.0 / self._goal_size))
             for gm in sorted_keys:
@@ -113,7 +108,7 @@ class CGM(object):
 
             avg_dist_list = np.array(avg_dist_list)
             prob_sampling_list = 1 - avg_dist_list
-            p = float(self.params['curriculum_sampling'].split("_")[3])
+            p = float(self._params['curriculum_sampling'].split("_")[3])
 
             # avg_dist_list = np.random.uniform(size=avg_dist_list.shape) # random distribution
 
@@ -133,7 +128,7 @@ class CGM(object):
                     f.write(str(p) + ", ")
                 f.write("\n")
             # Not use now:
-            n = float(self.params['curriculum_sampling'].split("_")[2])
+            n = float(self._params['curriculum_sampling'].split("_")[2])
             rnd = random.randint(1, 100)
             if rnd < n:
                 curriculum_mask_idx = "1" * self._goal_size
@@ -141,7 +136,7 @@ class CGM(object):
                 curriculum_mask_idx = np.random.choice(sorted_keys, p=norm_prob_sampling_list)
         else:
             curriculum_mask_idx = "1" * self._goal_size
-            print("Invalid curriculum sampling strategy {}".format(self.params['curriculum_sampling']))
+            print("Invalid curriculum sampling strategy {}".format(self._params['curriculum_sampling']))
 
         mask = [int(n) for n in list(curriculum_mask_idx)]
         self._mask = np.array(mask)
