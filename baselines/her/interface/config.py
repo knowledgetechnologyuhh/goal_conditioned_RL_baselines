@@ -74,7 +74,7 @@ EVAL_PARAMS = {
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
                                  'use_target_net': False
-                                 # 'use_target_net': params['test_with_polyak'],
+                                 # 'use_target_net': _params['test_with_polyak'],
                                  }
     }
 """
@@ -102,7 +102,7 @@ def cached_make_env(make_env):
 
 
 def prepare_params(kwargs):
-    # DDPG params
+    # DDPG _params
     ddpg_params = dict()
 
     env_name = kwargs['env_name']

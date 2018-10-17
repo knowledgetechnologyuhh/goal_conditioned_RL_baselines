@@ -127,7 +127,7 @@ def launch(
     rank_seed = seed + 1000000 * rank
     set_global_seeds(rank_seed)
 
-    # Prepare params.
+    # Prepare _params.
     params = config.DEFAULT_PARAMS
     params['env_name'] = env
     params['n_cycles'] = kwargs['n_train_rollout_cycles']
@@ -135,7 +135,7 @@ def launch(
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
     params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
     params.update(**override_params)  # makes it possible to override any parameter
-    with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
+    with open(os.path.join(logger.get_dir(), '_params.json'), 'w') as f:
         json.dump(params, f)
     params = config.prepare_params(params)
     config.log_params(params, logger=logger)
@@ -153,9 +153,9 @@ def launch(
         logger.warn()
 
     # if env.find("HLMG") == 0:
-    #     dims = config.configure_masked_dims(params)
+    #     dims = config.configure_masked_dims(_params)
     # else:
-    #     dims = config.configure_dims(params)
+    #     dims = config.configure_dims(_params)
 
     dims = config.configure_dims(params)
     if restore_policy is None:

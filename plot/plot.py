@@ -131,12 +131,12 @@ def draw_all_data_plot(data, fig_dir):
         label = label.replace("stochastic3_0_0_0_1", 'uniform')
         label = label.replace("replay_k: 6", "DDPG+HER")
         label = label.replace("replay_k: 0", "DDPG")
-        label = label.replace("+goldilocks_sampling: none", '')
+        label = label.replace("+curriculum_sampling: none", '')
         if 'stochastic3_' in label:
             rg = label.split("stochastic3_")[1].split("_")[0]
             kappa= label.split("stochastic3_")[1].split("_")[2]
             h = label.split("stochastic3_")[1].split("_")[3].split("+")[0]
-            gl_str = "goldilocks_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
+            gl_str = "curriculum_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
             # label = label.replace("stochastic3_{}_0_{}_{}".format(rg,c,h), 'CGM \nrg={} \nc={}'.format(rg,kappa))
             label = label.replace(gl_str, "CGM")
 
@@ -188,8 +188,8 @@ def draw_all_data_plot_rg_c_conv(data, fig_dir):
         # Some custom modifications of label:
         label = label.replace("stochastic3_0_0_0_1", 'uniform')
         label = label.replace("stochastic3_0_0_0_1", 'uniform')
-        label = label.replace("goldilocks_sampling: none", 'no CGM')
-        label = label.replace("goldilocks_sampling: ", "")
+        label = label.replace("curriculum_sampling: none", 'no CGM')
+        label = label.replace("curriculum_sampling: ", "")
         if 'stochastic3_' in label:
             rg = label.split("stochastic3_")[1].split("_")[0]
             kappa= label.split("stochastic3_")[1].split("_")[2]
@@ -251,7 +251,7 @@ def draw_stochastic_surface_plot(data, percent_to_achieve, fig_dir):
                 continue
             epochs.append(epoch)
         # epochs = [len(d[0]) for d in data[config]]
-        if 'goldilocks_sampling: none' in config:
+        if 'curriculum_sampling: none' in config:
             none_sampling_epochs += epochs
             kappa_s.add(-1)
             continue
@@ -385,7 +385,7 @@ def main():
             print('skipping {}, bad file format'.format(curr_path))
             continue
         # print('loading {} ({})'.format(curr_path, len(results['epoch'])))
-        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
+        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
             params = json.load(f)
         for k,v in params.items():
             if k not in inter_dict.keys():
@@ -409,7 +409,7 @@ def main():
         # if float(curr_path.split("_")[-1]) > 20:
         #     continue
         print('loading {} ({})'.format(curr_path, len(results['epoch'])))
-        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
+        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
             params = json.load(f)
         success_rate = np.array(results['test/success_rate'])
 

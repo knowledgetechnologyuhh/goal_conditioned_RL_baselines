@@ -21,7 +21,7 @@ def main(policy_file, seed, n_test_rollouts, render):
         policy = pickle.load(f)
     env_name = policy.info['env_name']
 
-    # Prepare params.
+    # Prepare _params.
     params = config.DEFAULT_PARAMS
     if env_name in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env_name])  # merge env-specific parameters in

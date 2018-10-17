@@ -11,7 +11,7 @@ click.option('--render', type=int, default=1, help='Whether or not to render the
 click.option('--replay_k', type=int, default=4, help='The ratio between HER replays and regular replays.'),
 click.option('--mask_at_observation', type=int, default=1, help='Whether or not to mask the goal at observation already (0,1)'),
 click.option('--early_stop_success_rate', type=int, default=95, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping'),
-click.option('--goldilocks_sampling', type=str, default='none', help='The goldilocks subgoal sampling success rate. Either '
+click.option('--curriculum_sampling', type=str, default='none', help='The curriculum subgoal sampling success rate. Either '
                                                                  '1) \'none\', i.e. the goal mask always uses the full goal or '
                                                                  '2) \'z1toN\', the goals z-positions are masked in 1 out of 5 samples, or'  
                                                                  '3) \'stochastic_R_C\', i.e., stochastically select those goal masks for which the goal is achieved at the '
