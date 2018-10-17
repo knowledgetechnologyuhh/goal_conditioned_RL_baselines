@@ -385,7 +385,7 @@ def main():
             print('skipping {}, bad file format'.format(curr_path))
             continue
         # print('loading {} ({})'.format(curr_path, len(results['epoch'])))
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
         for k,v in params.items():
             if k not in inter_dict.keys():
@@ -409,7 +409,7 @@ def main():
         # if float(curr_path.split("_")[-1]) > 20:
         #     continue
         print('loading {} ({})'.format(curr_path, len(results['epoch'])))
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
         success_rate = np.array(results['test/success_rate'])
 
