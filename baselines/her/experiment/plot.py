@@ -67,7 +67,7 @@ for curr_path in paths:
         print('skipping {}'.format(curr_path))
         continue
     print('loading {} ({})'.format(curr_path, len(results['epoch'])))
-    with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+    with open(os.path.join(curr_path, 'params.json'), 'r') as f:
         params = json.load(f)
 
     success_rate = np.array(results['test/success_rate'])
