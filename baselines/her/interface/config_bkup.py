@@ -77,14 +77,14 @@ EVAL_PARAMS = {
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
                                  'use_target_net': False
-                                 # 'use_target_net': params['test_with_polyak'],
+                                 # 'use_target_net': _params['test_with_polyak'],
                                  }
     }
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'goldilocks_sampling',
+OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'curriculum_sampling',
                         'replay_k', 'mask_at_observation', 'replay_strategy']
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'goldilocks_sampling', 'mask_at_observation', '_replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'curriculum_sampling', 'mask_at_observation', '_replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -100,7 +100,7 @@ def cached_make_env(make_env):
 
 
 def prepare_params(kwargs):
-    # DDPG params
+    # DDPG _params
     ddpg_params = dict()
 
     env_name = kwargs['env_name']

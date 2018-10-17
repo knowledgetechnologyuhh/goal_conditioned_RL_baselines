@@ -238,7 +238,7 @@ class EpisodeStats:
         if self.lenbuffer:
             return np.mean(self.lenbuffer)
         else:
-            return 0  # on the first params dump, no episodes are finished
+            return 0  # on the first _params dump, no episodes are finished
 
     def mean_reward(self):
         if self.rewbuffer:

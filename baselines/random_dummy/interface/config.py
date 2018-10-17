@@ -56,7 +56,7 @@ def cached_make_env(make_env):
 
 
 def prepare_params(kwargs):
-    # policy params
+    # policy _params
     ddpg_params = dict()
 
     env_name = kwargs['env_name']
