@@ -76,7 +76,7 @@ def prepare_data(paths):
         #     print('skipping {}'.format(curr_path))
         #     continue
 
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
         for k,v in params.items():
             if k not in inter_dict.keys():
@@ -107,7 +107,7 @@ def plot_mask_train_success():
             print('skipping {}'.format(curr_path))
 
         print('loading {} ({})'.format(curr_path, len(results['episode'])))
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
 
         config = ''
@@ -214,12 +214,12 @@ def plot_subgoal_eval_success():
             print("Error!!! number of goals not the same for all data")
             return
         print('loading {} ({})'.format(curr_path, len(results['episode'])))
-        # with open(os.path.join(curr_path, '_params.json'), 'r') as f:
-        #     _params = json.load(f)
+        # with open(os.path.join(curr_path, 'params.json'), 'r') as f:
+        #     params = json.load(f)
         # config = ''
         # for k in var_param_keys:
-        #     if k in _params.keys():
-        #         config += k + ": " + str(_params[k])+"-"
+        #     if k in params.keys():
+        #         config += k + ": " + str(params[k])+"-"
         #
         # config = config[:-1]
         n_data += 1
@@ -385,7 +385,7 @@ def plot_mask_frequency():
             print('skipping {}'.format(curr_path))
 
         print('loading {} ({})'.format(curr_path, len(results['episode'])))
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
 
         config = ''
@@ -502,7 +502,7 @@ def plot_mask_probability():
             print('skipping {}'.format(curr_path))
 
         print('loading {} ({})'.format(curr_path, len(results[list(results.keys())[0]])))
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
 
         config = ''
@@ -556,7 +556,7 @@ def plot_subgoal_frequency():
             print('skipping {}'.format(curr_path))
 
         print('loading {} ({})'.format(curr_path, len(results['episode'])))
-        with open(os.path.join(curr_path, '_params.json'), 'r') as f:
+        with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
 
         config = ''
