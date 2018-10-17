@@ -21,7 +21,7 @@ class AcerCnnPolicy(object):
         a = sample(tf.nn.softmax(pi_logits))  # could change this to use self.pi instead
         self.initial_state = []  # not stateful
         self.X = X
-        self.pi = pi  # actual policy _params now
+        self.pi = pi  # actual policy params now
         self.pi_logits = pi_logits
         self.q = q
         self.vf = q
@@ -70,7 +70,7 @@ class AcerLstmPolicy(object):
         self.X = X
         self.M = M
         self.S = S
-        self.pi = pi  # actual policy _params now
+        self.pi = pi  # actual policy params now
         self.q = q
 
         def step(ob, state, mask, *args, **kwargs):

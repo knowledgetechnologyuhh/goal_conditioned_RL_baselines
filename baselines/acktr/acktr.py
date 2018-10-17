@@ -57,7 +57,7 @@ class Model(object):
                 momentum=0.9, kfac_update=1, epsilon=0.01,\
                 stats_decay=0.99, is_async=is_async, cold_iter=10, max_grad_norm=max_grad_norm)
 
-            # update_stats_op = optim.compute_and_apply_stats(joint_fisher_loss, var_list=_params)
+            # update_stats_op = optim.compute_and_apply_stats(joint_fisher_loss, var_list=params)
             optim.compute_and_apply_stats(joint_fisher_loss, var_list=params)
             train_op, q_runner = optim.apply_gradients(list(zip(grads,params)))
         self.q_runner = q_runner
