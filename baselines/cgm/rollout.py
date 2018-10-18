@@ -15,7 +15,7 @@ class RolloutWorker(Rollout):
 
     @store_args
     def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
-                 history_len=100, render=False, **kwargs):
+                 history_len=100, render=False, curriculum_sampling='none', **kwargs):
         """Rollout worker generates experience by interacting with one or many environments.
 
         Args:
@@ -27,6 +27,7 @@ class RolloutWorker(Rollout):
             rollout_batch_size (int): the number of parallel rollouts that should be used
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
+            curriculum_sampling (str): the curriculum sampling method. Either none or stochastic3_*properties*
         """
         self.T = T
         max_goal_len = 0
@@ -39,8 +40,7 @@ class RolloutWorker(Rollout):
 
         max_goal_len += (n_objects * 3)
 
-        # TODO (fabawi): curriculum sampling to accepts params from training script (click_options)
-        self.cgms = [CGM(max_goal_len, curriculum_sampling='stochastic3_0.5_5_50_5', gripper_goal=gripper_goal) for _ in range(rollout_batch_size)]
+        self.cgms = [CGM(goal_size=max_goal_len, curriculum_sampling=curriculum_sampling, gripper_goal=gripper_goal, exploit=kwargs['policy_action_params']['exploit']) for _ in range(rollout_batch_size)]
 
         Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
 
@@ -117,7 +117,7 @@ class RolloutWorker(Rollout):
                 try:
                     # We fully ignore the reward here because it will have to be re-computed
                     # for HER.
-                    self.envs[i].goal = self.g[i] # TODO (fabawi): check if this is actually correct
+                    self.envs[i].env.goal = self.g[i]
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
 
                     if t == self.T - 1:
@@ -131,7 +131,7 @@ class RolloutWorker(Rollout):
                                                        curr_o_new['achieved_goal'], curr_o_new['desired_goal'],
                                                        curr_o_new['observation'], last_timestep)
 
-                    self.g[i] = curr_o_new['desired_goal'] # TODO (fabawi): check if updating the goal is necessary
+                    self.g[i] = curr_o_new['desired_goal']
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
                     for idx, key in enumerate(self.info_keys):
@@ -174,7 +174,7 @@ class RolloutWorker(Rollout):
                 self.custom_histories.append(deque(maxlen=self.history_len))
                 self.custom_histories[history_index].append([x[history_index] for x in other_histories])
         self.n_episodes += self.rollout_batch_size
-
+        # TODO (fabawi): add masking info to logs
         return convert_episode_to_batch_major(episode)
 
     def current_mean_Q(self):

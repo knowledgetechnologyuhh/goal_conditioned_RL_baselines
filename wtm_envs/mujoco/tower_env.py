@@ -33,7 +33,7 @@ class TowerEnv(robot_env.RobotEnv):
             target_range (float): range of a uniform distribution for sampling a target
             distance_threshold (float): the threshold after which a goal is considered achieved
             initial_qpos (dict): a dictionary of joint names and values that define the initial configuration
-            reward_type ('sparse', 'dense' or 'subgoal): the reward type, i.e. sparse or dense
+            reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
             gripper_goal ('gripper_none', 'gripper_above', 'gripper_random'): the gripper's goal location
             n_objects (int): no of objects in the environment. If none, then no_of_objects=0
             min_tower_height (int): the minimum height of the tower.
@@ -71,7 +71,7 @@ class TowerEnv(robot_env.RobotEnv):
     def compute_reward(self, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
         d = goal_distance(achieved_goal, goal)
-        if self.reward_type == 'sparse' or 'subgoal':
+        if self.reward_type == 'sparse':
             return -(d > self.distance_threshold).astype(np.float32)
         else:
             return -d
@@ -249,7 +249,6 @@ class TowerEnv(robot_env.RobotEnv):
             o_target_site_id = self.sim.model.site_name2id('target{}'.format(n))
             o_tgt_size = (np.ones(3) * 0.02)
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
-            dummy = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3]
             o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
             self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
             obj_goal_start_idx += 3

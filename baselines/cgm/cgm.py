@@ -9,22 +9,26 @@ from baselines import logger
 
 class CGM(object):
 
-    def __init__(self, goal_size, **kwargs):
-        self._curriculum_sampling = kwargs['curriculum_sampling']
-        self._gripper_goal = kwargs['gripper_goal']
+    def __init__(self, goal_size, curriculum_sampling, gripper_goal, exploit, **kwargs):
         self._goal_size = goal_size
-
-        glr_avg_hist_len = int(self._curriculum_sampling.split("_")[-1])
+        self._curriculum_sampling = curriculum_sampling
+        self._gripper_goal = gripper_goal
+        self._exploit = exploit
 
         if self._curriculum_sampling == 'none':
+            glr_avg_hist_len = 10
+        else:
+            glr_avg_hist_len = int(self._curriculum_sampling.split("_")[-1])
+
+        if self._curriculum_sampling != 'none':
             possible_goal_masks = ["".join(["1" for _ in range(self._goal_size)])]
         else:
             possible_goal_masks = []
-            max_n = pow(2, self._goal_size)
-            for n in range(max_n):
-                mask_str = bin(n)[2:]
-                mask_str = mask_str.rjust(self._goal_size, "0")
-                possible_goal_masks.append(mask_str)
+        max_n = pow(2, self._goal_size)
+        for n in range(max_n):
+            mask_str = bin(n)[2:]
+            mask_str = mask_str.rjust(self._goal_size, "0")
+            possible_goal_masks.append(mask_str)
         self._gm_successes = dict.fromkeys(["".join(["0" for _ in range(self._goal_size)])], [])
 
         for mask_str in possible_goal_masks:
@@ -43,7 +47,7 @@ class CGM(object):
         # Masking at observation
         inv_mask = 1 - self._mask
         goal = desired_goal * self._mask
-        if self._gripper_goal != 'gripper_none':
+        if self._gripper_goal == 'gripper_none':
             goal += (observation.copy()[:self._goal_size] * inv_mask)
         else:
             goal += (observation.copy()[3:self._goal_size + 3] * inv_mask)
@@ -66,14 +70,10 @@ class CGM(object):
         return is_success, achieved_goal, desired_goal, observation
 
     def update_and_reset(self):
-        # TODO (fabawi): integrate the following commented snippet into the parameter update (this snippet was in the rollout)
-        # if (self.exploit and ('none' in self.curriculum_sampling)):
-        #     if 'training_rollout_worker' in self.__dict__:
-        #         for env in self.training_rollout_worker.envs:
-        #             env.env.update_params({'subgoal_successes': self.subgoal_successes})
+        # if self._exploit and ('none' in self._curriculum_sampling): # TODO (fabawi): in the custom_rollout there is a condition placed on when to update subgoals. I don't know if it's relevant here
+        self._params.update({'subgoal_successes': self._subgoal_successes})
 
         self._params.update({'gm_successes': self._gm_successes,
-                             'subgoal_successes': self._subgoal_successes,
                              'curriculum_sampling': self._curriculum_sampling
                              })
 
