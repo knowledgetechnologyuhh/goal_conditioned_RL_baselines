@@ -20,6 +20,7 @@ class RolloutWorker(Rollout):
         self.err_hist_fname = os.path.join(logdir, "err_hist.png")
         self.pred_history = []
         self.pred_hist_fname = os.path.join(logdir, "pred_hist.png")
+        self.rollouts_per_epoch = 0
 
 
     def logs(self, prefix='worker'):
@@ -31,17 +32,20 @@ class RolloutWorker(Rollout):
             logs += [('loss-{}'.format(i), l)]
         # if self.custom_histories:
         #     logs += [('mean_Q', np.mean(self.custom_histories[0]))]
+        epoch_mean_pred_err = np.mean(self.err_history[-self.rollouts_per_epoch:])
+        epoch_mean_pred_steps = np.mean(self.pred_history[-self.rollouts_per_epoch:])
+        logs += [('pred_err', epoch_mean_pred_err)]
+        logs += [('pred_steps', epoch_mean_pred_steps)]
         logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)
-
-
 
     def generate_rollouts_update(self, n_cycles, n_batches):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
         self.avg_epoch_losses = []
+        self.rollouts_per_epoch = n_cycles * n_batches
         for cyc in tqdm(range(n_cycles)):
             ro_start = time.time()
             episode = self.generate_rollouts()
