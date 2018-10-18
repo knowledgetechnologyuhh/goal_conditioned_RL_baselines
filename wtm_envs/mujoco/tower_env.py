@@ -11,7 +11,7 @@ def goal_distance(goal_a, goal_b):
 
 
 class TowerEnv(robot_env.RobotEnv):
-    """Superclass for all Fetch environments.
+    """Superclass for all Tower environments.
     """
 
     def __init__(
@@ -151,70 +151,6 @@ class TowerEnv(robot_env.RobotEnv):
 
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy()}
 
-        # Build the tower
-
-        if self.gripper_goal != 'gripper_none':
-            goal = obs['observation'].copy()[:self.goal_size]
-        else:
-            goal = obs['observation'].copy()[3:self.goal_size+3]
-
-        if self.gripper_goal != 'gripper_none':
-            target_goal_start_idx = 3
-        else:
-            target_goal_start_idx = 0
-
-        stack_tower = (self.max_tower_height - self.min_tower_height + 1) == self.n_objects
-
-        if not stack_tower:
-            for n_o in range(self.n_objects):
-                # too_close = True
-                while True:
-                    target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range,
-                                                                                         self.target_range,
-                                                                                         size=3)
-                    target_goal += self.target_offset
-                    rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
-                    self.goal_tower_height = rnd_height
-                    target_goal[2] = self.table_height + (rnd_height * self.obj_height) - (self.obj_height / 2)
-                    too_close = False
-                    for i in range(0, target_goal_start_idx, 3):
-                        other_loc = goal[i:i+3]
-                        dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
-                        if dist < 0.1:
-                            too_close = True
-                    if too_close is False:
-                        break
-
-                goal[target_goal_start_idx:target_goal_start_idx+3] = target_goal.copy()
-                target_goal_start_idx += 3
-        else:
-            target_goal_xy = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.target_range,
-                                                                                    self.target_range,
-                                                                                        size=2)
-            self.goal_tower_height = self.n_objects
-            for n_o in range(self.n_objects):
-                height = n_o + 1
-                target_z = self.table_height + (height * self.obj_height) - (self.obj_height / 2)
-                target_goal = np.concatenate((target_goal_xy, [target_z]))
-                goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
-                target_goal_start_idx += 3
-
-        # Final gripper position
-        if self.gripper_goal != 'gripper_none':
-            gripper_goal_pos = goal.copy()[-3:]
-            if self.gripper_goal == 'gripper_above':
-                gripper_goal_pos[2] += (3 * self.obj_height)
-            elif self.gripper_goal == 'gripper_random':
-                too_close = True
-                while too_close:
-                    gripper_goal_pos = self.initial_gripper_xpos[:3] + \
-                                       self.np_random.uniform(-self.target_range,
-                                                              self.target_range, size=3)
-                    gripper_goal_pos[2] += 0.2
-                    if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
-                        too_close = False
-            goal[:3] = gripper_goal_pos
-
         if self.gripper_goal != 'gripper_none':
             obs['achieved_goal'] = obs['observation'][:self.goal_size]
         else:
@@ -350,8 +286,9 @@ class TowerEnv(robot_env.RobotEnv):
                         gripper_goal_pos = self.initial_gripper_xpos[:3] + \
                                            self.np_random.uniform(-self.target_range,
                                                                   self.target_range, size=3)
-                        gripper_goal_pos[0] += 0.25
-                        gripper_goal_pos[2] += 0.14
+                        gripper_goal_pos[0] += self.random_gripper_goal_pos_offset[0]
+                        gripper_goal_pos[1] += self.random_gripper_goal_pos_offset[0]
+                        gripper_goal_pos[2] += self.random_gripper_goal_pos_offset[2]
                         if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
                             too_close = False
                 goal[:3] = gripper_goal_pos
@@ -362,8 +299,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
-
-        # TODO (fabawi): return subgoal successes depending on subgoals as well
 
         return (d < self.distance_threshold).astype(np.float32)
 
@@ -380,6 +315,9 @@ class TowerEnv(robot_env.RobotEnv):
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
         for _ in range(10):
             self.sim.step()
+
+        # offset the random goal if gripper random is used
+        self.random_gripper_goal_pos_offset = (0.25, 0.0, 0.14)
 
         # Extract information for sampling goals.
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
