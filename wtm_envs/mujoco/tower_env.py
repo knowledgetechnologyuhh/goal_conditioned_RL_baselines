@@ -54,6 +54,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.obj_height = obj_height
         self.min_tower_height = min_tower_height
         self.max_tower_height = max_tower_height
+        self.step_ctr = 0
 
         self.goal = []
         self.goal_size = (n_objects * 3)
@@ -69,11 +70,11 @@ class TowerEnv(robot_env.RobotEnv):
     # ----------------------------
 
     def compute_reward(self, achieved_goal, goal, info):
-        # Compute distance between goal and the achieved goal.
-        d = goal_distance(achieved_goal, goal)
-        if self.reward_type == 'sparse' or 'subgoal':
-            return -(d > self.distance_threshold).astype(np.float32)
+        if self.reward_type == 'sparse':
+            success = self._is_success(achieved_goal, goal)
+            return (success - 1).astype(np.float32)
         else:
+            d = goal_distance(achieved_goal, goal)
             return -d
 
     # RobotEnv methods
@@ -101,6 +102,14 @@ class TowerEnv(robot_env.RobotEnv):
         # Apply action to simulation.
         utils.ctrl_set_action(self.sim, action)
         utils.mocap_set_action(self.sim, action)
+        self.step_ctr += 1
+
+    def _obs2goal(self, obs):
+        if self.gripper_goal != 'gripper_none':
+            goal = obs[:self.goal_size]
+        else:
+            goal = obs[3:self.goal_size+3]
+        return goal
 
     def _get_obs(self):
         dt = self.sim.nsubsteps * self.sim.model.opt.timestep
@@ -151,74 +160,7 @@ class TowerEnv(robot_env.RobotEnv):
 
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy()}
 
-        # Build the tower
-
-        if self.gripper_goal != 'gripper_none':
-            goal = obs['observation'].copy()[:self.goal_size]
-        else:
-            goal = obs['observation'].copy()[3:self.goal_size+3]
-
-        if self.gripper_goal != 'gripper_none':
-            target_goal_start_idx = 3
-        else:
-            target_goal_start_idx = 0
-
-        stack_tower = (self.max_tower_height - self.min_tower_height + 1) == self.n_objects
-
-        if not stack_tower:
-            for n_o in range(self.n_objects):
-                # too_close = True
-                while True:
-                    target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range,
-                                                                                         self.target_range,
-                                                                                         size=3)
-                    target_goal += self.target_offset
-                    rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
-                    self.goal_tower_height = rnd_height
-                    target_goal[2] = self.table_height + (rnd_height * self.obj_height) - (self.obj_height / 2)
-                    too_close = False
-                    for i in range(0, target_goal_start_idx, 3):
-                        other_loc = goal[i:i+3]
-                        dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
-                        if dist < 0.1:
-                            too_close = True
-                    if too_close is False:
-                        break
-
-                goal[target_goal_start_idx:target_goal_start_idx+3] = target_goal.copy()
-                target_goal_start_idx += 3
-        else:
-            target_goal_xy = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.target_range,
-                                                                                    self.target_range,
-                                                                                        size=2)
-            self.goal_tower_height = self.n_objects
-            for n_o in range(self.n_objects):
-                height = n_o + 1
-                target_z = self.table_height + (height * self.obj_height) - (self.obj_height / 2)
-                target_goal = np.concatenate((target_goal_xy, [target_z]))
-                goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
-                target_goal_start_idx += 3
-
-        # Final gripper position
-        if self.gripper_goal != 'gripper_none':
-            gripper_goal_pos = goal.copy()[-3:]
-            if self.gripper_goal == 'gripper_above':
-                gripper_goal_pos[2] += (3 * self.obj_height)
-            elif self.gripper_goal == 'gripper_random':
-                too_close = True
-                while too_close:
-                    gripper_goal_pos = self.initial_gripper_xpos[:3] + \
-                                       self.np_random.uniform(-self.target_range,
-                                                              self.target_range, size=3)
-                    gripper_goal_pos[2] += 0.2
-                    if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
-                        too_close = False
-            goal[:3] = gripper_goal_pos
-
-        if self.gripper_goal != 'gripper_none':
-            obs['achieved_goal'] = obs['observation'][:self.goal_size]
-        else:
-            obs['achieved_goal'] = obs['observation'][3:self.goal_size+3]
+        obs['achieved_goal'] = self._obs2goal(obs['observation'])
 
         return obs
 
@@ -257,6 +199,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.sim.forward()
 
     def _reset_sim(self):
+        self.step_ctr = 0
         self.sim.set_state(self.initial_state)
 
         # Randomize start position of objects.
@@ -351,7 +294,7 @@ class TowerEnv(robot_env.RobotEnv):
                         gripper_goal_pos = self.initial_gripper_xpos[:3] + \
                                            self.np_random.uniform(-self.target_range,
                                                                   self.target_range, size=3)
-                        gripper_goal_pos[0] += 0.25
+                        # gripper_goal_pos[0] += 0.25
                         gripper_goal_pos[2] += 0.14
                         if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
                             too_close = False
@@ -363,9 +306,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
-
-        # TODO (fabawi): return subgoal successes depending on subgoals as well
-
         return (d < self.distance_threshold).astype(np.float32)
 
     def _env_setup(self, initial_qpos):

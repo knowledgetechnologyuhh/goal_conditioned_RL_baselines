@@ -1,7 +1,7 @@
 import click
 _random_options = [
-click.option('--n_test_rollouts', type=int, default=2, help='Number of test rollouts'),
-click.option('--n_model_batches', type=int, default=40, help='The number of batches for model training.'),
+click.option('--n_test_rollouts', type=int, default=5, help='Number of test rollouts'),
+click.option('--model_train_batch_size', type=int, default=40, help='The batch size (parallel episodes) for model training.'),
 ]
 
 def click_main(func):

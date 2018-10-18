@@ -50,6 +50,8 @@ def train(rollout_worker, evaluator,
         # eval
         logger.info("Evaluating epoch {}".format(epoch))
         evaluator.clear_history()
+        evaluator.render = epoch % policy_save_interval == 0
+
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
 
@@ -150,7 +152,7 @@ def launch(
     if restore_policy is None:
         policy = config.configure_policy(dims=dims, params=params)
     else:
-        policy = config.load_policy(restore_policy_file = restore_policy,  params=params)
+        policy = config.load_policy(restore_policy_file=restore_policy,  params=params)
         loaded_env_name = policy.info['env_name']
         assert loaded_env_name == env
 
@@ -197,7 +199,6 @@ def main(ctx, **kwargs):
     # policy_args.update({ctx.args[i][0:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
     kwargs.update(policy_args)
 
-    kwargs['batch_size'] = kwargs['train_batch_size']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
     for op in override_params:
@@ -261,6 +262,7 @@ def main(ctx, **kwargs):
     if do_train:
         print("Launching training")
         launch(**kwargs)
+
 
 if __name__ == '__main__':
     main()

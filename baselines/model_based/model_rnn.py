@@ -19,13 +19,13 @@ class ModelRNN:
         self.o_tf = inputs_tf['o']
         self.u_tf = inputs_tf['u']
         #
-        dimo = self.o_tf.shape[1]
+        dimo = self.o_tf.shape[2]
         #
         hidden = 100
         layers = 3
         #
         with tf.variable_scope('ModelRNN'):
-            input = tf.concat(axis=1, values=[self.o_tf, self.u_tf])
+            input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
             self.output = nn(input, [hidden] * layers + [dimo])
 
             # # for policy training

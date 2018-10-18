@@ -8,47 +8,65 @@ class ModelReplayBuffer:
         """Creates a replay buffer to train the model.
 
         Args:
-            buffer_shapes (dict of ints): the shape for all buffers that are used in the replay
-                buffer
             size (int): the size of the buffer, measured in rollouts
-            sample_transitions (function): a function that samples from the replay buffer
+            sample (function): a function that samples episodes from the replay buffer
         """
-        self.buffer_shapes = buffer_shapes
         self.size = size
 
-        self.buffer = []
+        self.buffers = {}
+        for key, shape in buffer_shapes.items():
+            n_steps = shape[1]
+            dim = shape[2]
+            self.buffers[key] = np.empty([self.size, n_steps, dim])
 
         # memory management
-        # self.current_size = 0
-        # self.n_transitions_stored = 0
+        self.current_size = 0
 
         self.lock = threading.Lock()
 
     @property
     def full(self):
         with self.lock:
-            return len(self.buffer) == self.size
+            return self.current_size == self.size
 
     def sample(self, batch_size):
-        """Returns a list of episodes
+        """Returns a dict {key: array(batch_size x shapes[key])}
         """
-        # episodes = []
+        # buffers = {}
+        batch = {}
+        for key in self.buffers.keys():
+            batch[key] = np.zeros((batch_size, self.buffers[key].shape[1], self.buffers[key].shape[2]))
+        if self.current_size == 0:
+            return batch
 
         with self.lock:
-            assert len(self.buffer) > 0
-            episodes = np.random.choice(self.buffer, batch_size)
+            assert self.current_size > 0
+            replace = self.current_size < self.size
+            idxs = np.random.choice(self.current_size, batch_size, replace=replace)
+            for b_idx,idx in enumerate(idxs):
+                # episode = {}
+                for key in self.buffers.keys():
+                    batch[key][b_idx] = self.buffers[key][idx]
+                    # episode[key] = self.buffers[key][idx]
+                # ep_batch.append(episode)
 
-        return episodes
+        # ep_batch = np.array(ep_batch)
+        return batch
 
     def store_episode(self, episode_batch):
         """episode_batch: array(batch_size x (T or T+1) x dim_key)
         """
         with self.lock:
             for ep in episode_batch:
-                self.buffer.append(ep)
-            if len(self.buffer) > self.size:
-                rnd_idx = random.randint(0, len(self.buffer))
-                self.buffer.remove(self.buffer[rnd_idx])
+                if self.current_size < self.size:
+                    ins_idx = self.current_size
+                    self.current_size += 1
+                else:
+                    ins_idx = random.randint(0, self.size)
+
+                for key in ep:
+                    self.buffers[key][ins_idx] = np.array(ep[key])
+
 
     # def get_current_episode_size(self):
     #     with self.lock:

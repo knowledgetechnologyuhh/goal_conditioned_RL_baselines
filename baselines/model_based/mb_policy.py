@@ -1,10 +1,11 @@
 import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
-
+import collections
 import numpy as np
 from baselines import logger
 from baselines.template.policy import Policy
 from baselines.model_based.model_rnn import ModelRNN
+from baselines.common.mpi_adam import MpiAdam
 
 from collections import OrderedDict
 # from baselines.model_based.replay_buffer import ReplayBuffer
@@ -19,147 +20,211 @@ def dims_to_shapes(input_dims):
 
 class MBPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, model_buffer_size, model_network_class, scope, T, rollout_batch_size, **kwargs):
+    def __init__(self, input_dims, model_buffer_size, model_network_class, scope, T, rollout_batch_size, model_lr, model_train_batch_size, **kwargs):
 
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
-        self.buffer_size=10
+        # self.buffer_size=10
+        self.env = kwargs['env']
         self.scope = scope
-        self.create_model = import_function(self.model_network_class)
+        self.create_model = import_function(model_network_class)
+        self.model_loss_history = collections.deque(maxlen=100)
+        self.model_loss_exploration_threshold = 0.05 # The average model loss threshold over the last 100 episodes to consider the model realistic and to start model-based planning
         #
         # # Create network.
+        model_stage_shapes = OrderedDict()
+        time_dim = self.T
+        for key in sorted(self.input_dims.keys()):
+            if key.startswith('info_'):
+                continue
+            if key in ['o']:
+                model_stage_shapes[key] = (None, time_dim, *self.input_shapes[key])
+                model_stage_shapes[key +"2"] = (None, time_dim, *self.input_shapes[key])
+            if key in ['u']:
+                model_stage_shapes[key] = (None, time_dim, *self.input_shapes[key])
+
+        self.model_stage_shapes = model_stage_shapes
         with tf.variable_scope(self.scope):
-            self.staging_tf = StagingArea(
-                dtypes=[tf.float32 for _ in self.stage_shapes.keys()],
-                shapes=list(self.stage_shapes.values()))
-            self.buffer_ph_tf = [
-                tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
-            self.stage_op = self.staging_tf.put(self.buffer_ph_tf)
-        #
+            self.model_staging_tf = StagingArea(
+                dtypes=[tf.float32 for _ in self.model_stage_shapes.keys()],
+                shapes=list(self.model_stage_shapes.values()))
+            # self.model_buffer_ph_tf = [
+            #     tf.placeholder(tf.float32, shape=shape) for shape in self.model_stage_shapes.values()]
+            self.model_buffer_ph_tf = [
+                tf.placeholder(tf.float32, shape=(None, None, shape[2])) for shape in self.model_stage_shapes.values()]
+            self.model_stage_op = self.model_staging_tf.put(self.model_buffer_ph_tf)
+
             self._create_network(reuse=False)
-        #
-        # # Configure the replay buffer.
-        # input_shapes = dims_to_shapes(self.input_dims)
-        # mr_buffer_shapes = {'o': (self.T + 1, *input_shapes['o']),
-        #                     'u': (self.T, *input_shapes['u'])}
-        #
-        # self.model_replay_buffer = ModelReplayBuffer(mr_buffer_shapes, model_buffer_size)
+
+
+        # Initialize the model replay buffer.
+        self.model_replay_buffer = ModelReplayBuffer(model_stage_shapes, model_buffer_size)
         # pass
         print("done init MBPolicy")
 
+    def _vars(self, scope):
+        res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + '/' + scope)
+        assert len(res) > 0
+        return res
 
     def _create_network(self, reuse=False):
         logger.info("Creating a model-based agent with action space %d x %s..." % (self.dimu, self.max_u))
-        # pass
-        #
         self.sess = tf.get_default_session()
         if self.sess is None:
             self.sess = tf.InteractiveSession()
-        #
-        # # running averages
-        # with tf.variable_scope('o_stats') as vs:
-        #     if reuse:
-        #         vs.reuse_variables()
-        #     self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-        # with tf.variable_scope('g_stats') as vs:
-        #     if reuse:
-        #         vs.reuse_variables()
-        #     self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
-        #
         # # mini-batch sampling.
-        batch = self.staging_tf.get()
-        batch_tf = OrderedDict([(key, batch[i])
-                                for i, key in enumerate(self.stage_shapes.keys())])
-        # batch_tf['r'] = tf.reshape(batch_tf['r'], [-1, 1])
-        #
+        model_batch = self.model_staging_tf.get()
+        model_batch_tf = OrderedDict([(key, model_batch[i])
+                                for i, key in enumerate(self.model_stage_shapes.keys())])
         # # networks
         with tf.variable_scope('model') as ms:
-            # self.model = self.create_model(batch_tf)
-            self.prediction_model = ModelRNN(batch_tf)
+            self.prediction_model = self.create_model(model_batch_tf)
             ms.reuse_variables()
-        # with tf.variable_scope('main') as vs:
-        #     if reuse:
-        #         vs.reuse_variables()
-        #     self.main = self.create_actor_critic(batch_tf, net_type='main', **self.__dict__)
-        #     vs.reuse_variables()
-        # with tf.variable_scope('target') as vs:
-        #     if reuse:
-        #         vs.reuse_variables()
-        #     target_batch_tf = batch_tf.copy()
-        #     target_batch_tf['o'] = batch_tf['o_2']
-        #     target_batch_tf['g'] = batch_tf['g_2']
-        #     self.target = self.create_actor_critic(
-        #         target_batch_tf, net_type='target', **self.__dict__)
-        #     vs.reuse_variables()
-        # assert len(self._vars("main")) == len(self._vars("target"))
-        #
-        # # loss functions
-        # obs_loss = self.model.output - batch_tf['o']
-        # target_Q_pi_tf = self.target.Q_pi_tf
-        # clip_range = (-self.clip_return, 0. if self.clip_pos_returns else np.inf)
-        # target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
-        # self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
-        # self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
-        # self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
-        # Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars('main/Q'))
-        # pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/pi'))
-        # assert len(self._vars('main/Q')) == len(Q_grads_tf)
-        # assert len(self._vars('main/pi')) == len(pi_grads_tf)
-        # self.Q_grads_vars_tf = zip(Q_grads_tf, self._vars('main/Q'))
-        # self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars('main/pi'))
-        # self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self._vars('main/Q'))
-        # self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars('main/pi'))
-        #
+        self.obs_loss_tf = tf.reduce_mean(tf.square(self.prediction_model.output - model_batch_tf['o2']))
+        model_grads = tf.gradients(self.obs_loss_tf, self._vars('model/ModelRNN'))
+        self.model_grads_tf = flatten_grads(grads=model_grads, var_list=self._vars('model/ModelRNN'))
+
         # # optimizers
-        # self.Q_adam = MpiAdam(self._vars('main/Q'), scale_grad_by_procs=False)
-        # self.pi_adam = MpiAdam(self._vars('main/pi'), scale_grad_by_procs=False)
-        #
-        # # polyak averaging
-        # self.main_vars = self._vars('main/Q') + self._vars('main/pi')
-        # self.target_vars = self._vars('target/Q') + self._vars('target/pi')
-        # self.stats_vars = self._global_vars('o_stats') + self._global_vars('g_stats')
-        # self.init_target_net_op = list(
-        #     map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
-        # self.update_target_net_op = list(
-        #     map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]), zip(self.target_vars, self.main_vars)))
-        #
+        self.pred_adam = MpiAdam(self._vars('model/ModelRNN'), scale_grad_by_procs=False)
+
         # # initialize all variables
         tf.variables_initializer(self._global_vars('')).run()
-        # self._sync_optimizers()
-        # self._init_target_net()
+        self._sync_optimizers()
 
     def get_actions(self, o, ag, g, policy_action_params=None):
-        # This is important for the rollout (Achieved through policy). DUMMY RETURN ZEROS
-        EMPTY = 0
-        u = np.random.randn(o.size // self.dimo, self.dimu)
-        return u, EMPTY
+        batch = self.model_replay_buffer.sample(self.model_replay_buffer.current_size)
+        ep_len = batch['o2'].shape[1]
+        ep_steps_remaining = ep_len - self.env.step_ctr
+        u_s = []
+        for ro_idx in range(self.rollout_batch_size):
+            obs_goal = self.env._obs2goal(o[ro_idx])
+            if self.env._is_success(g[ro_idx], obs_goal):
+                u = np.zeros(self.dimu)
+
+            elif np.mean(self.model_loss_history) < self.model_loss_exploration_threshold:
+                # print("Using model and experience to find appropriate action towards achieving the goal")
+
+                smallest_dist_to_goal = np.finfo(np.float32).max
+                smallest_dist_to_goal_obs_idx = -1
+                smallest_dist_to_goal_obs_seq_idx = -1
+                smallest_dist_to_obs = np.finfo(np.float32).max
+                smallest_dist_to_obs_obs_idx = -1
+                smallest_dist_to_obs_obs_seq_idx = -1
+
+                # Find sequence with state that is closest to goal and sequence with state that is closest to observation.
+                for obs_seq_idx, obs_seq in enumerate(batch['o2']):
+                    for obs_idx, obs in enumerate(obs_seq):
+                        obs_goal = self.env._obs2goal(obs)
+                        goal_dist = np.linalg.norm(obs_goal - g[ro_idx], axis=-1)
+                        if goal_dist < smallest_dist_to_goal:
+                            smallest_dist_to_goal = goal_dist
+                            smallest_dist_to_goal_obs_idx = obs_idx
+                            smallest_dist_to_goal_obs_seq_idx = obs_seq_idx
+                        if (obs_idx + 1) < ep_len:
+                            obs_dist = np.linalg.norm(obs - o[ro_idx], axis=-1)
+                            if obs_dist < smallest_dist_to_obs:
+                                smallest_dist_to_obs = obs_dist
+                                smallest_dist_to_obs_obs_idx = obs_idx + 1
+                                smallest_dist_to_obs_obs_seq_idx = obs_seq_idx
+
+                # Now connect both sequences at minimal intersection point, such that the resulting sequence contains at most ep_steps_remaining transitions
+                smallest_obs_dist = np.finfo(np.float32).max
+                intersection_idxs = (smallest_dist_to_obs_obs_idx, smallest_dist_to_goal_obs_idx)
+                for og_idx, obs_goal in enumerate(batch['o2'][smallest_dist_to_goal_obs_seq_idx][:smallest_dist_to_goal_obs_idx]):
+                    inter_to_goal_steps = smallest_dist_to_goal_obs_idx - og_idx
+                    for oo_idx, obs_obs in enumerate(batch['o'][smallest_dist_to_obs_obs_seq_idx][smallest_dist_to_obs_obs_idx:]):
+                        obs_to_inter_steps = oo_idx
+                        total_steps = inter_to_goal_steps + obs_to_inter_steps
+                        if total_steps > ep_steps_remaining:
+                            continue
+                        this_dist = np.linalg.norm(obs_goal - obs_obs, axis=-1)
+                        if this_dist < smallest_obs_dist:
+                            intersection_idxs = (oo_idx + smallest_dist_to_obs_obs_idx, og_idx)
+                            smallest_obs_dist = this_dist
+
+                actions = np.concatenate(
+                    (batch['u'][smallest_dist_to_obs_obs_seq_idx][smallest_dist_to_obs_obs_idx:intersection_idxs[0]],
+                     batch['u'][smallest_dist_to_goal_obs_seq_idx][intersection_idxs[1]:smallest_dist_to_goal_obs_idx]))
+
+                success = False
+                next_o = o[ro_idx]
+                for u in actions:
+                    next_o = self.forward_step(u,next_o)
+                    next_o_goal = self.env._obs2goal(next_o)
+                    if self.env._is_success(g[ro_idx], next_o_goal):
+                        u = actions[0]
+                        # print("I found a plan that should work, according to the learned forward model.")
+                        success = True
+                        break
+                if success is False:
+                    u = np.random.randn(self.dimu)
+            else:
+                # print("Selecting action that maximizes surprisal-based exploration")
+                u = np.random.randn(self.dimu)
+            u_s.append(u)
+        u_s = np.array(u_s)
+        if len(u_s) == 1:
+            return u_s[0]
+        else:
+            return u_s
 
     def store_episode(self, episode_batch, update_stats=True):
-        print("Storing episode")
+        # print("Storing episode batch")
+        episodes = []
+        for e_idx in range(len(episode_batch['o'])):
+            episode = {}
+            episode['o'] = episode_batch['o'][e_idx][:-1]
+            episode['u'] = episode_batch['u'][e_idx]
+            episode['o2'] = episode_batch['o'][e_idx][1:]
+            episodes.append(episode)
+        self.model_replay_buffer.store_episode(episodes)
         pass
 
-    def get_current_buffer_size(self):
-        print("Getting current buffer size...")
-        pass
 
-    def sample_batch(self):
-        print("Sampling batch")
-        pass
+    def sample_batch(self, batch_size=None):
+        # print("Sampling batch")
+        if batch_size is None:
+            batch_size = self.model_train_batch_size
+        batch_dict = self.model_replay_buffer.sample(batch_size)
+        batch = [batch_dict[key] for key in self.model_stage_shapes.keys()]
+        return batch
+
+    def forward_step(self,u,o):
+        single_step = [np.array([[o]]), np.array([[o]]), np.array([[u]])]
+        # single_step_batch = self.sample_batch(batch_size=1)
+        self.sess.run(self.model_stage_op, feed_dict=dict(zip(self.model_buffer_ph_tf, single_step)))
+        o2 = self.sess.run([
+            self.prediction_model.output
+        ])
+        return np.array(o2[0][0][0])
 
     def stage_batch(self, batch=None):
-        print("Staging batch")
-        pass
+        if batch is None:
+            batch = self.sample_batch()
+        assert len(self.model_buffer_ph_tf) == len(batch)
+        self.sess.run(self.model_stage_op, feed_dict=dict(zip(self.model_buffer_ph_tf, batch)))
 
-    def train(self, stage=True):
-        print("Training")
-        pass
+    def _update(self, model_grads):
+        self.pred_adam.update(model_grads, self.model_lr)
 
-    def clear_buffer(self):
-        print("Clearing buffer")
-        pass
+    def _grads(self):
+        # Avoid feed_dict here for performance!
+        model_loss, model_grads = self.sess.run([
+            self.obs_loss_tf,
+            self.model_grads_tf
+        ])
+        return model_loss, model_grads
+
+    def train(self):
+        # print("Training")
+        self.stage_batch()
+        model_loss, model_grads = self._grads()
+        self._update(model_grads)
+        self.model_loss_history.append(model_loss)
+        return model_loss
 
     def logs(self, prefix=''):
         logs = []
-        logs += [('stats/some_stat_value', 0)]
+        # logs += [('stats/some_stat_value', 0)]
         # logs = []
         # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
         # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
@@ -175,31 +240,31 @@ class MBPolicy(Policy):
         res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
         return res
 
+    def _sync_optimizers(self):
+        self.pred_adam.sync()
+
+
     def __getstate__(self):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
         # [print(key, ": ", item) for key, item in self.__dict__.items()]
-        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
-                             'prediction_model', 'target', 'lock', 'env', 'sample_transitions',
-                             'stage_shapes', 'create_model']
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'model_replay_buffer', 'sess', '_stats',
+                             'prediction_model', 'lock', 'env',
+                             'stage_shapes', 'model_stage_shapes', 'create_model']
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
-        state['buffer_size'] = self.buffer_size
-        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name])
+        state['model_buffer_size'] = self.model_buffer_size
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'model_replay_buffer' not in x.name])
         return state
 
     def __setstate__(self, state):
-        if 'sample_transitions' not in state:
-            # We don't need this for playing the policy.
-            state['sample_transitions'] = None
-
         self.__init__(**state)
         # set up stats (they are overwritten in __init__)
         for k, v in state.items():
             if k[-6:] == '_stats':
                 self.__dict__[k] = v
         # load TF variables
-        vars = [x for x in self._global_vars('') if 'buffer' not in x.name]
+        vars = [x for x in self._global_vars('') if 'model_replay_buffer' not in x.name]
         assert (len(vars) == len(state["tf"]))
         node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
         self.sess.run(node)
