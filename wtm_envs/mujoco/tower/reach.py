@@ -2,7 +2,7 @@ from gym import utils
 from wtm_envs.mujoco import tower_env
 
 
-class TowerBuildMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
+class TowerReachMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
                  n_objects=3, min_tower_height=1, max_tower_height=3):
         initial_qpos = {
