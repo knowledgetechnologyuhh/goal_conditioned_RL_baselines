@@ -3,6 +3,7 @@ _her_options = [
 click.option('--clip_return', type=int, default=1, help='whether or not returns should be clipped'),
 click.option('--network_class', type=str, default='baselines.her.actor_critic:ActorCritic', help='The Neural network model to use.'),
 click.option('--replay_k', type=int, default=4, help='The ratio between HER replays and regular replays.'),
+click.option('--batch_size', type=int, default=256, help='The number of state transitions processed during network training.'),
 click.option('--replay_strategy', type=str, default='future', help='The method for transition sampling in hindsight future replay. Either '
                                                                  '0) \'none\': no HER sampling, just use the standard DDPG algorithm.'
                                                                  '1) \'future\': as in the normal future implementation of HER.'

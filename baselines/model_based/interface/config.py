@@ -11,13 +11,15 @@ DEFAULT_PARAMS = {
     # training
     'n_train_rollouts': 50,  # training rollouts per epoch per rollout batch
     'rollout_batch_size': 1,  # batches (parallel rollouts) per mpi thread
-    'n_batches': 40,  # training batches per cycle for neural network training
-    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    # 'n_batches': 40,  # training batches per cycle for neural network training
+    # 'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-    'model_buffer_size': 1000, # number of rollouts to store for model training
+    'model_buffer_size': 200, # number of rollouts to store for model training
     'max_u': 1.,  # max absolute value of actions on different coordinates
     'model_network_class': 'baselines.model_based.model_rnn:ModelRNN',
     'scope': 'mbpolicy',
+    'model_lr': 0.001,
+    'model_train_batch_size': 10,
 }
 
 # POLICY_ACTION_PARAMS = {
@@ -65,7 +67,7 @@ def prepare_params(kwargs):
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    for name in ['model_buffer_size', 'model_network_class', 'max_u', 'scope']:
+    for name in ['model_buffer_size', 'model_network_class', 'max_u', 'scope', 'model_lr', 'model_train_batch_size']:
         policy_params[name] = DEFAULT_PARAMS[name]
     kwargs['policy_params'] = policy_params
 
@@ -93,6 +95,7 @@ def configure_policy(dims, params):
     policy_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
+                        'env': env.env,
                         })
     policy_params['info'] = {
         'env_name': params['env_name'],
