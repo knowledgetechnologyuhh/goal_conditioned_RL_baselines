@@ -50,7 +50,7 @@ def train(rollout_worker, evaluator,
         # eval
         logger.info("Evaluating epoch {}".format(epoch))
         evaluator.clear_history()
-        evaluator.render = epoch % policy_save_interval == 0
+        # evaluator.render = epoch % policy_save_interval == 0
 
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()

@@ -13,7 +13,7 @@ DEFAULT_PARAMS = {
     'rollout_batch_size': 1,  # batches (parallel rollouts) per mpi thread
     # 'n_batches': 40,  # training batches per cycle for neural network training
     # 'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
-    'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
+    'n_test_rollouts': 2,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
     'model_buffer_size': 200, # number of rollouts to store for model training
     'max_u': 1.,  # max absolute value of actions on different coordinates
     'model_network_class': 'baselines.model_based.model_rnn:ModelRNN',
