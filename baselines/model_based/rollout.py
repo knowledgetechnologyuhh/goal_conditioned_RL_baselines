@@ -16,7 +16,11 @@ class RolloutWorker(Rollout):
         Rollout.__init__(self, make_env, policy, dims, logger, T, **kwargs)
         self.avg_epoch_losses = []
         self.err_history = []
-        self.err_hist_fname = "err_hist.png"
+        logdir = logger.get_dir()
+        self.err_hist_fname = os.path.join(logdir, "err_hist.png")
+        self.pred_history = []
+        self.pred_hist_fname = os.path.join(logdir, "pred_hist.png")
+
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
@@ -72,7 +76,9 @@ class RolloutWorker(Rollout):
                 o2 = eps_o[i2 + 1]
                 u = episode['u'][i1][i2]
                 transitions.append({"o": o, "o2": o2, "u": u})
+
             # TO DO: In case of using a RNN as prediction model, reset states after each episode here.
+            # Test error for each individual transition
             for t in transitions:
                 o = t['o']
                 u = t['u']
@@ -82,12 +88,35 @@ class RolloutWorker(Rollout):
                 norm_err = np.linalg.norm(o2 - o2_pred, axis=-1)
                 self.err_history.append(norm_err)
 
+            # TO DO: In case of using a RNN as prediction model, reset states after each episode here.
+            # Test how many steps can be predicted without the error exceeding the goal achievement threshold.
+            o = transitions[0]['o']
+            step = 0
+            for t in transitions[:-1]:
+                step += 1
+                u = t['u']
+                o2 = t['o2']
+                o = self.policy.forward_step(u, o)
+                o_pred_g = self.policy.env._obs2goal(o)
+                o_g = self.policy.env._obs2goal(o2)
+                pred_success = self.policy.env._is_success(o_pred_g, o_g)
+                if not pred_success:
+                    break
+            self.pred_history.append(step-1)
+
+
     def draw_err_hist(self):
         plt.clf()
         # plt.figure(figsize=(20, 8))
         fig = plt.figure(figsize=(10, 5))
         plt.semilogy(self.err_history)
         plt.savefig(self.err_hist_fname)
+
+        plt.clf()
+        # plt.figure(figsize=(20, 8))
+        fig = plt.figure(figsize=(10, 5))
+        plt.plot(self.pred_history)
+        plt.savefig(self.pred_hist_fname)
         pass
 
 
