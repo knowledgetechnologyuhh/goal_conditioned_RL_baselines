@@ -223,10 +223,10 @@ def main(ctx, **kwargs):
             logdir = os.path.join(kwargs['base_logdir'], kwargs['env'], param_subdir)
         subdir_exists = os.path.exists(logdir)
         ctr += 1
-    print("Data dir: {}".format(logdir))
-    os.makedirs(logdir, exist_ok=False)
-
-    time.sleep(10)
+    # print("Data dir: {}".format(logdir))
+    # os.makedirs(logdir, exist_ok=False)
+    #
+    # time.sleep(10)
 
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
