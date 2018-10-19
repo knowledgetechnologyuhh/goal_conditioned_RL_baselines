@@ -102,11 +102,15 @@ class TowerEnv(robot_env.RobotEnv):
         utils.ctrl_set_action(self.sim, action)
         utils.mocap_set_action(self.sim, action)
 
-    def _get_obs(self):
+    def _get_obs(self, grip_pos=None, grip_velp=None):
+        # If the grip position and grip velp are provided externally, the external values will be used.
+        # This can later be extended to provide the properties of all elements in the scene.
         dt = self.sim.nsubsteps * self.sim.model.opt.timestep
         # positions
-        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
-        grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
+        if grip_pos is None:
+            grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+        if grip_velp is None:
+            grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
 
         robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
         object_pos, object_rot, object_velp, object_velr = ([] for _ in range(4))
@@ -287,7 +291,7 @@ class TowerEnv(robot_env.RobotEnv):
                                            self.np_random.uniform(-self.target_range,
                                                                   self.target_range, size=3)
                         gripper_goal_pos[0] += self.random_gripper_goal_pos_offset[0]
-                        gripper_goal_pos[1] += self.random_gripper_goal_pos_offset[0]
+                        gripper_goal_pos[1] += self.random_gripper_goal_pos_offset[1]
                         gripper_goal_pos[2] += self.random_gripper_goal_pos_offset[2]
                         if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
                             too_close = False
@@ -317,7 +321,7 @@ class TowerEnv(robot_env.RobotEnv):
             self.sim.step()
 
         # offset the random goal if gripper random is used
-        self.random_gripper_goal_pos_offset = (0.25, 0.0, 0.14)
+        self.random_gripper_goal_pos_offset = (0.2, 0.0, 0.0)
 
         # Extract information for sampling goals.
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()

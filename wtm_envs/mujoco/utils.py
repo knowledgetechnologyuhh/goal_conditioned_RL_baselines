@@ -35,7 +35,7 @@ def ctrl_set_action(sim, action):
                 sim.data.ctrl[i] = sim.data.qpos[idx] + action[i]
 
 
-def mocap_set_action(sim, action):
+def mocap_set_action(sim, action, absolute_ref=None):
     """The action controls the robot using mocaps. Specifically, bodies
     on the robot (for example the gripper wrist) is controlled with
     mocap bodies. In this case the action is the desired difference
@@ -52,8 +52,15 @@ def mocap_set_action(sim, action):
         quat_delta = action[:, 3:]
 
         reset_mocap2body_xpos(sim)
-        sim.data.mocap_pos[:] = sim.data.mocap_pos + pos_delta
-        sim.data.mocap_quat[:] = sim.data.mocap_quat + quat_delta
+
+        if absolute_ref is None:
+            sim.data.mocap_pos[:] = sim.data.mocap_pos + pos_delta
+            sim.data.mocap_quat[:] = sim.data.mocap_quat + quat_delta
+
+        else:
+            sim.data.mocap_pos[:] = absolute_ref + pos_delta
+            sim.data.mocap_quat[:] = sim.data.mocap_quat + quat_delta
+
 
 
 def reset_mocap_welds(sim):
