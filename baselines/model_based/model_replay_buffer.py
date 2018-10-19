@@ -62,7 +62,7 @@ class ModelReplayBuffer:
                     ins_idx = self.current_size
                     self.current_size += 1
                 else:
-                    ins_idx = random.randint(0, self.size)
+                    ins_idx = random.randint(0, self.size-1)
 
                 for key in ep:
                     self.buffers[key][ins_idx] = np.array(ep[key])

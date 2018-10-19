@@ -60,7 +60,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.goal_size = (n_objects * 3)
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
-        self.gripper_has_target = (gripper_goal != 'gripper_none')
+        # self.gripper_has_target = (gripper_goal != 'gripper_none')
 
         super(TowerEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -145,18 +145,26 @@ class TowerEnv(robot_env.RobotEnv):
         gripper_state = robot_qpos[-2:]
         gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
 
+        # obs = np.concatenate([
+        #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
+        #     object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
+        # ])
+
         obs = np.concatenate([
-            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-            object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
+            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
         ])
 
-        gripper_achieved_goal = obs[:3]
-        target_achieved_goal = obs[3:6]
 
-        if not self.gripper_has_target:
-            gripper_achieved_goal = []
 
-        achieved_goal = np.concatenate([gripper_achieved_goal, target_achieved_goal])
+        # gripper_achieved_goal = obs[:3]
+        # target_achieved_goal = obs[3:6]
+        #
+        # if not self.gripper_has_target:
+        #     gripper_achieved_goal = []
+        #
+        # achieved_goal = np.concatenate([gripper_achieved_goal, target_achieved_goal])
+
+        achieved_goal = self._obs2goal(obs)
 
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy()}
 

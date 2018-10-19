@@ -20,6 +20,8 @@ class RolloutWorker(Rollout):
         self.err_hist_fname = os.path.join(logdir, "err_hist.png")
         self.pred_history = []
         self.pred_hist_fname = os.path.join(logdir, "pred_hist.png")
+        self.loss_history = []
+        self.loss_hist_fname = os.path.join(logdir, "loss_hist.png")
         self.rollouts_per_epoch = 0
 
 
@@ -63,6 +65,7 @@ class RolloutWorker(Rollout):
             dur_train += time.time() - train_start
         for idx,loss in enumerate(self.avg_epoch_losses):
             self.avg_epoch_losses[idx] = loss / n_batches / n_cycles
+        self.loss_history.append(np.mean(self.avg_epoch_losses))
         self.draw_err_hist()
         dur_total = time.time() - dur_start
         updated_policy = self.policy
@@ -83,6 +86,7 @@ class RolloutWorker(Rollout):
 
             # TO DO: In case of using a RNN as prediction model, reset states after each episode here.
             # Test error for each individual transition
+            ep_err_hist = []
             for t in transitions:
                 o = t['o']
                 u = t['u']
@@ -90,7 +94,10 @@ class RolloutWorker(Rollout):
                 o2_pred = self.policy.forward_step(u,o)
                 err = abs(o2 - o2_pred)
                 norm_err = np.linalg.norm(o2 - o2_pred, axis=-1)
-                self.err_history.append(norm_err)
+                ep_err_hist.append(norm_err)
+            ep_err_mean = np.mean(ep_err_hist)
+            ep_err_std = np.std(ep_err_hist)
+            self.err_history.append([ep_err_mean, ep_err_std])
 
             # TO DO: In case of using a RNN as prediction model, reset states after each episode here.
             # Test how many steps can be predicted without the error exceeding the goal achievement threshold.
@@ -113,7 +120,15 @@ class RolloutWorker(Rollout):
         plt.clf()
         # plt.figure(figsize=(20, 8))
         fig = plt.figure(figsize=(10, 5))
-        plt.semilogy(self.err_history)
+        err_hist_mean = np.swapaxes(self.err_history,0,1)[0]
+        err_hist_std = np.swapaxes(self.err_history, 0, 1)[1]
+        plt.semilogy(err_hist_mean)
+        err_hist_low = err_hist_mean - err_hist_std
+        err_hist_high = err_hist_mean + err_hist_std
+        # plt.semilogy(err_hist_low, color='green', linestyle='dashed', alpha=0.25)
+        # plt.semilogy(err_hist_high, color='green', linestyle='dashed', alpha=0.25)
+
+
         plt.savefig(self.err_hist_fname)
 
         plt.clf()
@@ -121,6 +136,12 @@ class RolloutWorker(Rollout):
         fig = plt.figure(figsize=(10, 5))
         plt.plot(self.pred_history)
         plt.savefig(self.pred_hist_fname)
+
+        plt.clf()
+        # plt.figure(figsize=(20, 8))
+        fig = plt.figure(figsize=(10, 5))
+        plt.plot(self.loss_history)
+        plt.savefig(self.loss_hist_fname)
         pass
 
 

@@ -4,7 +4,6 @@ import collections
 import numpy as np
 from baselines import logger
 from baselines.template.policy import Policy
-from baselines.model_based.model_rnn import ModelRNN
 from baselines.common.mpi_adam import MpiAdam
 
 from collections import OrderedDict
@@ -28,7 +27,7 @@ class MBPolicy(Policy):
         self.scope = scope
         self.create_model = import_function(model_network_class)
         self.model_loss_history = collections.deque(maxlen=100)
-        self.model_loss_exploration_threshold = 0.05 # The average model loss threshold over the last 100 episodes to consider the model realistic and to start model-based planning
+        self.model_loss_exploration_threshold = 0.00 # The average model loss threshold over the last 100 episodes to consider the model realistic and to start model-based planning
         #
         # # Create network.
         model_stage_shapes = OrderedDict()
@@ -42,15 +41,21 @@ class MBPolicy(Policy):
             if key in ['u']:
                 model_stage_shapes[key] = (None, time_dim, *self.input_shapes[key])
 
+        # Add state dimension
+        # init_state = self.get_init_zero_state()
+        # if init_state is not None:
+        #     initial_state_shape = tuple([int(d) for d in init_state.shape])
+        #     model_stage_shapes['s'] = initial_state_shape
+
         self.model_stage_shapes = model_stage_shapes
+
         with tf.variable_scope(self.scope):
+
             self.model_staging_tf = StagingArea(
                 dtypes=[tf.float32 for _ in self.model_stage_shapes.keys()],
                 shapes=list(self.model_stage_shapes.values()))
-            # self.model_buffer_ph_tf = [
-            #     tf.placeholder(tf.float32, shape=shape) for shape in self.model_stage_shapes.values()]
             self.model_buffer_ph_tf = [
-                tf.placeholder(tf.float32, shape=(None, None, shape[2])) for shape in self.model_stage_shapes.values()]
+                tf.placeholder(tf.float32, shape=(None, None, shape[2])) for _, shape in self.model_stage_shapes.items()]
             self.model_stage_op = self.model_staging_tf.put(self.model_buffer_ph_tf)
 
             self._create_network(reuse=False)
@@ -66,6 +71,17 @@ class MBPolicy(Policy):
         assert len(res) > 0
         return res
 
+    def get_init_zero_state(self):
+        pred_net2 = self.create_model(
+            {'o': tf.placeholder(tf.float32, shape=(None, None, 1)), 'o2': tf.placeholder(tf.float32, shape=(None, None, 1)), 'u': tf.placeholder(tf.float32, shape=(None, None, 1))},
+            **self.__dict__)
+        if 'initial_state' in pred_net2.__dict__.keys():
+            # initial_state = tuple([int(d) for d in pred_net2.init_state.shape])
+            return pred_net2.initial_state
+        # if pred_net2.__dict__
+        else:
+            return None
+
     def _create_network(self, reuse=False):
         logger.info("Creating a model-based agent with action space %d x %s..." % (self.dimu, self.max_u))
         self.sess = tf.get_default_session()
@@ -77,8 +93,9 @@ class MBPolicy(Policy):
                                 for i, key in enumerate(self.model_stage_shapes.keys())])
         # # networks
         with tf.variable_scope('model') as ms:
-            self.prediction_model = self.create_model(model_batch_tf)
+            self.prediction_model = self.create_model(model_batch_tf, **self.__dict__)
             ms.reuse_variables()
+
         self.obs_loss_tf = tf.reduce_mean(tf.square(self.prediction_model.output - model_batch_tf['o2']))
         model_grads = tf.gradients(self.obs_loss_tf, self._vars('model/ModelRNN'))
         self.model_grads_tf = flatten_grads(grads=model_grads, var_list=self._vars('model/ModelRNN'))
@@ -91,6 +108,20 @@ class MBPolicy(Policy):
         self._sync_optimizers()
 
     def get_actions(self, o, ag, g, policy_action_params=None):
+        return self.get_actions_explore(o, ag, g)
+
+    def get_actions_explore(self, o, ag, g, policy_action_params=None):
+        u_s = []
+        for ro_idx in range(self.rollout_batch_size):
+            u = np.random.randn(self.dimu)
+            u_s.append(u)
+        u_s = np.array(u_s)
+        if len(u_s) == 1:
+            return u_s[0]
+        else:
+            return u_s
+
+    def get_actions_policy(self, o, ag, g, policy_action_params=None):
         batch = self.model_replay_buffer.sample(self.model_replay_buffer.current_size)
         ep_len = batch['o2'].shape[1]
         ep_steps_remaining = ep_len - self.env.step_ctr
@@ -188,20 +219,30 @@ class MBPolicy(Policy):
         batch = [batch_dict[key] for key in self.model_stage_shapes.keys()]
         return batch
 
-    def forward_step(self,u,o):
-        single_step = [np.array([[o]]), np.array([[o]]), np.array([[u]])]
-        # single_step_batch = self.sample_batch(batch_size=1)
-        self.sess.run(self.model_stage_op, feed_dict=dict(zip(self.model_buffer_ph_tf, single_step)))
-        o2 = self.sess.run([
-            self.prediction_model.output
+    def forward_step(self,u,o, resume=True):
+
+        bs = self.model_train_batch_size
+
+        single_step = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
+        # batch = self.sample_batch(bs)
+        # single_step = batch
+
+        fd = dict(zip(self.model_buffer_ph_tf, single_step))
+        self.sess.run(self.model_stage_op, feed_dict=fd)
+        o2, s2 = self.sess.run([
+            self.prediction_model.output,
+            self.prediction_model.state
         ])
-        return np.array(o2[0][0][0])
+
+        next_o = np.array(o2[0][0])
+        return next_o
 
     def stage_batch(self, batch=None):
         if batch is None:
             batch = self.sample_batch()
         assert len(self.model_buffer_ph_tf) == len(batch)
-        self.sess.run(self.model_stage_op, feed_dict=dict(zip(self.model_buffer_ph_tf, batch)))
+        fd = dict(zip(self.model_buffer_ph_tf, batch))
+        self.sess.run(self.model_stage_op, feed_dict=fd)
 
     def _update(self, model_grads):
         self.pred_adam.update(model_grads, self.model_lr)
@@ -213,6 +254,7 @@ class MBPolicy(Policy):
             self.model_grads_tf
         ])
         return model_loss, model_grads
+
 
     def train(self):
         # print("Training")
