@@ -1,7 +1,7 @@
 import numpy as np
 from wtm_envs.mujoco import tower_env, utils
 
-class KeybotEnv(tower_env.TowerEnv):
+class JarvisbotEnv(tower_env.TowerEnv):
     """Superclass for all Fetch environments.
     """
 
@@ -12,7 +12,7 @@ class KeybotEnv(tower_env.TowerEnv):
             gripper_goal, n_objects, table_height, obj_height, min_tower_height=None, max_tower_height=None,
     ):
         self.gripper_relative_target = gripper_relative_target
-        super(KeybotEnv, self).__init__(model_path, n_substeps, gripper_extra_height, block_gripper,
+        super(JarvisbotEnv, self).__init__(model_path, n_substeps, gripper_extra_height, block_gripper,
             target_in_the_air, target_offset, obj_range, target_range,
             distance_threshold, initial_qpos, reward_type,
             gripper_goal, n_objects, table_height, obj_height, min_tower_height, max_tower_height)
@@ -24,7 +24,7 @@ class KeybotEnv(tower_env.TowerEnv):
         pos_ctrl, gripper_ctrl = action[:3], action[3]
 
         if self.gripper_relative_target:
-            pos_ctrl *= 0.005  # limit maximum change in position. was 0.05\
+            pos_ctrl *= 0.05  # limit maximum change in position. was 0.05\
             ref_frame = None
         else:  # Absolute target relative to the robot frame
             pos_ctrl *= 0.08  # limit maximum change in position. was 0.05
@@ -51,7 +51,7 @@ class KeybotEnv(tower_env.TowerEnv):
         self.sim.forward()
 
         # Move end effector into position.
-        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
+        gripper_target = np.array([-0.4, 0.0, -0.12 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
             'robot0:grip')
         gripper_rotation = np.array([1., 0., 0., 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)

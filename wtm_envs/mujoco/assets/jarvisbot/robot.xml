@@ -1,0 +1,94 @@
+<mujoco model="robot0">
+    <body mocap="true" name="robot0:mocap" pos="0 0 0">
+        <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.7" size="0.005 0.005 0.005" type="box"></geom>
+        <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="1 0.005 0.005" type="box"></geom>
+        <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="0.005 1 0.001" type="box"></geom>
+        <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="0.005 0.005 1" type="box"></geom>
+    </body>
+    <body childclass="robot0:fetch" name="base_link" pos="0 0 0">
+        <joint armature="0.0001" axis="1 0 0" damping="1e+11" name="robot0:slide0" pos="0 0 0" type="slide"></joint>
+		<joint armature="0.0001" axis="0 1 0" damping="1e+11" name="robot0:slide1" pos="0 0 0" type="slide"></joint>
+		<joint armature="0.0001" axis="0 0 1" damping="1e+11" name="robot0:slide2" pos="0 0 0" type="slide"></joint>
+        <inertial diaginertia="1.2869 1.2236 0.9868" mass="70.1294" pos="-0.0036 0 0.0014" quat="0.7605 -0.0133 -0.0061 0.6491"></inertial>
+        <geom size="0.001 0.001 0.001" pos="0 0 0.38" type="box" contype="0" conaffinity="0" group="1" rgba="0 0 0.8 1" />
+        <body name="box_set" pos="0 0 0.79">
+            <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+            <geom size="0.0625 0.0625 0.03" type="box" contype="0" conaffinity="0" group="1" rgba="0 0 0.8 1" />
+            <body name="torso_fixed_link" pos="0 0 0.08">
+                <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                <geom size="0.015 0.005 0.05" type="box" contype="0" conaffinity="0" group="1" rgba="0 0 0.8 1" />
+                <body name="torso_lift_link" pos="0 0.021 0.002">
+                    <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                    <geom size="0.01 0.016 0.0175" type="box" contype="0" conaffinity="0" group="1" rgba="0 0 0 1" />
+                    <body name="shoulder_pan_link" pos="0 0.0285 0">
+                        <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
+                        <joint name="motor1" pos="0 0 0" axis="0 0 1" limited="true" range="-2.6 2.6" />
+                        <geom size="0.0125 0.0175" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                        <body name="link_1" pos="0 0.0475 0">
+                            <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                            <geom size="0.01 0.035 0.0175" type="box" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                            <body name="motor_2" pos="0 0.0475 0">
+                                <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
+                                <joint name="motor2" pos="0 0 0" axis="0 0 1" limited="true" range="-2.6 2.6" />
+                                <geom size="0.0125 0.0175" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                <body name="link_2" pos="0 0.0535 0">
+                                    <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                                    <geom size="0.01 0.041 0.0185" type="box" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                    <body name="motor_3" pos="0 0.0535 0">
+                                        <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
+                                        <joint name="motor3" pos="0 0 0" axis="0 0 -1" limited="true" range="-2.6 2.6" />
+                                        <geom size="0.0125 0.0175" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                        <body name="link_3" pos="0 0.0575 0">
+                                            <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                                            <geom size="0.01 0.045 0.0185" type="box" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                            <body name="motor_4" pos="0 0.0575 0">
+                                                <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
+                                                <joint name="motor4" pos="0 0 0" axis="1 0 0" limited="true" range="-2.6 2.6" />
+                                                <geom size="0.0125 0.0175" quat="0.707123 0 0.70709 0" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                                <body name="link_4" pos="0 0.0465 0">
+                                                    <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                                                    <geom size="0.0185 0.034 0.01" type="box" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                                    <body name="motor_5" pos="0 0.0465 0">
+                                                        <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
+                                                        <joint name="motor5" pos="0 0 0" axis="-1 0 0" limited="true" range="-2.6 2.6" />
+                                                        <geom size="0.0125 0.0175" quat="0.707123 0 0.70709 0" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                                        <body name="link_5" pos="0 0.02375 0">
+                                                            <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                                                            <geom size="0.0185 0.01125 0.01" type="box" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                                            <body name="link_6" pos="0 0.0435 -0.02">
+                                                                <inertial pos="0 0 0" mass="0" diaginertia="0 0 0" />
+                                                                <geom size="0.0185 0.03225 0.01" type="box" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                                                <body name="robot0:gripper_link" pos="0 0.04475 0">
+                                                                    <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
+                                                                    <!-- change axis in motor 6 to 0 0 1 -->
+                                                                    <joint name="motor6" pos="0 0 0" axis="0 0 1" limited="true" range="-2.6 2.6" />
+                                                                    <geom size="0.0125 0.0175" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
+                                                                    <body childclass="robot0:fetchGripper" name="robot0:r_gripper_finger_link" pos="0 0.0159 0">
+                                                                        <inertial diaginertia="0.1 0.1 0.1" mass="4" pos="-0.01 0 0"></inertial>
+                                                                        <joint axis="0 1 0" name="robot0:r_gripper_finger_joint" range="0 0.05"></joint>
+                                                                        <geom pos="0 -0.008 0" size="0.0385 0.007 0.0335" type="box" name="robot0:r_gripper_finger_link" material="robot0:gripper_finger_mat" condim="4" friction="1 0.05 0.01"></geom>
+                                                                    </body>
+                                                                    <body childclass="robot0:fetchGripper" name="robot0:l_gripper_finger_link" pos="0 -0.0159 0">
+                                                                        <inertial diaginertia="0.1 0.1 0.1" mass="4" pos="-0.01 0 0"></inertial>
+                                                                        <joint axis="0 -1 0" name="robot0:l_gripper_finger_joint" range="0 0.05"></joint>
+                                                                        <geom pos="0 0.008 0" size="0.0385 0.007 0.0335" type="box" name="robot0:l_gripper_finger_link" material="robot0:gripper_finger_mat" condim="4" friction="1 0.05 0.01"></geom>
+                                                                    </body>
+                                                                    <site name="robot0:grip" pos="0.02 0 0" rgba="0 0 0 0" size="0.02 0.02 0.02"></site>
+
+                                                                </body>
+                                                            </body>
+                                                        </body>
+                                                    </body>
+                                                </body>
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </body>
+</mujoco>
