@@ -41,19 +41,13 @@ class MBPolicy(Policy):
             if key in ['u']:
                 model_stage_shapes[key] = (None, time_dim, *self.input_shapes[key])
 
-        # Add state dimension
-        # init_state = self.get_init_zero_state()
-        # if init_state is not None:
-        #     initial_state_shape = tuple([int(d) for d in init_state.shape])
-        #     model_stage_shapes['s'] = initial_state_shape
-
         self.model_stage_shapes = model_stage_shapes
 
         with tf.variable_scope(self.scope):
-
             self.model_staging_tf = StagingArea(
                 dtypes=[tf.float32 for _ in self.model_stage_shapes.keys()],
-                shapes=list(self.model_stage_shapes.values()))
+                shapes=[(None, None, shape[2]) for _, shape in self.model_stage_shapes.items()])
+
             self.model_buffer_ph_tf = [
                 tf.placeholder(tf.float32, shape=(None, None, shape[2])) for _, shape in self.model_stage_shapes.items()]
             self.model_stage_op = self.model_staging_tf.put(self.model_buffer_ph_tf)
@@ -96,8 +90,8 @@ class MBPolicy(Policy):
             self.prediction_model = self.create_model(model_batch_tf, **self.__dict__)
             ms.reuse_variables()
 
-        self.obs_loss_tf = tf.reduce_mean(tf.square(self.prediction_model.output - model_batch_tf['o2']))
-        model_grads = tf.gradients(self.obs_loss_tf, self._vars('model/ModelRNN'))
+        # self.obs_loss_tf = tf.reduce_mean(tf.square(self.prediction_model.output - model_batch_tf['o2']))
+        model_grads = tf.gradients(self.prediction_model.obs_loss_tf, self._vars('model/ModelRNN'))
         self.model_grads_tf = flatten_grads(grads=model_grads, var_list=self._vars('model/ModelRNN'))
 
         # # optimizers
@@ -178,8 +172,9 @@ class MBPolicy(Policy):
 
                 success = False
                 next_o = o[ro_idx]
+                next_s = None # The optional internal state in case of using RNNs.
                 for u in actions:
-                    next_o = self.forward_step(u,next_o)
+                    next_o, next_s = self.forward_step(u,next_o, next_s)
                     next_o_goal = self.env._obs2goal(next_o)
                     if self.env._is_success(g[ro_idx], next_o_goal):
                         u = actions[0]
@@ -219,7 +214,7 @@ class MBPolicy(Policy):
         batch = [batch_dict[key] for key in self.model_stage_shapes.keys()]
         return batch
 
-    def forward_step(self,u,o, resume=True):
+    def forward_step(self,u,o,s):
 
         bs = self.model_train_batch_size
 
@@ -227,15 +222,27 @@ class MBPolicy(Policy):
         # batch = self.sample_batch(bs)
         # single_step = batch
 
-        fd = dict(zip(self.model_buffer_ph_tf, single_step))
-        self.sess.run(self.model_stage_op, feed_dict=fd)
-        o2, s2 = self.sess.run([
-            self.prediction_model.output,
-            self.prediction_model.state
-        ])
+        fd = {self.prediction_model.o_tf: single_step[0], self.prediction_model.u_tf: single_step[2]}
+        if s is not None and 'initial_state' in self.prediction_model.__dict__:
+            fd[self.prediction_model.initial_state] = s
+
+        fetches = [self.prediction_model.output]
+        if 'state' in self.prediction_model.__dict__:
+            fetches.append(self.prediction_model.state)
+            o2, s2 = self.sess.run(fetches, feed_dict=fd)
+        else:
+            o2 = np.array(self.sess.run(fetches, feed_dict=fd)[0])
+            s2 = None
+
+        # fd = dict(zip(self.model_buffer_ph_tf, single_step))
+        # self.sess.run(self.model_stage_op, feed_dict=fd)
+        # o2, s2 = self.sess.run([
+        #     self.prediction_model.output,
+        #     self.prediction_model.state
+        # ])
 
         next_o = np.array(o2[0][0])
-        return next_o
+        return next_o, s2
 
     def stage_batch(self, batch=None):
         if batch is None:
@@ -258,8 +265,19 @@ class MBPolicy(Policy):
 
     def train(self):
         # print("Training")
-        self.stage_batch()
-        model_loss, model_grads = self._grads()
+        batch = self.sample_batch()
+        fetches = [
+            self.prediction_model.obs_loss_tf,
+            self.model_grads_tf
+        ]
+        fd = {self.prediction_model.o_tf : batch[0],
+              self.prediction_model.o2_tf : batch[1],
+              self.prediction_model.u_tf : batch[2]}
+        model_loss, model_grads = self.sess.run(fetches, fd)
+
+
+        # self.stage_batch()
+        # model_loss, model_grads = self._grads()
         self._update(model_grads)
         self.model_loss_history.append(model_loss)
         return model_loss
