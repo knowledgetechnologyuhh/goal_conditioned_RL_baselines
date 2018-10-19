@@ -47,7 +47,7 @@ class Resetable_GRU:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        # self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
+        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
 
 class GRU_Simple:
     @store_args
@@ -126,6 +126,7 @@ class FF_Simple:
         """
         print("Initializing model")
         self.o_tf = inputs_tf['o']
+        self.o2_tf = inputs_tf['o2']
         self.u_tf = inputs_tf['u']
         #
         dimo = self.o_tf.shape[2]
@@ -136,6 +137,8 @@ class FF_Simple:
         with tf.variable_scope('ModelRNN'):
             input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
             self.output = nn(input, [hidden] * layers + [dimo])
+
+        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
 
 
 #
