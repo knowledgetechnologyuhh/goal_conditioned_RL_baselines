@@ -1,5 +1,10 @@
 import os
 import sys
+this_path =os.getcwd()
+print(this_path)
+sys.path.append(this_path)
+os.chdir(this_path)
+
 import click
 import numpy as np
 import json
@@ -14,6 +19,9 @@ import experiment.click_options as main_linker
 
 from subprocess import CalledProcessError
 import subprocess
+
+
+# sys.path.append(os.getcwd())
 
 import wtm_envs.register_envs
 
