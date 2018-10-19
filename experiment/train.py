@@ -196,7 +196,7 @@ def main(ctx, **kwargs):
     global config, RolloutWorker, policy_linker
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
-    # policy_args.update({ctx.args[i][0:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
+    policy_args.update({ctx.args[i][2:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
     kwargs.update(policy_args)
 
     override_params = config.OVERRIDE_PARAMS_LIST
