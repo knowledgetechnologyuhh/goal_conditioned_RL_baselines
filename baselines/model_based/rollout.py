@@ -86,12 +86,12 @@ class RolloutWorker(Rollout):
 
             # Test error for each individual transition
             ep_err_hist = []
-            s2_pred = None
+            s = None
             for t in transitions:
                 o = t['o']
                 u = t['u']
                 o2 = t['o2']
-                o2_pred, s2_pred = self.policy.forward_step(u,o,s2_pred)
+                o2_pred, s = self.policy.forward_step(u,o,s)
                 err = abs(o2 - o2_pred)
                 norm_err = np.linalg.norm(o2 - o2_pred, axis=-1)
                 ep_err_hist.append(norm_err)
@@ -99,7 +99,6 @@ class RolloutWorker(Rollout):
             ep_err_std = np.std(ep_err_hist)
             self.err_history.append([ep_err_mean, ep_err_std])
 
-            # TO DO: In case of using a RNN as prediction model, reset states after each episode here.
             # Test how many steps can be predicted without the error exceeding the goal achievement threshold.
             o = transitions[0]['o']
             step = 0
@@ -119,7 +118,6 @@ class RolloutWorker(Rollout):
 
     def draw_err_hist(self):
         plt.clf()
-        # plt.figure(figsize=(20, 8))
         fig = plt.figure(figsize=(10, 5))
         err_hist_mean = np.swapaxes(self.err_history,0,1)[0]
         err_hist_std = np.swapaxes(self.err_history, 0, 1)[1]

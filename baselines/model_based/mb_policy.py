@@ -30,33 +30,33 @@ class MBPolicy(Policy):
         self.model_loss_exploration_threshold = 0.00 # The average model loss threshold over the last 100 episodes to consider the model realistic and to start model-based planning
         #
         # # Create network.
-        model_stage_shapes = OrderedDict()
+        model_shapes = OrderedDict()
         time_dim = self.T
         for key in sorted(self.input_dims.keys()):
             if key.startswith('info_'):
                 continue
             if key in ['o']:
-                model_stage_shapes[key] = (None, time_dim, *self.input_shapes[key])
-                model_stage_shapes[key +"2"] = (None, time_dim, *self.input_shapes[key])
+                model_shapes[key] = (None, time_dim, *self.input_shapes[key])
+                model_shapes[key +"2"] = (None, time_dim, *self.input_shapes[key])
             if key in ['u']:
-                model_stage_shapes[key] = (None, time_dim, *self.input_shapes[key])
+                model_shapes[key] = (None, time_dim, *self.input_shapes[key])
 
-        self.model_stage_shapes = model_stage_shapes
+        self.model_shapes = model_shapes
 
         with tf.variable_scope(self.scope):
-            self.model_staging_tf = StagingArea(
-                dtypes=[tf.float32 for _ in self.model_stage_shapes.keys()],
-                shapes=[(None, None, shape[2]) for _, shape in self.model_stage_shapes.items()])
+            # self.model_staging_tf = StagingArea(
+            #     dtypes=[tf.float32 for _ in self.model_shapes.keys()],
+            #     shapes=[(None, None, shape[2]) for _, shape in self.model_shapes.items()])
 
             self.model_buffer_ph_tf = [
-                tf.placeholder(tf.float32, shape=(None, None, shape[2])) for _, shape in self.model_stage_shapes.items()]
-            self.model_stage_op = self.model_staging_tf.put(self.model_buffer_ph_tf)
+                tf.placeholder(tf.float32, shape=(None, None, shape[2])) for _, shape in self.model_shapes.items()]
+            # self.model_stage_op = self.model_staging_tf.put(self.model_buffer_ph_tf)
 
             self._create_network(reuse=False)
 
 
         # Initialize the model replay buffer.
-        self.model_replay_buffer = ModelReplayBuffer(model_stage_shapes, model_buffer_size)
+        self.model_replay_buffer = ModelReplayBuffer(model_shapes, model_buffer_size)
         # pass
         print("done init MBPolicy")
 
@@ -70,9 +70,7 @@ class MBPolicy(Policy):
             {'o': tf.placeholder(tf.float32, shape=(None, None, 1)), 'o2': tf.placeholder(tf.float32, shape=(None, None, 1)), 'u': tf.placeholder(tf.float32, shape=(None, None, 1))},
             **self.__dict__)
         if 'initial_state' in pred_net2.__dict__.keys():
-            # initial_state = tuple([int(d) for d in pred_net2.init_state.shape])
             return pred_net2.initial_state
-        # if pred_net2.__dict__
         else:
             return None
 
@@ -81,16 +79,15 @@ class MBPolicy(Policy):
         self.sess = tf.get_default_session()
         if self.sess is None:
             self.sess = tf.InteractiveSession()
+
         # # mini-batch sampling.
-        model_batch = self.model_staging_tf.get()
-        model_batch_tf = OrderedDict([(key, model_batch[i])
-                                for i, key in enumerate(self.model_stage_shapes.keys())])
+        model_batch_tf = OrderedDict([(key, self.model_buffer_ph_tf[i])
+                                      for i, key in enumerate(self.model_shapes.keys())])
         # # networks
         with tf.variable_scope('model') as ms:
             self.prediction_model = self.create_model(model_batch_tf, **self.__dict__)
             ms.reuse_variables()
 
-        # self.obs_loss_tf = tf.reduce_mean(tf.square(self.prediction_model.output - model_batch_tf['o2']))
         model_grads = tf.gradients(self.prediction_model.obs_loss_tf, self._vars('model/ModelRNN'))
         self.model_grads_tf = flatten_grads(grads=model_grads, var_list=self._vars('model/ModelRNN'))
 
@@ -211,7 +208,7 @@ class MBPolicy(Policy):
         if batch_size is None:
             batch_size = self.model_train_batch_size
         batch_dict = self.model_replay_buffer.sample(batch_size)
-        batch = [batch_dict[key] for key in self.model_stage_shapes.keys()]
+        batch = [batch_dict[key] for key in self.model_shapes.keys()]
         return batch
 
     def forward_step(self,u,o,s):
@@ -310,7 +307,7 @@ class MBPolicy(Policy):
         # [print(key, ": ", item) for key, item in self.__dict__.items()]
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'model_replay_buffer', 'sess', '_stats',
                              'prediction_model', 'lock', 'env',
-                             'stage_shapes', 'model_stage_shapes', 'create_model']
+                             'stage_shapes', 'model_shapes', 'create_model']
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['model_buffer_size'] = self.model_buffer_size
