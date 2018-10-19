@@ -22,7 +22,7 @@ class RolloutWorker(Rollout):
         self.pred_hist_fname = os.path.join(logdir, "pred_hist.png")
         self.loss_history = []
         self.loss_hist_fname = os.path.join(logdir, "loss_hist.png")
-        self.rollouts_per_epoch = 0
+        self.n_rollouts_for_test_prediction_per_epoch = 0
 
 
     def logs(self, prefix='worker'):
@@ -34,10 +34,12 @@ class RolloutWorker(Rollout):
             logs += [('loss-{}'.format(i), l)]
         # if self.custom_histories:
         #     logs += [('mean_Q', np.mean(self.custom_histories[0]))]
-        epoch_mean_pred_err = np.mean(self.err_history[-self.rollouts_per_epoch:])
-        epoch_mean_pred_steps = np.mean(self.pred_history[-self.rollouts_per_epoch:])
-        logs += [('pred_err', epoch_mean_pred_err)]
-        logs += [('pred_steps', epoch_mean_pred_steps)]
+        if len(self.err_history) > 0:
+            epoch_mean_pred_err = self.err_history[-1]
+            logs += [('pred_err', epoch_mean_pred_err)]
+        if len(self.pred_history) > 0:
+            epoch_mean_pred_steps = self.pred_history[-1]
+            logs += [('pred_steps', epoch_mean_pred_steps)]
         logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)
@@ -47,11 +49,13 @@ class RolloutWorker(Rollout):
         dur_train = 0
         dur_start = time.time()
         self.avg_epoch_losses = []
-        self.rollouts_per_epoch = n_cycles * n_batches
+        rollouts_per_epoch = n_cycles * self.rollout_batch_size
+        self.n_rollouts_for_test_prediction_per_epoch = min(rollouts_per_epoch, self.rollout_batch_size)
+        last_episode_batch = None
         for cyc in tqdm(range(n_cycles)):
             ro_start = time.time()
             episode = self.generate_rollouts()
-            self.test_prediction_error(episode)
+            last_episode_batch = episode
             self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
@@ -59,13 +63,15 @@ class RolloutWorker(Rollout):
                 losses = self.policy.train()
                 if not isinstance(losses, tuple):
                     losses = [losses]
-                self.avg_epoch_losses = [0 for _ in losses]
+                if self.avg_epoch_losses == []:
+                    self.avg_epoch_losses = [0 for _ in losses]
                 for idx, loss in enumerate(losses):
                     self.avg_epoch_losses[idx] += loss
             dur_train += time.time() - train_start
         for idx,loss in enumerate(self.avg_epoch_losses):
-            self.avg_epoch_losses[idx] = loss / n_batches / n_cycles
+            self.avg_epoch_losses[idx] = loss / n_cycles
         self.loss_history.append(np.mean(self.avg_epoch_losses))
+        self.test_prediction_error(last_episode_batch)
         self.draw_err_hist()
         dur_total = time.time() - dur_start
         updated_policy = self.policy
@@ -74,6 +80,9 @@ class RolloutWorker(Rollout):
         return updated_policy, time_durations
 
     def test_prediction_error(self, episode):
+        this_err_hist = []
+        this_std_hist = []
+        this_pred_hist = []
         ep_transitions = []
         for i1, eps_o in enumerate(episode['o']):
             transitions = []
@@ -97,7 +106,8 @@ class RolloutWorker(Rollout):
                 ep_err_hist.append(norm_err)
             ep_err_mean = np.mean(ep_err_hist)
             ep_err_std = np.std(ep_err_hist)
-            self.err_history.append([ep_err_mean, ep_err_std])
+            this_err_hist.append(ep_err_mean)
+            this_std_hist.append(ep_err_std)
 
             # Test how many steps can be predicted without the error exceeding the goal achievement threshold.
             o = transitions[0]['o']
@@ -113,7 +123,14 @@ class RolloutWorker(Rollout):
                 pred_success = self.policy.env._is_success(o_pred_g, o_g)
                 if not pred_success:
                     break
-            self.pred_history.append(step-1)
+            this_pred_hist.append(step-1)
+
+
+        err_mean = np.mean(this_err_hist)
+        std_mean = np.mean(this_std_hist)
+        pred_mean = np.mean(this_pred_hist)
+        self.err_history.append([err_mean, std_mean])
+        self.pred_history.append(pred_mean)
 
 
     def draw_err_hist(self):

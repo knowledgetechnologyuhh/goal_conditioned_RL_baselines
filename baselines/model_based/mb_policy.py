@@ -231,13 +231,6 @@ class MBPolicy(Policy):
             o2 = np.array(self.sess.run(fetches, feed_dict=fd)[0])
             s2 = None
 
-        # fd = dict(zip(self.model_buffer_ph_tf, single_step))
-        # self.sess.run(self.model_stage_op, feed_dict=fd)
-        # o2, s2 = self.sess.run([
-        #     self.prediction_model.output,
-        #     self.prediction_model.state
-        # ])
-
         next_o = np.array(o2[0][0])
         return next_o, s2
 
@@ -306,7 +299,7 @@ class MBPolicy(Policy):
         """
         # [print(key, ": ", item) for key, item in self.__dict__.items()]
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'model_replay_buffer', 'sess', '_stats',
-                             'prediction_model', 'lock', 'env',
+                             'prediction_model', 'lock',
                              'stage_shapes', 'model_shapes', 'create_model']
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
