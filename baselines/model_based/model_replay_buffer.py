@@ -39,6 +39,7 @@ class ModelReplayBuffer:
         if self.current_size == 0:
             return batch
 
+        idxs = []
         with self.lock:
             assert self.current_size > 0
             replace = self.current_size < self.size
@@ -51,7 +52,7 @@ class ModelReplayBuffer:
                 # ep_batch.append(episode)
 
         # ep_batch = np.array(ep_batch)
-        return batch
+        return batch, idxs
 
     def store_episode(self, episode_batch):
         """episode_batch: array(batch_size x (T or T+1) x dim_key)

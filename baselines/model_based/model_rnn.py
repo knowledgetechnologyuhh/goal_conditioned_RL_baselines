@@ -47,7 +47,8 @@ class State_GRU1:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        self.obs_loss_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf))
+        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 class State_GRU2:
     @store_args
@@ -88,75 +89,9 @@ class State_GRU2:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        self.obs_loss_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf))
+        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
-
-class GRU_Simple:
-    @store_args
-    def __init__(self, inputs_tf, **kwargs):
-        """The actor-critic network and related training code.
-
-        Args:
-            inputs_tf (dict of tensors): all necessary inputs for the network: the
-                observation (o), the action (u) and the successive observation (o2) (o2 not required for the network)
-        """
-        print("Initializing model")
-        self.o_tf = inputs_tf['o']
-        self.o2_tf = inputs_tf['o2']
-        self.u_tf = inputs_tf['u']
-        self.max_batch_size = kwargs['model_train_batch_size']
-
-        #
-        dimo = self.o_tf.shape[2]
-        #
-        size = 100
-
-        # layers = 3
-        with tf.variable_scope('ModelRNN'):
-            # create a BasicRNNCell
-            self.rnn_cell = tf.nn.rnn_cell.GRUCell(size)
-
-            input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
-
-            out, state = tf.nn.dynamic_rnn(
-                self.rnn_cell,
-                input,
-                dtype=tf.float32)
-
-            self.output = tf.layers.dense(out, dimo)
-
-        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
-
-
-class LSTM_Simple:
-    @store_args
-    def __init__(self, inputs_tf, **kwargs):
-        """The actor-critic network and related training code.
-
-        Args:
-            inputs_tf (dict of tensors): all necessary inputs for the network: the
-                observation (o), the action (u) and the successive observation (o2) (o2 not required for the network)
-        """
-        print("Initializing model")
-        self.o_tf = inputs_tf['o']
-        self.o2_tf = inputs_tf['o2']
-        self.u_tf = inputs_tf['u']
-        #
-        dimo = self.o_tf.shape[2]
-        #
-        size = 100
-        # layers = 3
-        #
-        with tf.variable_scope('ModelRNN'):
-            input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
-            out, states = tf.nn.dynamic_rnn(
-                LSTMCell(size),
-                input,
-                dtype=tf.float32)
-
-            self.output = tf.layers.dense(out, dimo)
-
-        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
 
 
 class FF_Simple3:
@@ -182,7 +117,8 @@ class FF_Simple3:
             input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
             self.output = nn(input, [hidden] * layers + [dimo])
 
-        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
+        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 class FF_Simple5:
     @store_args
@@ -207,6 +143,7 @@ class FF_Simple5:
             input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
             self.output = nn(input, [hidden] * layers + [dimo])
 
-        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
+        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 
