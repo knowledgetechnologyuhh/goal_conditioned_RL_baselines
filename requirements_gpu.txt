@@ -9,6 +9,7 @@ Cython==0.29
 future==0.16.0
 gast==0.2.0
 glfw==1.7.0
+glob2==0.6
 grpcio==1.15.0
 gym==0.10.8
 h5py==2.8.0
@@ -24,6 +25,7 @@ matplotlib==3.0.0
 mpi4py==3.0.0
 mujoco-py==1.50.1.62
 numpy==1.15.2
+pandas==0.23.4
 Pillow==5.3.0
 pkg-resources==0.0.0
 protobuf==3.6.1
@@ -31,8 +33,10 @@ pycparser==2.19
 pyglet==1.3.2
 pyparsing==2.2.2
 python-dateutil==2.7.3
+pytz==2018.5
 requests==2.20.0
 scipy==1.1.0
+seaborn==0.9.0
 six==1.11.0
 tensorboard==1.11.0
 tensorflow-gpu==1.11.0
@@ -40,4 +44,3 @@ termcolor==1.1.0
 tqdm==4.27.0
 urllib3==1.24
 Werkzeug==0.14.1
-

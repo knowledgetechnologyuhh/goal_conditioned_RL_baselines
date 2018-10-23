@@ -24,6 +24,7 @@ class MBPolicy(Policy):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
         # self.buffer_size=10
         self.env = kwargs['env']
+        self.current_fwd_step_hist = []
         self.scope = scope
         self.create_model = import_function(model_network_class)
         self.model_loss_history = collections.deque(maxlen=100)
@@ -211,13 +212,36 @@ class MBPolicy(Policy):
         batch = [batch_dict[key] for key in self.model_shapes.keys()]
         return batch
 
-    def forward_step(self,u,o,s):
+    def forward_step_history(self,u,o,s):
+
+        bs = self.model_train_batch_size
+
+        if s is None:
+            self.current_fwd_step_hist = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
+        else:
+        # self.current_fwd_step_hist[0][0]
+            o_s = np.concatenate((self.current_fwd_step_hist[0][0], [o]))
+            u_s = np.concatenate((self.current_fwd_step_hist[2][0], [u]))
+            self.current_fwd_step_hist = [np.array([o_s] * bs), np.array([o_s] * bs), np.array([u_s] * bs)]
+
+        fd = {self.prediction_model.o_tf: self.current_fwd_step_hist[0], self.prediction_model.u_tf: self.current_fwd_step_hist[2]}
+
+        fetches = [self.prediction_model.output]
+        if 'state' in self.prediction_model.__dict__:
+            fetches.append(self.prediction_model.state)
+            o2, s2 = self.sess.run(fetches, feed_dict=fd)
+        else:
+            o2 = np.array(self.sess.run(fetches, feed_dict=fd)[0])
+            s2 = None
+
+        next_o = np.array(o2[0][-1])
+        return next_o, s2
+
+    def forward_step_single(self,u,o,s):
 
         bs = self.model_train_batch_size
 
         single_step = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
-        # batch = self.sample_batch(bs)
-        # single_step = batch
 
         fd = {self.prediction_model.o_tf: single_step[0], self.prediction_model.u_tf: single_step[2]}
         if s is not None and 'initial_state' in self.prediction_model.__dict__:
@@ -231,7 +255,7 @@ class MBPolicy(Policy):
             o2 = np.array(self.sess.run(fetches, feed_dict=fd)[0])
             s2 = None
 
-        next_o = np.array(o2[0][0])
+        next_o = np.array(o2[0][-1])
         return next_o, s2
 
     def stage_batch(self, batch=None):
@@ -243,6 +267,7 @@ class MBPolicy(Policy):
 
     def _update(self, model_grads):
         self.pred_adam.update(model_grads, self.model_lr)
+        # print("LR: {}".format(self.model_lr))
 
     def _grads(self):
         # Avoid feed_dict here for performance!

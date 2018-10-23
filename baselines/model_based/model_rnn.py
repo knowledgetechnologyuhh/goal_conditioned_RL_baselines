@@ -47,7 +47,7 @@ class State_GRU1:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        self.obs_loss_tf = tf.reduce_mean(tf.square(self.output - self.o2_tf))
+        self.obs_loss_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf))
 
 class GRU_Simple:
     @store_args
