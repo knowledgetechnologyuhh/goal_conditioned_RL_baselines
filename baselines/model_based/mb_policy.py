@@ -55,9 +55,14 @@ class MBPolicy(Policy):
 
             self._create_network(reuse=False)
 
+        self.buffer_eval_shapes = {'surprise': (None, time_dim, 1), 'age': (None, time_dim, 1), 'utility': (None, time_dim, 1)}
+
+        all_buffer_shapes = {}
+        all_buffer_shapes.update(self.model_shapes)
+        all_buffer_shapes.update(self.buffer_eval_shapes)
 
         # Initialize the model replay buffer.
-        self.model_replay_buffer = ModelReplayBuffer(model_shapes, model_buffer_size)
+        self.model_replay_buffer = ModelReplayBuffer(all_buffer_shapes, model_buffer_size)
         # pass
         print("done init MBPolicy")
 

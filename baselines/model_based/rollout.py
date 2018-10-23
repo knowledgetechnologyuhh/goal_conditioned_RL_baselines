@@ -6,7 +6,7 @@ import time
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
-
+from collections import deque
 
 class RolloutWorker(Rollout):
     @store_args
@@ -15,16 +15,10 @@ class RolloutWorker(Rollout):
         """
         Rollout.__init__(self, make_env, policy, dims, logger, T, **kwargs)
 
-        logdir = logger.get_dir()
-        self.err_history = []
-        self.err_hist_fname = os.path.join(logdir, "err_hist.png")
-        self.err_std_history = []
-        self.err_hist_fname = os.path.join(logdir, "err_std_hist.png")
-        self.pred_history = []
-        self.pred_hist_fname = os.path.join(logdir, "pred_hist.png")
+        self.err = None
+        self.err_std = None
+        self.pred = None
         self.loss_histories = []
-        self.loss_hist_fname = os.path.join(logdir, "loss_hist-{}.png")
-        self.n_rollouts_for_test_prediction_per_epoch = 0
 
 
     def logs(self, prefix='worker'):
@@ -41,12 +35,10 @@ class RolloutWorker(Rollout):
                 loss_grad = np.nan
             logs += [('loss-{}-grad'.format(i), loss_grad)]
 
-        if len(self.err_history) > 0:
-            epoch_mean_pred_err = self.err_history[-1]
-            logs += [('pred_err', epoch_mean_pred_err)]
-        if len(self.pred_history) > 0:
-            epoch_mean_pred_steps = self.pred_history[-1]
-            logs += [('pred_steps', epoch_mean_pred_steps)]
+        if self.err is not None :
+            logs += [('pred_err', self.err)]
+        if self.pred is not None:
+            logs += [('pred_steps', self.pred)]
         logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)
@@ -57,7 +49,6 @@ class RolloutWorker(Rollout):
         dur_start = time.time()
         avg_epoch_losses = []
         rollouts_per_epoch = n_cycles * self.rollout_batch_size
-        self.n_rollouts_for_test_prediction_per_epoch = min(rollouts_per_epoch, self.rollout_batch_size)
         last_episode_batch = None
         for cyc in tqdm(range(n_cycles)):
             ro_start = time.time()
@@ -72,7 +63,7 @@ class RolloutWorker(Rollout):
                     losses = [losses]
 
                 if self.loss_histories == []:
-                    self.loss_histories = [[] for _ in losses]
+                    self.loss_histories = [deque(maxlen=2) for _ in losses]
                 if avg_epoch_losses == []:
                     avg_epoch_losses = [0 for _ in losses]
                 for idx, loss in enumerate(losses):
@@ -82,7 +73,6 @@ class RolloutWorker(Rollout):
             avg_loss = loss / n_cycles
             self.loss_histories[idx].append(avg_loss)
         self.test_prediction_error(last_episode_batch)
-        # self.draw_err_hist()
         dur_total = time.time() - dur_start
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
@@ -107,16 +97,11 @@ class RolloutWorker(Rollout):
             # Test error for each individual transition
             ep_err_hist = []
             s = None
-            # s_single = None
             for t in transitions:
                 o = t['o']
                 u = t['u']
                 o2 = t['o2']
                 o2_pred, s = fwd_step(u,o,s)
-                # o2_pred_single, s_single = self.policy.forward_step_single(u,o,s_single)
-                # err_single_vs_hist = np.linalg.norm(o2_pred_single - o2_pred, axis=-1)
-                # print(err_single_vs_hist)
-                norm_err = np.linalg.norm(o2 - o2_pred, axis=-1)
                 err = np.mean(abs(o2 - o2_pred))
                 ep_err_hist.append(err)
             ep_err_mean = np.mean(ep_err_hist)
@@ -144,33 +129,8 @@ class RolloutWorker(Rollout):
         err_mean = np.mean(this_err_hist)
         err_std_mean = np.mean(this_std_hist)
         pred_mean = np.mean(this_pred_hist)
-        self.err_history.append(err_mean)
-        self.err_std_history.append(err_std_mean)
-        self.pred_history.append(pred_mean)
-
-
-    # def draw_err_hist(self):
-    #     mean_last = 10
-    #     plt.clf()
-    #     fig = plt.figure(figsize=(10, 5))
-    #     plt.semilogy(self.err_history)
-    #     plt.title('Mean of last {} epochs: {}'.format(mean_last, np.mean(self.err_history[-10:])))
-    #     plt.savefig(self.err_hist_fname)
-    #
-    #     plt.clf()
-    #     # plt.figure(figsize=(20, 8))
-    #     fig = plt.figure(figsize=(10, 5))
-    #     plt.plot(self.pred_history)
-    #     plt.title('Mean of last {} epochs: {}'.format(mean_last, np.mean(self.pred_history[-10:])))
-    #     plt.savefig(self.pred_hist_fname)
-    #
-    #     plt.clf()
-    #     # plt.figure(figsize=(20, 8))
-    #     fig = plt.figure(figsize=(10, 5))
-    #
-    #     # plt.plot(self.loss_history)
-    #     # plt.title('Mean of last {} epochs: {}'.format(mean_last, np.mean(self.loss_history[-10:])))
-    #     plt.savefig(self.loss_hist_fname)
-    #     pass
+        self.err = err_mean
+        self.err_std = err_std_mean
+        self.pred = pred_mean
 
 

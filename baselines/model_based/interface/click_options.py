@@ -1,6 +1,6 @@
 import click
 _random_options = [
-click.option('--n_test_rollouts', type=int, default=1, help='Number of test rollouts'),
+click.option('--n_test_rollouts', type=int, default=0, help='Number of test rollouts'),
 click.option('--model_train_batch_size', type=int, default=40, help='The batch size (parallel episodes) for model training.'),
 ]
 

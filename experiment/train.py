@@ -73,9 +73,10 @@ def train(rollout_worker, evaluator,
             logger.record_tabular(key, mpi_average(val))
 
         if rank == 0:
+            print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
 
-        plot_model_train(os.path.join(logger.get_dir(), 'progress.csv'))
+        plot_model_train("/".join(logger.get_dir().split("/")[:-1]))
 
         # save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())
