@@ -55,7 +55,7 @@ class MBPolicy(Policy):
 
             self._create_network(reuse=False)
 
-        self.buffer_eval_shapes = {'surprise': (None, time_dim, 1), 'age': (None, time_dim, 1), 'utility': (None, time_dim, 1)}
+        self.buffer_eval_shapes = {'surprise': (None, time_dim, 1), 'times_sampled': (None, time_dim, 1), 'utility': (None, time_dim, 1)}
 
         all_buffer_shapes = {}
         all_buffer_shapes.update(self.model_shapes)
@@ -213,9 +213,9 @@ class MBPolicy(Policy):
         # print("Sampling batch")
         if batch_size is None:
             batch_size = self.model_train_batch_size
-        batch_dict = self.model_replay_buffer.sample(batch_size)
+        batch_dict, idxs = self.model_replay_buffer.sample(batch_size)
         batch = [batch_dict[key] for key in self.model_shapes.keys()]
-        return batch
+        return batch, idxs
 
     def forward_step_history(self,u,o,s):
 
@@ -263,44 +263,37 @@ class MBPolicy(Policy):
         next_o = np.array(o2[0][-1])
         return next_o, s2
 
-    def stage_batch(self, batch=None):
-        if batch is None:
-            batch = self.sample_batch()
-        assert len(self.model_buffer_ph_tf) == len(batch)
-        fd = dict(zip(self.model_buffer_ph_tf, batch))
-        self.sess.run(self.model_stage_op, feed_dict=fd)
+    # def stage_batch(self, batch=None):
+    #     if batch is None:
+    #         batch = self.sample_batch()
+    #     assert len(self.model_buffer_ph_tf) == len(batch)
+    #     fd = dict(zip(self.model_buffer_ph_tf, batch))
+    #     self.sess.run(self.model_stage_op, feed_dict=fd)
 
     def _update(self, model_grads):
         self.pred_adam.update(model_grads, self.model_lr)
         # print("LR: {}".format(self.model_lr))
 
-    def _grads(self):
-        # Avoid feed_dict here for performance!
-        model_loss, model_grads = self.sess.run([
-            self.obs_loss_tf,
-            self.model_grads_tf
-        ])
-        return model_loss, model_grads
-
-
-    def train(self):
-        # print("Training")
-        batch = self.sample_batch()
+    def get_grads(self, batch):
         fetches = [
             self.prediction_model.obs_loss_tf,
+            self.prediction_model.obs_loss_per_step_tf,
             self.model_grads_tf
         ]
-        fd = {self.prediction_model.o_tf : batch[0],
-              self.prediction_model.o2_tf : batch[1],
-              self.prediction_model.u_tf : batch[2]}
-        model_loss, model_grads = self.sess.run(fetches, fd)
+        fd = {self.prediction_model.o_tf: batch[0],
+              self.prediction_model.o2_tf: batch[1],
+              self.prediction_model.u_tf: batch[2]}
+        total_model_loss, model_loss_per_step, model_grads = self.sess.run(fetches, fd)
+        return total_model_loss, model_loss_per_step, model_grads
 
 
-        # self.stage_batch()
-        # model_loss, model_grads = self._grads()
+    def train(self, stage=False):
+        batch, buffer_idxs = self.sample_batch()
+        total_model_loss, model_loss_per_step, model_grads = self.get_grads(batch)
+        # self.update_buffer(buffer_idxs, model_loss_per_step)
         self._update(model_grads)
-        self.model_loss_history.append(model_loss)
-        return model_loss
+        self.model_loss_history.append(total_model_loss)
+        return total_model_loss
 
     def logs(self, prefix=''):
         logs = []
