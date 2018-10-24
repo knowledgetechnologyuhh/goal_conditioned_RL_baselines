@@ -89,7 +89,8 @@ class State_GRU2:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        # self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
         self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 

@@ -64,11 +64,16 @@ class Rollout:
         for i in range(self.rollout_batch_size):
             self.reset_rollout(i)
 
-    def generate_rollouts(self):
+    def generate_rollouts(self, return_initial_states=False):
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
         policy acting on it accordingly.
         """
         self.reset_all_rollouts()
+        if return_initial_states:
+            init_states = []
+            for i in range(self.rollout_batch_size):
+                state = self.envs[i].env.sim.get_state()
+                init_states.append(state)
 
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
@@ -101,6 +106,7 @@ class Rollout:
                 self.logger.warn('Action "u" is not a Numpy array.')
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
+            loss = np.empty((self.rollout_batch_size))
             success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
@@ -153,7 +159,11 @@ class Rollout:
                 self.custom_histories[history_index].append([x[history_index] for x in other_histories])
         self.n_episodes += self.rollout_batch_size
 
-        return convert_episode_to_batch_major(episode)
+        if return_initial_states:
+            ret = convert_episode_to_batch_major(episode), init_states
+        else:
+            ret = convert_episode_to_batch_major(episode)
+        return ret
 
     def clear_history(self):
         """Clears all histories that are used for statistics

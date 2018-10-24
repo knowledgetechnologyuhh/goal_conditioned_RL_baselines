@@ -6,7 +6,12 @@ import time
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
+from mujoco_py import MujocoException
+from mujoco_py import MujocoException
 from collections import deque
+from baselines.template.util import convert_episode_to_batch_major, store_args
+import matplotlib.pyplot as plt
+from mujoco_py.generated import const as mj_const
 
 class RolloutWorker(Rollout):
     @store_args
@@ -43,6 +48,19 @@ class RolloutWorker(Rollout):
 
         return logger(logs, prefix)
 
+    def perform_episode_predictions(self, buffer_idxs):
+        batch_size_diff = self.policy.model_train_batch_size - len(buffer_idxs)
+        if batch_size_diff < 0:
+            print("ERROR!!! cannot predict more episodes than model_train_buffer_size")
+            assert False
+        padded_buffer_idxs = buffer_idxs + [0] * batch_size_diff
+        batch, idxs = self.policy.sample_batch(idxs=padded_buffer_idxs)
+        # i_batch, i_idxs = self.policy.sample_batch(batch_size=len(buffer_idxs))
+        total_model_loss, model_loss_per_step, model_grads = self.policy.get_grads(batch)
+        self.policy.model_replay_buffer.update_with_loss(buffer_idxs, model_loss_per_step[:len(buffer_idxs)])
+        # self.policy.
+        pass
+
     def generate_rollouts_update(self, n_cycles, n_batches):
         dur_ro = 0
         dur_train = 0
@@ -50,11 +68,13 @@ class RolloutWorker(Rollout):
         avg_epoch_losses = []
         rollouts_per_epoch = n_cycles * self.rollout_batch_size
         last_episode_batch = None
-        for cyc in tqdm(range(n_cycles)):
+        for cyc in range(n_cycles):
+            print("episode {} / {}".format(cyc, n_cycles))
             ro_start = time.time()
-            episode = self.generate_rollouts()
+            episode, initial_mj_states = self.generate_rollouts(return_initial_states=True)
             last_episode_batch = episode
-            self.policy.store_episode(episode)
+            new_idxs = self.policy.store_episode(episode, initial_mj_states=initial_mj_states)
+            self.perform_episode_predictions(new_idxs)
             dur_ro += time.time() - ro_start
             train_start = time.time()
             for _ in range(n_batches):
@@ -76,6 +96,7 @@ class RolloutWorker(Rollout):
         dur_total = time.time() - dur_start
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
+        # self.replay_experience()
 
         return updated_policy, time_durations
 
@@ -132,5 +153,44 @@ class RolloutWorker(Rollout):
         self.err = err_mean
         self.err_std = err_std_mean
         self.pred = pred_mean
+
+    def replay_experience(self):
+        buff_idxs = [0]
+        env = self.envs[0].env
+        plt.axis([0, 10, 0, 1])
+        for buff_idx in buff_idxs:
+            initial_obs = env.reset()
+            initial_state = self.policy.model_replay_buffer.initial_mj_states[buff_idx]
+            env.sim.set_state(initial_state)
+            step_no = 0
+            for o,o2,u in zip(self.policy.model_replay_buffer.buffers['o'][buff_idx],
+                              self.policy.model_replay_buffer.buffers['o2'][buff_idx],
+                              self.policy.model_replay_buffer.buffers['u'][buff_idx]):
+                next_o, _, _, _ = env.step(u)
+                env.render()
+                surprise = self.policy.model_replay_buffer.loss_history[buff_idx][step_no]
+                # plt.scatter(step_no, surprise)
+                # plt.show()
+                step_no += 1
+                viewer = env._get_viewer()
+                viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
+
+                y = step_no
+                z = step_no
+                dim1 = step_no % 100 * 1
+                dim2 = step_no % 100 * 1
+                dim3 = step_no % 3 * 1
+                img1 = np.ones([dim1, dim2, dim3], dtype=np.uint8) * 1
+                # img2 = np.ones([3, 100, 100], dtype=np.uint8) * step_no*10
+                # img3 = np.ones([100, 3, 100], dtype=np.uint8) * step_no*100
+                imgs = [img1]
+                for img in imgs:
+                    print(dim1,dim2,dim3, step_no)
+                    viewer.draw_pixels(img, y, z)
+                    # viewer.draw_pixels(img, "hallo", "TEst")
+                    # viewer.draw_pixels(y, z, img)
+                    # viewer.draw_pixels(y, img, z)
+
+
 
 

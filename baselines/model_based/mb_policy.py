@@ -45,24 +45,12 @@ class MBPolicy(Policy):
         self.model_shapes = model_shapes
 
         with tf.variable_scope(self.scope):
-            # self.model_staging_tf = StagingArea(
-            #     dtypes=[tf.float32 for _ in self.model_shapes.keys()],
-            #     shapes=[(None, None, shape[2]) for _, shape in self.model_shapes.items()])
-
             self.model_buffer_ph_tf = [
                 tf.placeholder(tf.float32, shape=(None, None, shape[2])) for _, shape in self.model_shapes.items()]
-            # self.model_stage_op = self.model_staging_tf.put(self.model_buffer_ph_tf)
-
             self._create_network(reuse=False)
 
-        self.buffer_eval_shapes = {'surprise': (None, time_dim, 1), 'times_sampled': (None, time_dim, 1), 'utility': (None, time_dim, 1)}
-
-        all_buffer_shapes = {}
-        all_buffer_shapes.update(self.model_shapes)
-        all_buffer_shapes.update(self.buffer_eval_shapes)
-
         # Initialize the model replay buffer.
-        self.model_replay_buffer = ModelReplayBuffer(all_buffer_shapes, model_buffer_size)
+        self.model_replay_buffer = ModelReplayBuffer(self.model_shapes, model_buffer_size)
         # pass
         print("done init MBPolicy")
 
@@ -196,53 +184,27 @@ class MBPolicy(Policy):
         else:
             return u_s
 
-    def store_episode(self, episode_batch, update_stats=True):
+    def store_episode(self, rollouts, update_stats=True, initial_mj_states=None):
         # print("Storing episode batch")
         episodes = []
-        for e_idx in range(len(episode_batch['o'])):
+        for e_idx in range(len(rollouts['o'])):
             episode = {}
-            episode['o'] = episode_batch['o'][e_idx][:-1]
-            episode['u'] = episode_batch['u'][e_idx]
-            episode['o2'] = episode_batch['o'][e_idx][1:]
+            episode['o'] = rollouts['o'][e_idx][:-1]
+            episode['u'] = rollouts['u'][e_idx]
+            episode['o2'] = rollouts['o'][e_idx][1:]
             episodes.append(episode)
-        self.model_replay_buffer.store_episode(episodes)
-        pass
+        new_idxs = self.model_replay_buffer.store_episode(episodes, initial_mj_states)
+        return new_idxs
 
-
-    def sample_batch(self, batch_size=None):
+    def sample_batch(self, batch_size=None, idxs=None):
         # print("Sampling batch")
-        if batch_size is None:
+        if idxs is None and batch_size is None:
             batch_size = self.model_train_batch_size
-        batch_dict, idxs = self.model_replay_buffer.sample(batch_size)
+        batch_dict, idxs = self.model_replay_buffer.sample(batch_size=batch_size, idxs=idxs)
         batch = [batch_dict[key] for key in self.model_shapes.keys()]
         return batch, idxs
 
-    def forward_step_history(self,u,o,s):
-
-        bs = self.model_train_batch_size
-
-        if s is None:
-            self.current_fwd_step_hist = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
-        else:
-        # self.current_fwd_step_hist[0][0]
-            o_s = np.concatenate((self.current_fwd_step_hist[0][0], [o]))
-            u_s = np.concatenate((self.current_fwd_step_hist[2][0], [u]))
-            self.current_fwd_step_hist = [np.array([o_s] * bs), np.array([o_s] * bs), np.array([u_s] * bs)]
-
-        fd = {self.prediction_model.o_tf: self.current_fwd_step_hist[0], self.prediction_model.u_tf: self.current_fwd_step_hist[2]}
-
-        fetches = [self.prediction_model.output]
-        if 'state' in self.prediction_model.__dict__:
-            fetches.append(self.prediction_model.state)
-            o2, s2 = self.sess.run(fetches, feed_dict=fd)
-        else:
-            o2 = np.array(self.sess.run(fetches, feed_dict=fd)[0])
-            s2 = None
-
-        next_o = np.array(o2[0][-1])
-        return next_o, s2
-
-    def forward_step_single(self,u,o,s):
+    def forward_step_single(self, u, o, s):
 
         bs = self.model_train_batch_size
 
@@ -259,16 +221,8 @@ class MBPolicy(Policy):
         else:
             o2 = np.array(self.sess.run(fetches, feed_dict=fd)[0])
             s2 = None
-
         next_o = np.array(o2[0][-1])
         return next_o, s2
-
-    # def stage_batch(self, batch=None):
-    #     if batch is None:
-    #         batch = self.sample_batch()
-    #     assert len(self.model_buffer_ph_tf) == len(batch)
-    #     fd = dict(zip(self.model_buffer_ph_tf, batch))
-    #     self.sess.run(self.model_stage_op, feed_dict=fd)
 
     def _update(self, model_grads):
         self.pred_adam.update(model_grads, self.model_lr)
@@ -290,7 +244,6 @@ class MBPolicy(Policy):
     def train(self, stage=False):
         batch, buffer_idxs = self.sample_batch()
         total_model_loss, model_loss_per_step, model_grads = self.get_grads(batch)
-        # self.update_buffer(buffer_idxs, model_loss_per_step)
         self._update(model_grads)
         self.model_loss_history.append(total_model_loss)
         return total_model_loss
