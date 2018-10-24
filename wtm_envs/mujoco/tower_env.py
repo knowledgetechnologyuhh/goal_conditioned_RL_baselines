@@ -3,7 +3,7 @@ import random
 
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
-
+from mujoco_py.generated import const as mj_const
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -65,6 +65,8 @@ class TowerEnv(robot_env.RobotEnv):
         super(TowerEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
+
+        pass
 
     # GoalEnv methods
     # ----------------------------
@@ -154,16 +156,6 @@ class TowerEnv(robot_env.RobotEnv):
             grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
         ])
 
-
-
-        # gripper_achieved_goal = obs[:3]
-        # target_achieved_goal = obs[3:6]
-        #
-        # if not self.gripper_has_target:
-        #     gripper_achieved_goal = []
-        #
-        # achieved_goal = np.concatenate([gripper_achieved_goal, target_achieved_goal])
-
         achieved_goal = self._obs2goal(obs)
 
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy()}
@@ -183,6 +175,7 @@ class TowerEnv(robot_env.RobotEnv):
 
     def _render_callback(self):
         # Visualize target.
+
         sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
 
         obj_goal_start_idx = 0
@@ -203,6 +196,9 @@ class TowerEnv(robot_env.RobotEnv):
             o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
             self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
             obj_goal_start_idx += 3
+
+        viewer = self._get_viewer()
+        viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Text", "Text2")
 
         self.sim.forward()
 
@@ -236,6 +232,9 @@ class TowerEnv(robot_env.RobotEnv):
 
         self.sim.forward()
         return True
+
+
+
 
     def _sample_goal(self):
         obs = self._get_obs()

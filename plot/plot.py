@@ -449,5 +449,5 @@ if __name__ == '__main__':
     parser.add_argument('--pad', type=int, default=0)
     parser.add_argument('--column', type=str, default='test/success_rate')
     args = parser.parse_args()
-    data_lastval_threshold = 0.0
-    do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column, data_lastval_threshold=data_lastval_threshold)
+    # data_lastval_threshold = 0.0
+    do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)
