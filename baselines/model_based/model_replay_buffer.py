@@ -31,8 +31,8 @@ class ModelReplayBuffer:
         # For each replay rollout, stores the loss_history
         self.loss_history = np.zeros([self.size, n_steps])
 
-        # This initial mujoco simulation states. Required for visualizing the experience replay.
-        self.initial_mj_states = list(np.zeros([self.size]))
+        # The mujoco simulation states. Required for visualizing the experience replay.
+        self.mj_states = [[] for _ in range(self.size)]
 
         # For each replay rollout, stores the episode at which it was stored.
         self.ep_added = np.zeros([self.size])
@@ -97,7 +97,7 @@ class ModelReplayBuffer:
 
         return batch, sample_idxs
 
-    def store_episode(self, episode, initial_mj_states=None):
+    def store_episode(self, episode, mj_states=None):
         """episode_batch: array(batch_size x (T or T+1) x dim_key)
         """
         idxs = []
@@ -123,8 +123,8 @@ class ModelReplayBuffer:
                 for key in ro.keys():
                     self.buffers[key][buf_idx] = ro[key]
                 self.ep_added[buf_idx] = self.ep_no
-                if initial_mj_states is not None:
-                    self.initial_mj_states[buf_idx] = initial_mj_states[ro_idx]
+                if mj_states is not None:
+                    self.mj_states[buf_idx] = mj_states[ro_idx]
 
         return idxs
 

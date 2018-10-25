@@ -65,9 +65,11 @@ class RolloutWorker(Rollout):
         for cyc in range(n_cycles):
             print("episode {} / {}".format(cyc, n_cycles))
             ro_start = time.time()
-            episode, initial_mj_states = self.generate_rollouts(return_initial_states=True)
+            # episode, initial_mj_states = self.generate_rollouts(return_initial_states=True)
+            episode, mj_states = self.generate_rollouts(return_states=True)
             last_episode_batch = episode
-            stored_idxs = self.policy.store_episode(episode, initial_mj_states=initial_mj_states)
+            # stored_idxs = self.policy.store_episode(episode, initial_mj_states=initial_mj_states)
+            stored_idxs = self.policy.store_episode(episode, mj_states=mj_states)
             for i in stored_idxs:
                 if i in self.replayed_episodes:
                     self.replayed_episodes.remove(i)
@@ -182,10 +184,13 @@ class RolloutWorker(Rollout):
 
         if highest_mem_val < mem_val_required:
             print("highes mem_val is {}, but {} required to be interesting enough for replay".format(highest_mem_val, mem_val_required))
+            self.top_exp_replay_values *= 0.9
             return
 
         if replay_idx in self.replayed_episodes:
             return
+
+        self.replayed_episodes.append(replay_idx)
 
         age = self.policy.model_replay_buffer.ep_added[replay_idx]
         mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
@@ -196,24 +201,23 @@ class RolloutWorker(Rollout):
         buff_idxs = [replay_idx]
         env = self.envs[0].env
 
-
         for buff_idx in buff_idxs:
-            initial_obs = env.reset()
-            initial_state = self.policy.model_replay_buffer.initial_mj_states[buff_idx]
-            env.sim.set_state(initial_state)
+
             step_no = 0
             for o,o2,u in zip(self.policy.model_replay_buffer.buffers['o'][buff_idx],
                               self.policy.model_replay_buffer.buffers['o2'][buff_idx],
                               self.policy.model_replay_buffer.buffers['u'][buff_idx]):
                 next_o, _, _, _ = env.step(u)
+                env.sim.set_state(self.policy.model_replay_buffer.mj_states[buff_idx][step_no])
                 obs_err = np.mean(abs(next_o['observation'] - o2))
                 env.render()
+
                 # surprise = self.policy.model_replay_buffer.loss_history[buff_idx][step_no]
                 surprise_hist = self.policy.model_replay_buffer.loss_history[buff_idx][:step_no+1]
                 surprise = surprise_hist[-1]
                 steps = list(range(step_no+1))
 
-                plt.pause(0.01)
+                plt.pause(0.0001)
                 self.surprise_fig_li.set_xdata(steps)
                 self.surprise_fig_li.set_ydata(surprise_hist)
                 self.surprise_fig_ax.relim()
@@ -225,6 +229,7 @@ class RolloutWorker(Rollout):
                 viewer = env._get_viewer()
                 viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
                 viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Observation error:", "{:.2f}".format(obs_err))
+
                 #
                 # y = step_no
                 # z = step_no

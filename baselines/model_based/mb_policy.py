@@ -196,7 +196,7 @@ class MBPolicy(Policy):
         self.model_replay_buffer.update_with_loss(buffer_idxs, model_loss_per_step[:len(buffer_idxs)])
         pass
 
-    def store_episode(self, episode, update_stats=True, initial_mj_states=None):
+    def store_episode(self, episode, update_stats=True, initial_mj_states=None, mj_states=None):
         rollouts = []
         for e_idx in range(len(episode['o'])):
             rollout = {}
@@ -207,7 +207,7 @@ class MBPolicy(Policy):
                 rollout['loss'] = episode['loss'][e_idx]
             rollouts.append(rollout)
 
-        new_idxs = self.model_replay_buffer.store_episode(rollouts, initial_mj_states)
+        new_idxs = self.model_replay_buffer.store_episode(rollouts, mj_states)
         self.update_replay_buffer_losses(new_idxs)
         return new_idxs
     
