@@ -194,12 +194,12 @@ class RolloutWorker(Rollout):
         replay_idx = last_added_idxs[np.argmax(last_added_values)]
 
         highest_mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
-        if len(self.top_exp_replay_values) > 0:
+        if len(self.top_exp_replay_values) == self.top_exp_replay_values.maxlen:
             mem_val_required = min(self.top_exp_replay_values)
         else:
             mem_val_required = 0
 
-        if highest_mem_val < mem_val_required:
+        if highest_mem_val > mem_val_required:
             print("highes mem_val is {}, but {} required to be interesting enough for replay".format(highest_mem_val, mem_val_required))
             self.top_exp_replay_values = deque(np.array(self.top_exp_replay_values) * 0.95, maxlen=self.top_exp_replay_values.maxlen)
             return
