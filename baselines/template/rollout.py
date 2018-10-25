@@ -106,7 +106,6 @@ class Rollout:
                 self.logger.warn('Action "u" is not a Numpy array.')
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
-            loss = np.empty((self.rollout_batch_size))
             success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):

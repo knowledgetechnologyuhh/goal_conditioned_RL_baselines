@@ -197,9 +197,6 @@ class TowerEnv(robot_env.RobotEnv):
             self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
             obj_goal_start_idx += 3
 
-        viewer = self._get_viewer()
-        viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Text", "Text2")
-
         self.sim.forward()
 
     def _reset_sim(self):
