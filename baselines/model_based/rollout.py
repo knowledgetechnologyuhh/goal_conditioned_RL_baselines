@@ -16,6 +16,8 @@ from baselines.template.util import convert_episode_to_batch_major, store_args
 import matplotlib.pyplot as plt
 from mujoco_py.generated import const as mj_const
 from plot.plot_model_train import plot_model_train
+from multiprocessing import Process, Queue
+import imageio
 
 
 class RolloutWorker(Rollout):
@@ -155,6 +157,7 @@ class RolloutWorker(Rollout):
         self.pred = pred_mean
 
     def init_surprise_plot(self):
+        plt.clf()
         self.surprise_fig = plt.figure()
         self.surprise_fig_ax = self.surprise_fig.add_subplot(111)
 
@@ -164,11 +167,34 @@ class RolloutWorker(Rollout):
         self.surprise_fig_li, = self.surprise_fig_ax.plot(x, y)
         self.surprise_fig_ax.relim()
         self.surprise_fig_ax.autoscale_view(True, True, True)
+        plt.ylabel('surprise (model-learning loss)')
         plt.pause(0.01)
         self.surprise_fig.canvas.draw()
         plt.pause(0.01)
         plt.show(block=False)
         plt.pause(0.01)
+
+    # def start_record_experience_replay(self, video_path):
+    #     if self._record_video:
+    #         fps = (1 / self._time_per_render)
+    #
+    #         self._video_process = Process(target=self.save_video,
+    #                                       args=(self._video_queue, video_path, fps))
+    #         self._video_process.start()
+    #
+    #     if not self._record_video:
+    #         self._video_queue.put(None)
+    #         self._video_process.join()
+    #         self._video_idx += 1
+    #
+    # def save_video(queue, filename, fps):
+    #     writer = imageio.get_writer(filename, fps=fps)
+    #     while True:
+    #         frame = queue.get()
+    #         if frame is None:
+    #             break
+    #         writer.append_data(frame)
+    #     writer.close()
 
     def replay_experience(self):
         if self.surprise_fig is None:
