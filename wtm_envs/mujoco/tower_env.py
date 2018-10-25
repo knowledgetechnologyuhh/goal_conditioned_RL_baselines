@@ -4,6 +4,8 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
+import mujoco_py
+
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -61,6 +63,8 @@ class TowerEnv(robot_env.RobotEnv):
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
         # self.gripper_has_target = (gripper_goal != 'gripper_none')
+
+        self._viewers = {}
 
         super(TowerEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -164,14 +168,28 @@ class TowerEnv(robot_env.RobotEnv):
 
         return obs
 
-    def _viewer_setup(self):
+    def _get_viewer(self, mode='human'):
+        viewer = self._viewers.get(mode)
+        if viewer is None:
+            if mode == 'human':
+                viewer = mujoco_py.MjViewer(self.sim)
+            elif mode == 'rgb_array' or mode == 'depth_array':
+                viewer = mujoco_py.MjViewer(self.sim)
+                # The following should work but it does not. Therefore, replaced by human rendering (with MjViewer, the line above) now.
+                # viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
+            self._viewers[mode] = viewer
+            self._viewer_setup(mode=mode)
+
+        return self._viewers[mode]
+
+    def _viewer_setup(self,mode='human'):
         body_id = self.sim.model.body_name2id('robot0:gripper_link')
         lookat = self.sim.data.body_xpos[body_id]
         for idx, value in enumerate(lookat):
-            self.viewer.cam.lookat[idx] = value
-        self.viewer.cam.distance = 2.5
-        self.viewer.cam.azimuth = 132.
-        self.viewer.cam.elevation = -14.
+            self._viewers[mode].cam.lookat[idx] = value
+        self._viewers[mode].cam.distance = 2.5
+        self._viewers[mode].cam.azimuth = 132.
+        self._viewers[mode].cam.elevation = -14.
 
     def _render_callback(self):
         # Visualize target.

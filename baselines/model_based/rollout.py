@@ -34,6 +34,7 @@ class RolloutWorker(Rollout):
         self.surprise_fig = None
         self.replayed_episodes = []
         self.top_exp_replay_values = deque(maxlen=10)
+        self.episodes_per_epoch = None
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
@@ -64,6 +65,7 @@ class RolloutWorker(Rollout):
         avg_epoch_losses = []
         # rollouts_per_epoch = n_cycles * self.rollout_batch_size
         last_episode_batch = None
+        self.episodes_per_epoch = n_cycles
         for cyc in range(n_cycles):
             print("episode {} / {}".format(cyc, n_cycles))
             ro_start = time.time()
@@ -157,14 +159,14 @@ class RolloutWorker(Rollout):
         self.pred = pred_mean
 
     def init_surprise_plot(self):
-        plt.clf()
-        self.surprise_fig = plt.figure()
+        # plt.clf()
+        self.surprise_fig = plt.figure(figsize=(8, 4), dpi=100)
         self.surprise_fig_ax = self.surprise_fig.add_subplot(111)
 
         # some X and Y data
         x = [0]
         y = [0]
-        self.surprise_fig_li, = self.surprise_fig_ax.plot(x, y)
+        self.surprise_fig_li, = self.surprise_fig_ax.plot(x, y,color=(0,0,0))
         self.surprise_fig_ax.relim()
         self.surprise_fig_ax.autoscale_view(True, True, True)
         plt.ylabel('surprise (model-learning loss)')
@@ -174,33 +176,22 @@ class RolloutWorker(Rollout):
         plt.show(block=False)
         plt.pause(0.01)
 
-    # def start_record_experience_replay(self, video_path):
-    #     if self._record_video:
-    #         fps = (1 / self._time_per_render)
-    #
-    #         self._video_process = Process(target=self.save_video,
-    #                                       args=(self._video_queue, video_path, fps))
-    #         self._video_process.start()
-    #
-    #     if not self._record_video:
-    #         self._video_queue.put(None)
-    #         self._video_process.join()
-    #         self._video_idx += 1
-    #
-    # def save_video(queue, filename, fps):
-    #     writer = imageio.get_writer(filename, fps=fps)
-    #     while True:
-    #         frame = queue.get()
-    #         if frame is None:
-    #             break
-    #         writer.append_data(frame)
-    #     writer.close()
-
     def replay_experience(self):
         if self.surprise_fig is None:
             self.init_surprise_plot()
 
-        replay_idx = np.argmax(self.policy.model_replay_buffer.memory_value)
+        visualize_replay = False
+        record_replay = True
+
+        current_epoch = int(np.round(self.policy.model_replay_buffer.ep_no / self.episodes_per_epoch)) - 1
+
+        last_added_idxs = np.argwhere(self.policy.model_replay_buffer.ep_added > (self.policy.model_replay_buffer.ep_no - self.episodes_per_epoch))
+
+        last_added_idxs = last_added_idxs.flatten()
+        # replay_idx = np.argmax(self.policy.model_replay_buffer.memory_value)
+        last_added_values = np.take(self.policy.model_replay_buffer.memory_value, last_added_idxs)
+
+        replay_idx = last_added_idxs[np.argmax(last_added_values)]
 
         highest_mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
         if len(self.top_exp_replay_values) > 0:
@@ -210,19 +201,22 @@ class RolloutWorker(Rollout):
 
         if highest_mem_val < mem_val_required:
             print("highes mem_val is {}, but {} required to be interesting enough for replay".format(highest_mem_val, mem_val_required))
-            self.top_exp_replay_values *= 0.9
+            self.top_exp_replay_values = deque(np.array(self.top_exp_replay_values) * 0.95, maxlen=self.top_exp_replay_values.maxlen)
             return
 
         if replay_idx in self.replayed_episodes:
             return
 
         self.replayed_episodes.append(replay_idx)
+        self.top_exp_replay_values.append(highest_mem_val)
 
-        age = self.policy.model_replay_buffer.ep_added[replay_idx]
+        ep_added = self.policy.model_replay_buffer.ep_added[replay_idx]
         mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
         init_max_surprise = max(self.policy.model_replay_buffer.loss_history[replay_idx])
 
-        print("Replaying experience {} with highest memory value {}, age {}, initial max surprise {}".format(replay_idx, mem_val, age, init_max_surprise))
+        print("Replaying experience {} with highest memory value {}, added in episode {}, initial max surprise {}".format(replay_idx, mem_val, ep_added, init_max_surprise))
+
+        replay_video_fpath = os.path.join(self.logger.get_dir(), "video_ep_{}_v_{:.2f}.mp4".format(current_epoch, highest_mem_val))
 
         buff_idxs = [replay_idx]
         env = self.envs[0].env
@@ -230,13 +224,16 @@ class RolloutWorker(Rollout):
         for buff_idx in buff_idxs:
 
             step_no = 0
+
+            if record_replay:
+                frames = []
+                plots = []
             for o,o2,u in zip(self.policy.model_replay_buffer.buffers['o'][buff_idx],
                               self.policy.model_replay_buffer.buffers['o2'][buff_idx],
                               self.policy.model_replay_buffer.buffers['u'][buff_idx]):
                 next_o, _, _, _ = env.step(u)
                 env.sim.set_state(self.policy.model_replay_buffer.mj_states[buff_idx][step_no])
                 obs_err = np.mean(abs(next_o['observation'] - o2))
-                env.render()
 
                 # surprise = self.policy.model_replay_buffer.loss_history[buff_idx][step_no]
                 surprise_hist = self.policy.model_replay_buffer.loss_history[buff_idx][:step_no+1]
@@ -248,30 +245,45 @@ class RolloutWorker(Rollout):
                 self.surprise_fig_li.set_ydata(surprise_hist)
                 self.surprise_fig_ax.relim()
                 self.surprise_fig_ax.autoscale_view(True, True, True)
-                self.surprise_fig.canvas.draw()
+
 
                 step_no += 1
 
-                viewer = env._get_viewer()
-                viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
-                viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Observation error:", "{:.2f}".format(obs_err))
+                if visualize_replay:
+                    viewer = env._get_viewer('human')
+                    viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
+                    viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Observation error:", "{:.2f}".format(obs_err))
+                    self.surprise_fig.canvas.draw()
+                    env.render()
+                if record_replay:
+                    record_viewer = env._get_viewer('rgb_array')
+                    frame = record_viewer._read_pixels_as_in_window()
+                    fig = self.surprise_fig
+                    frame_plot = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                    frame_plot = frame_plot.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                    plots.append(frame_plot)
+                    frames.append(frame)
+            if record_replay and len(frames) > 0:
+                # graph_color =
+                video_writer = imageio.get_writer(replay_video_fpath, fps=10)
+                for frame, plot in zip(frames, plots):
+                    f_width = frame.shape[1]
+                    f_height = frame.shape[0]
+                    p_width = plot.shape[1]
+                    p_height = plot.shape[0]
+                    # plot_area = np.zeros(plot.shape)
+                    plot_area = np.where(plot == 0, 0, 1)
 
-                #
-                # y = step_no
-                # z = step_no
-                # dim1 = step_no % 100 * 1
-                # dim2 = step_no % 100 * 1
-                # dim3 = step_no % 3 * 1
-                # img1 = np.ones([dim1, dim2, dim3], dtype=np.uint8) * 1
-                # # img2 = np.ones([3, 100, 100], dtype=np.uint8) * step_no*10
-                # # img3 = np.ones([100, 3, 100], dtype=np.uint8) * step_no*100
-                # imgs = [img1]
-                # for img in imgs:
-                #     print(dim1,dim2,dim3, step_no)
-                #     viewer.draw_pixels(img, y, z)
-                #     # viewer.draw_pixels(img, "hallo", "TEst")
-                #     # viewer.draw_pixels(y, z, img)
-                #     # viewer.draw_pixels(y, img, z)
+                    # plot_area = np.uint8(plot_area)
+                    pad_values = ((f_height-p_height,0),(f_width-p_width,0), (0,0))
+                    large_plot = np.pad(plot, pad_values, 'constant', constant_values=0)
+                    padded_plot_area = np.pad(plot_area, pad_values, 'constant', constant_values=1)
+                    # frame = np.int64(frame)
+                    frame_with_plot = (frame * padded_plot_area) + large_plot
+                    frame_with_plot = np.uint8(frame_with_plot)
+                    video_writer.append_data(frame_with_plot)
+                video_writer.close()
+
 
 
 
