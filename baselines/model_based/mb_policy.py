@@ -54,6 +54,7 @@ class MBPolicy(Policy):
         # pass
         print("done init MBPolicy")
 
+
     def _vars(self, scope):
         res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + '/' + scope)
         assert len(res) > 0
@@ -184,17 +185,32 @@ class MBPolicy(Policy):
         else:
             return u_s
 
-    def store_episode(self, rollouts, update_stats=True, initial_mj_states=None):
-        # print("Storing episode batch")
-        episodes = []
-        for e_idx in range(len(rollouts['o'])):
-            episode = {}
-            episode['o'] = rollouts['o'][e_idx][:-1]
-            episode['u'] = rollouts['u'][e_idx]
-            episode['o2'] = rollouts['o'][e_idx][1:]
-            episodes.append(episode)
-        new_idxs = self.model_replay_buffer.store_episode(episodes, initial_mj_states)
+    def update_replay_buffer_losses(self, buffer_idxs):
+        batch_size_diff = self.model_train_batch_size - len(buffer_idxs)
+        if batch_size_diff < 0:
+            print("ERROR!!! cannot predict more episodes than model_train_buffer_size")
+            assert False
+        padded_buffer_idxs = buffer_idxs + [0] * batch_size_diff
+        batch, idxs = self.sample_batch(idxs=padded_buffer_idxs)
+        total_model_loss, model_loss_per_step, model_grads = self.get_grads(batch)
+        self.model_replay_buffer.update_with_loss(buffer_idxs, model_loss_per_step[:len(buffer_idxs)])
+        pass
+
+    def store_episode(self, episode, update_stats=True, initial_mj_states=None):
+        rollouts = []
+        for e_idx in range(len(episode['o'])):
+            rollout = {}
+            rollout['o'] = episode['o'][e_idx][:-1]
+            rollout['u'] = episode['u'][e_idx]
+            rollout['o2'] = episode['o'][e_idx][1:]
+            if 'loss' in episode.keys():
+                rollout['loss'] = episode['loss'][e_idx]
+            rollouts.append(rollout)
+
+        new_idxs = self.model_replay_buffer.store_episode(rollouts, initial_mj_states)
+        self.update_replay_buffer_losses(new_idxs)
         return new_idxs
+    
 
     def sample_batch(self, batch_size=None, idxs=None):
         # print("Sampling batch")

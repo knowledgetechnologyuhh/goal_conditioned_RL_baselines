@@ -16,7 +16,6 @@ from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
 from baselines.util import mpi_fork
 import experiment.click_options as main_linker
-from plot.plot_model_train import plot_model_train
 from subprocess import CalledProcessError
 import subprocess
 
@@ -75,8 +74,6 @@ def train(rollout_worker, evaluator,
         if rank == 0:
             print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
-
-        plot_model_train("/".join(logger.get_dir().split("/")[:-1]))
 
         # save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())

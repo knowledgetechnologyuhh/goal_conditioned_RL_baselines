@@ -47,7 +47,7 @@ class State_GRU1:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
         self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 class State_GRU2:
@@ -89,7 +89,6 @@ class State_GRU2:
             self.state = state
             self.output = tf.layers.dense(out, dimo)
 
-        # self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
         self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
         self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
@@ -118,7 +117,7 @@ class FF_Simple3:
             input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
             self.output = nn(input, [hidden] * layers + [dimo])
 
-        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
         self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 class FF_Simple5:
@@ -144,7 +143,7 @@ class FF_Simple5:
             input = tf.concat(axis=2, values=[self.o_tf, self.u_tf])
             self.output = nn(input, [hidden] * layers + [dimo])
 
-        self.obs_loss_per_step_tf = tf.abs(self.output - self.o2_tf)
+        self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
         self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
 
 
