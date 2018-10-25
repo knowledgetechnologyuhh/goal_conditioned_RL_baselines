@@ -24,7 +24,7 @@ class State_GRU1:
         size = 100
 
         # layers = 3
-        with tf.variable_scope('ModelRNN'):
+        with tf.variable_scope('AdversarialControlRNN'):
             # create a BasicRNNCell
             self.rnn_cell = tf.nn.rnn_cell.GRUCell(size)
 
