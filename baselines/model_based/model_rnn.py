@@ -28,7 +28,7 @@ class State_GRU3_300:
 
         dimo = self.o_tf.shape[2]
         diml = self.loss_tf.shape[2]
-        sizes = [80, 300, 80]
+        sizes = [80, 160, 240]
         with tf.variable_scope('ModelRNN'):
             # create a BasicRNNCell
             self.rnn_cell = MultiRNNCell([tf.nn.rnn_cell.GRUCell(size) for size in sizes], state_is_tuple=False)
@@ -46,12 +46,12 @@ class State_GRU3_300:
 
             self.state = state
             intermediate_out = tf.layers.dense(out, 200, activation='sigmoid')
-            intermediate_out = tf.layers.dense(intermediate_out, 100, activation='sigmoid')
+            # intermediate_out = tf.layers.dense(intermediate_out, 100, activation='sigmoid')
             self.output = tf.layers.dense(intermediate_out, dimo)
 
-            intermediate_loss = tf.layers.dense(out, 200, activation='sigmoid')
-            intermediate_loss = tf.layers.dense(intermediate_loss, 100, activation='sigmoid')
-            self.loss_prediction_tf = tf.layers.dense(intermediate_loss, diml, activation='relu')
+            # intermediate_loss = tf.layers.dense(out, 150, activation='sigmoid')
+            # intermediate_loss = tf.layers.dense(intermediate_loss, 100, activation='sigmoid')
+            self.loss_prediction_tf = tf.layers.dense(out, diml, activation='relu')
 
         self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
         self.loss_loss_per_step_tf = tf.reduce_mean(tf.abs(self.loss_prediction_tf - self.loss_tf), axis=2)

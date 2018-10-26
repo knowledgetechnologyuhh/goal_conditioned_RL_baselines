@@ -297,7 +297,12 @@ class RolloutWorker(Rollout):
                     masked_large_plot = large_plot * padded_plot_mask
                     # plot_writer.append_data(masked_large_plot * 100)
                     frame_with_plot = (frame * padded_plot_mask) + masked_large_plot
-                    video_writer.append_data(frame_with_plot)
+                    try:
+                        video_writer.append_data(frame_with_plot)
+                    except Exception as e:
+                        print("FS: {}, {}".format(frame.shape, frames[0].shape))
+                        print("PS: {}, {}".format(plot.shape, plots[0].shape))
+                        print(e)
                 video_writer.close()
                 # frame_writer.close()
                 # mask_writer.close()
