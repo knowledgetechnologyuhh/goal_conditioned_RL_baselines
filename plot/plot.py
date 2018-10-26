@@ -355,7 +355,7 @@ def get_var_param_keys(paths):
         # print('loading {}'.format(curr_path))
         results = load_results(os.path.join(curr_path, 'progress.csv'))
         if not results:
-            print('skipping plot for {}'.format(curr_path))
+            # print('skipping plot for {}'.format(curr_path))
             continue
         # if len(results) != 10:
         #     print('skipping {}, bad file format'.format(curr_path))
@@ -380,7 +380,7 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
         # print('loading {}'.format(curr_path))
         results = load_results(os.path.join(curr_path, 'progress.csv'))
         if not results:
-            print('skipping plot for {}'.format(curr_path))
+            # print('skipping plot for {}'.format(curr_path))
             continue
         # print('loading {} ({})'.format(curr_path, len(results['epoch'])))
         with open(os.path.join(curr_path, 'params.json'), 'r') as f:
