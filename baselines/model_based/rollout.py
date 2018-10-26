@@ -99,7 +99,7 @@ class RolloutWorker(Rollout):
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
         self.replay_experience()
-        # plot_model_train("/".join(self.logger.get_dir().split("/")[:-1]))
+        plot_model_train("/".join(self.logger.get_dir().split("/")[:-1]))
         self.policy.model_replay_buffer.recompute_memory_values()
         return updated_policy, time_durations
 
@@ -157,6 +157,7 @@ class RolloutWorker(Rollout):
         self.pred = pred_mean
 
     def init_surprise_plot(self):
+        plt.switch_backend('agg')
         self.surprise_fig = plt.figure(figsize=(10, 4), dpi=70)
         self.surprise_fig_ax = self.surprise_fig.add_subplot(111)
         self.surprise_fig_ax.set_facecolor('white')
@@ -243,12 +244,11 @@ class RolloutWorker(Rollout):
                 self.surprise_fig_ax.autoscale_view(True, True, True)
 
                 step_no += 1
-
+                self.surprise_fig.canvas.draw()
                 if self.visualize_replay:
                     viewer = env._get_viewer('human')
                     viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
                     viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Observation error:", "{:.2f}".format(obs_err))
-                    self.surprise_fig.canvas.draw()
                     env.render()
                 if self.record_replay:
                     record_viewer = env._get_viewer('rgb_array')
