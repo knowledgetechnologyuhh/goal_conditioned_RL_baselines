@@ -79,7 +79,11 @@ class ModelReplayBuffer:
             if idxs is not None:
                 sample_idxs = idxs
             else:
-                sample_idxs = np.random.choice(self.current_size, batch_size, replace=replace)
+                # Sample those rollouts that have a high maximal loss prediction error.
+                prob_dist = np.max(np.abs(self.buffers['loss'] - self.buffers['loss_pred']), axis=1)[:self.current_size]
+                prob_dist = prob_dist / np.sum(prob_dist)
+                prob_dist = prob_dist.flatten()
+                sample_idxs = np.random.choice(self.current_size, batch_size, replace=replace, p=prob_dist)
             for b_idx,idx in enumerate(sample_idxs):
                 for key in self.buffers.keys():
                     batch[key][b_idx] = self.buffers[key][idx]
