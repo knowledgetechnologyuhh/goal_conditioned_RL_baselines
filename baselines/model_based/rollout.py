@@ -29,7 +29,8 @@ class RolloutWorker(Rollout):
 
         self.err = None
         self.err_std = None
-        self.pred = None
+        self.pred_steps = None
+        self.loss_pred_steps = None
         self.loss_histories = []
         self.surprise_fig = None
         self.replayed_episodes = []
@@ -59,8 +60,10 @@ class RolloutWorker(Rollout):
 
         if self.err is not None :
             logs += [('pred_err', self.err)]
-        if self.pred is not None:
-            logs += [('pred_steps', self.pred)]
+        if self.pred_steps is not None:
+            logs += [('pred_steps', self.pred_steps)]
+        if self.loss_pred_steps is not None:
+            logs += [('loss_pred_steps', self.loss_pred_steps)]
         logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)
@@ -76,8 +79,9 @@ class RolloutWorker(Rollout):
             print("episode {} / {}".format(cyc, n_cycles))
             ro_start = time.time()
             episode, mj_states = self.generate_rollouts(return_states=True)
-            last_episode_batch = episode
+            # last_episode_batch = episode
             stored_idxs = self.policy.store_episode(episode, mj_states=mj_states)
+            last_stored_idxs = stored_idxs
             for i in stored_idxs:
                 if i in self.replayed_episodes:
                     self.replayed_episodes.remove(i)
@@ -98,7 +102,7 @@ class RolloutWorker(Rollout):
         for idx,loss in enumerate(avg_epoch_losses):
             avg_loss = loss / n_cycles
             self.loss_histories[idx].append(avg_loss)
-        self.test_prediction_error(last_episode_batch)
+        self.test_prediction_error(last_stored_idxs)
         dur_total = time.time() - dur_start
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
@@ -108,25 +112,18 @@ class RolloutWorker(Rollout):
         return updated_policy, time_durations
 
 
-    def test_prediction_error(self, episode):
+    def test_prediction_error(self, batch_idxs):
         this_err_hist = []
         this_std_hist = []
         this_pred_hist = []
-        for i1, eps_o in enumerate(episode['o']):
-            transitions = []
-            for i2,ep_o in enumerate(eps_o[:-1]):
-                o = eps_o[i2]
-                o2 = eps_o[i2 + 1]
-                u = episode['u'][i1][i2]
-                transitions.append({"o": o, "o2": o2, "u": u})
+        this_loss_pred_hist = []
+        loss_pred_threshold_perc = 20 # Loss prediction threshold in %
 
-            # Test error for each individual transition
+        batch, idxs = self.policy.sample_batch(idxs=batch_idxs)
+        for o_s, o2_s, u_s, loss_s, loss_pred_s in zip(batch[0], batch[1], batch[2], batch[3], batch[4]):
             ep_err_hist = []
             s = None
-            for t in transitions:
-                o = t['o']
-                u = t['u']
-                o2 = t['o2']
+            for o, o2, u, loss, loss_pred in zip(o_s, o2_s, u_s, loss_s, loss_pred_s):
                 o2_pred, l, s = self.policy.forward_step_single(u,o,s)
                 err = np.mean(abs(o2 - o2_pred))
                 ep_err_hist.append(err)
@@ -135,28 +132,39 @@ class RolloutWorker(Rollout):
             this_err_hist.append(ep_err_mean)
             this_std_hist.append(ep_err_std)
 
-            # Test how many steps can be predicted without the error exceeding the goal achievement threshold.
-            o = transitions[0]['o']
+            # Test how many steps can be predicted without the error exceeding the goal achievement threshold and the loss prediction threshold.
+            o = o_s[0]
             step = 0
             s = None
-            for t in transitions[:-1]:
+            this_pred_hist_steps = None
+            this_loss_pred_hist_steps = None
+            for o2, u, loss, in zip(o2_s, u_s, loss_s):
                 step += 1
-                u = t['u']
-                o2 = t['o2']
                 o, l, s = self.policy.forward_step_single(u, o, s)
                 o_pred_g = self.policy.env._obs2goal(o)
                 o_g = self.policy.env._obs2goal(o2)
                 pred_success = self.policy.env._is_success(o_pred_g, o_g)
-                if not pred_success:
+                if not pred_success and this_pred_hist_steps is None:
+                    this_pred_hist_steps = step-1
+                loss_pred_ok = loss[0] + (loss[0] * loss_pred_threshold_perc / 100) < l[0]
+                if not loss_pred_ok and this_loss_pred_hist_steps is None:
+                    this_loss_pred_hist_steps = step-1
+                if not pred_success and not loss_pred_ok:
                     break
-            this_pred_hist.append(step-1)
+
+            this_pred_hist.append(this_pred_hist_steps)
+            this_loss_pred_hist.append(this_loss_pred_hist_steps)
+
 
         err_mean = np.mean(this_err_hist)
         err_std_mean = np.mean(this_std_hist)
         pred_mean = np.mean(this_pred_hist)
+        loss_pred_mean = np.mean(this_loss_pred_hist)
         self.err = err_mean
         self.err_std = err_std_mean
-        self.pred = pred_mean
+        self.pred_steps = pred_mean
+        self.loss_pred_steps = loss_pred_mean
+        self.policy.loss_pred_reliable_fwd_steps = self.loss_pred_steps
 
     def init_surprise_plot(self):
         self.surprise_fig = plt.figure(figsize=(10, 4), dpi=70)

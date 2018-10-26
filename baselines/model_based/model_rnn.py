@@ -70,16 +70,16 @@ class State_GRU2:
         """
         print("Initializing model")
         self.o_tf = inputs_tf['o']
-        self.o2_tf = inputs_tf['o2']
         self.u_tf = inputs_tf['u']
+        self.o2_tf = inputs_tf['o2']
+        self.loss_tf = inputs_tf['loss']
+
         self.max_batch_size = kwargs['model_train_batch_size']
 
-        #
-        dimo = self.o_tf.shape[2]
-        #
-        sizes = [100,100]
 
-        # layers = 3
+        dimo = self.o_tf.shape[2]
+        diml = self.loss_tf.shape[2]
+        sizes = [100, 100]
         with tf.variable_scope('ModelRNN'):
             # create a BasicRNNCell
             self.rnn_cell = MultiRNNCell([tf.nn.rnn_cell.GRUCell(size) for size in sizes])
@@ -97,9 +97,17 @@ class State_GRU2:
 
             self.state = state
             self.output = tf.layers.dense(out, dimo)
+            self.loss_prediction_tf = tf.layers.dense(out, diml)
 
         self.obs_loss_per_step_tf = tf.reduce_mean(tf.abs(self.output - self.o2_tf), axis=2)
+        self.loss_loss_per_step_tf = tf.reduce_mean(tf.abs(self.loss_prediction_tf - self.loss_tf), axis=2)
+
         self.obs_loss_tf = tf.reduce_mean(self.obs_loss_per_step_tf)
+        self.loss_loss_tf = tf.reduce_mean(self.loss_loss_per_step_tf)
+
+        self.total_loss_tf = (dimo.value * self.obs_loss_tf + diml.value * self.loss_loss_tf) / float(dimo.value + diml.value)
+
+
 
 
 
