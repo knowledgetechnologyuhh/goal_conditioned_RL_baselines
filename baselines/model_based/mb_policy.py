@@ -125,6 +125,7 @@ class MBPolicy(Policy):
             for step in range(pred_lookahead):
                 u = np.random.rand(self.model_train_batch_size, 1, self.dimu) * 2 - 1
                 current_seq.append(u)
+                # state = None
                 obs, loss, state = self.forward_step(u, obs, state)
                 if np.max(loss) > max_l_branch:
                     next_u = current_seq[0][np.argmax(loss)][0]
@@ -307,24 +308,6 @@ class MBPolicy(Policy):
         next_o, pred_l, s2 = self.forward_step(np.array([np.array([u])]), np.array([np.array([o])]), s)
         next_o = next_o[0][0]
         pred_l = pred_l[0][0]
-
-        # bs = self.model_train_batch_size
-        #
-        # single_step = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
-        #
-        # fd = {self.prediction_model.o_tf: single_step[0], self.prediction_model.u_tf: single_step[2]}
-        # if s is not None and 'initial_state' in self.prediction_model.__dict__:
-        #     fd[self.prediction_model.initial_state] = s
-        #
-        # fetches = [self.prediction_model.output, self.prediction_model.loss_prediction_tf]
-        # if 'state' in self.prediction_model.__dict__:
-        #     fetches.append(self.prediction_model.state)
-        #     o2, l, s2 = self.sess.run(fetches, feed_dict=fd)
-        # else:
-        #     o2, l = np.array(self.sess.run(fetches, feed_dict=fd)[0])
-        #     s2 = None
-        # next_o = np.array(o2[0][-1])
-        # pred_l = np.array(l[0][-1])
         return next_o, pred_l, s2
 
     def forward_step(self, u, o, s):
