@@ -54,7 +54,7 @@ class MBPolicy(Policy):
         self.model_replay_buffer = ModelReplayBuffer(self.model_shapes, model_buffer_size)
         # pass
         self.loss_pred_reliable_fwd_steps = 0
-        self.lookahead_branching_factor = 5
+        # self.lookahead_branching_factor = 5
         # self.obs_pred_reliable_fwd_steps = 0
         print("done init MBPolicy")
 
@@ -100,7 +100,7 @@ class MBPolicy(Policy):
     def get_actions(self, o, ag, g, policy_action_params=None):
         # return self.get_actions_random()
         # pred_lookahead = max(1,int(self.loss_pred_reliable_fwd_steps))
-        pred_lookahead = 12
+        pred_lookahead = 15
         return self.get_actions_max_surprise(o, pred_lookahead)
 
     def get_actions_random(self):
@@ -118,18 +118,18 @@ class MBPolicy(Policy):
         u_s = []
         for ro_idx in range(self.rollout_batch_size):
             max_l_branch = np.finfo(np.float16).min
-            next_u = None
-            for branch in range(self.lookahead_branching_factor):
-                state = None
-                obs = o[ro_idx]
-                current_seq = []
-                for step in range(pred_lookahead):
-                    u = np.random.randn(self.dimu)
-                    current_seq.append(u)
-                    obs, loss, state = self.forward_step_single(u, obs, state)
-                    if loss[0] > max_l_branch:
-                        next_u = current_seq[0]
-                        max_l_branch = loss[0]
+            state = None
+            obs = np.array([np.array([o[ro_idx]]) for _ in range(self.model_train_batch_size)])
+            current_seq = []
+            next_u = np.random.rand(self.model_train_batch_size, 1, self.dimu) * 2 - 1
+            for step in range(pred_lookahead):
+                u = np.random.rand(self.model_train_batch_size, 1, self.dimu) * 2 - 1
+                current_seq.append(u)
+                obs, loss, state = self.forward_step(u, obs, state)
+                if np.max(loss) > max_l_branch:
+                    next_u = current_seq[0][np.argmax(loss)][0]
+                    max_l_branch = np.max(loss)
+                current_seq.append(u)
 
             u_s.append(next_u)
         u_s = np.array(u_s)
@@ -137,6 +137,30 @@ class MBPolicy(Policy):
             return u_s[0]
         else:
             return u_s
+
+    # def get_actions_max_surprise_old(self, o, pred_lookahead):
+    #     u_s = []
+    #     for ro_idx in range(self.rollout_batch_size):
+    #         max_l_branch = np.finfo(np.float16).min
+    #         next_u = None
+    #         for branch in range(self.lookahead_branching_factor):
+    #             state = None
+    #             obs = o[ro_idx]
+    #             current_seq = []
+    #             for step in range(pred_lookahead):
+    #                 u = np.random.randn(self.dimu)
+    #                 current_seq.append(u)
+    #                 obs, loss, state = self.forward_step_single(u, obs, state)
+    #                 if loss[0] > max_l_branch:
+    #                     next_u = current_seq[0]
+    #                     max_l_branch = loss[0]
+    #
+    #         u_s.append(next_u)
+    #     u_s = np.array(u_s)
+    #     if len(u_s) == 1:
+    #         return u_s[0]
+    #     else:
+    #         return u_s
 
     # This implements a random greedy beam search to maximize expected surprisal. It does not work well, because the agent will always take the action that is immediately highest surprise without planning in the long run.
     def get_actions_max_surprise_greedy(self, o, pred_lookahead):
@@ -279,14 +303,49 @@ class MBPolicy(Policy):
         return batch, idxs
 
     def forward_step_single(self, u, o, s):
+        # TODO: Use function forward_step instead.
+        next_o, pred_l, s2 = self.forward_step(np.array([np.array([u])]), np.array([np.array([o])]), s)
+        next_o = next_o[0][0]
+        pred_l = pred_l[0][0]
+
+        # bs = self.model_train_batch_size
+        #
+        # single_step = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
+        #
+        # fd = {self.prediction_model.o_tf: single_step[0], self.prediction_model.u_tf: single_step[2]}
+        # if s is not None and 'initial_state' in self.prediction_model.__dict__:
+        #     fd[self.prediction_model.initial_state] = s
+        #
+        # fetches = [self.prediction_model.output, self.prediction_model.loss_prediction_tf]
+        # if 'state' in self.prediction_model.__dict__:
+        #     fetches.append(self.prediction_model.state)
+        #     o2, l, s2 = self.sess.run(fetches, feed_dict=fd)
+        # else:
+        #     o2, l = np.array(self.sess.run(fetches, feed_dict=fd)[0])
+        #     s2 = None
+        # next_o = np.array(o2[0][-1])
+        # pred_l = np.array(l[0][-1])
+        return next_o, pred_l, s2
+
+    def forward_step(self, u, o, s):
 
         bs = self.model_train_batch_size
+        o_pad = bs - len(o)
+        # o_pad_vals = np.zeros(o.shape[1:])
+        u_pad = bs - len(u)
+        # u_pad_vals = np.zeros(u.shape[1:])
+        padded_o = np.pad(o, ((0, o_pad),(0,0),(0,0)), 'constant', constant_values=0)
+        padded_u = np.pad(u, ((0, u_pad),(0,0),(0,0)), 'constant', constant_values=0)
+        if s is not None:
+            padded_s = np.pad(s, (0,bs - len(s)), 'constant', constant_values=0)
+        else:
+            padded_s = None
 
-        single_step = [np.array([[o]] * bs), np.array([[o]] * bs), np.array([[u]] * bs)]
+        step_batch = [padded_o, padded_u]
 
-        fd = {self.prediction_model.o_tf: single_step[0], self.prediction_model.u_tf: single_step[2]}
+        fd = {self.prediction_model.o_tf: step_batch[0], self.prediction_model.u_tf: step_batch[1]}
         if s is not None and 'initial_state' in self.prediction_model.__dict__:
-            fd[self.prediction_model.initial_state] = s
+            fd[self.prediction_model.initial_state] = padded_s
 
         fetches = [self.prediction_model.output, self.prediction_model.loss_prediction_tf]
         if 'state' in self.prediction_model.__dict__:
@@ -295,8 +354,8 @@ class MBPolicy(Policy):
         else:
             o2, l = np.array(self.sess.run(fetches, feed_dict=fd)[0])
             s2 = None
-        next_o = np.array(o2[0][-1])
-        pred_l = np.array(l[0][-1])
+        next_o = o2
+        pred_l = l
         return next_o, pred_l, s2
 
     def _update(self, model_grads):
