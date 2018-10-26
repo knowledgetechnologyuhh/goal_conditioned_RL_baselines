@@ -31,7 +31,7 @@ class State_GRU3_300:
         sizes = [80, 300, 80]
         with tf.variable_scope('ModelRNN'):
             # create a BasicRNNCell
-            self.rnn_cell = MultiRNNCell([tf.nn.rnn_cell.GRUCell(size) for size in sizes])
+            self.rnn_cell = MultiRNNCell([tf.nn.rnn_cell.GRUCell(size) for size in sizes], state_is_tuple=False)
 
             # defining initial zero state
             self.initial_state = self.rnn_cell.zero_state(self.max_batch_size, dtype=tf.float32)
@@ -135,7 +135,7 @@ class State_GRU2:
         sizes = [100, 100]
         with tf.variable_scope('ModelRNN'):
             # create a BasicRNNCell
-            self.rnn_cell = MultiRNNCell([tf.nn.rnn_cell.GRUCell(size) for size in sizes])
+            self.rnn_cell = MultiRNNCell([tf.nn.rnn_cell.GRUCell(size) for size in sizes], state_is_tuple=False)
 
             # defining initial zero state
             self.initial_state = self.rnn_cell.zero_state(self.max_batch_size, dtype=tf.float32)
