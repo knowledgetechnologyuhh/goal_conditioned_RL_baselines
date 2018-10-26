@@ -283,7 +283,10 @@ class RolloutWorker(Rollout):
                 # frame_writer = imageio.get_writer(replay_video_fpath+"_frame.mp4", fps=10)
                 # mask_writer = imageio.get_writer(replay_video_fpath + "_mask.mp4", fps=10)
                 # plot_writer = imageio.get_writer(replay_video_fpath + "_plot.mp4", fps=10)
+                initial_shape = frames[0].shape
                 for frame, plot in zip(frames, plots):
+                    if frame.shape != frames[0].shape:
+                        frame = frame[0:initial_shape[0]][0:initial_shape[1]][0:initial_shape[2]]
                     # frame_writer.append_data(frame)
                     f_width = frame.shape[1]
                     f_height = frame.shape[0]
