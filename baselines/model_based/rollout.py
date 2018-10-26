@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from mujoco_py.generated import const as mj_const
 from plot.plot_model_train import plot_model_train
 from multiprocessing import Process, Queue
+
 import imageio
 
 
@@ -35,6 +36,8 @@ class RolloutWorker(Rollout):
         self.replayed_episodes = []
         self.top_exp_replay_values = deque(maxlen=10)
         self.episodes_per_epoch = None
+        self.visualize_replay = False
+        self.record_replay = True
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
@@ -63,16 +66,13 @@ class RolloutWorker(Rollout):
         dur_train = 0
         dur_start = time.time()
         avg_epoch_losses = []
-        # rollouts_per_epoch = n_cycles * self.rollout_batch_size
         last_episode_batch = None
         self.episodes_per_epoch = n_cycles
         for cyc in range(n_cycles):
             print("episode {} / {}".format(cyc, n_cycles))
             ro_start = time.time()
-            # episode, initial_mj_states = self.generate_rollouts(return_initial_states=True)
             episode, mj_states = self.generate_rollouts(return_states=True)
             last_episode_batch = episode
-            # stored_idxs = self.policy.store_episode(episode, initial_mj_states=initial_mj_states)
             stored_idxs = self.policy.store_episode(episode, mj_states=mj_states)
             for i in stored_idxs:
                 if i in self.replayed_episodes:
@@ -113,7 +113,6 @@ class RolloutWorker(Rollout):
         for i1, eps_o in enumerate(episode['o']):
             transitions = []
             for i2,ep_o in enumerate(eps_o[:-1]):
-                # for i3,o in enumerate(ep_o[:-1]):
                 o = eps_o[i2]
                 o2 = eps_o[i2 + 1]
                 u = episode['u'][i1][i2]
@@ -150,7 +149,6 @@ class RolloutWorker(Rollout):
                     break
             this_pred_hist.append(step-1)
 
-
         err_mean = np.mean(this_err_hist)
         err_std_mean = np.mean(this_std_hist)
         pred_mean = np.mean(this_pred_hist)
@@ -159,38 +157,37 @@ class RolloutWorker(Rollout):
         self.pred = pred_mean
 
     def init_surprise_plot(self):
-        # plt.clf()
-        self.surprise_fig = plt.figure(figsize=(8, 4), dpi=100)
+        self.surprise_fig = plt.figure(figsize=(10, 4), dpi=70)
         self.surprise_fig_ax = self.surprise_fig.add_subplot(111)
+        self.surprise_fig_ax.set_facecolor('white')
+        self.surprise_fig_ax.grid(color='gray', linestyle='-', linewidth=1)
+        self.surprise_fig_ax.spines['left'].set_color('black')
+        self.surprise_fig_ax.spines['bottom'].set_color('black')
+        self.surprise_fig_ax.set_xlim([0, self.T])
 
-        # some X and Y data
+        # init with some X and Y data
         x = [0]
         y = [0]
         self.surprise_fig_li, = self.surprise_fig_ax.plot(x, y,color=(0,0,0))
         self.surprise_fig_ax.relim()
         self.surprise_fig_ax.autoscale_view(True, True, True)
-        plt.ylabel('surprise (model-learning loss)')
+        plt.ylabel('surprise')
         plt.pause(0.01)
         self.surprise_fig.canvas.draw()
         plt.pause(0.01)
-        plt.show(block=False)
+        if self.visualize_replay:
+            plt.show(block=False)
         plt.pause(0.01)
 
     def replay_experience(self):
         if self.surprise_fig is None:
             self.init_surprise_plot()
 
-        visualize_replay = False
-        record_replay = True
-
         current_epoch = int(np.round(self.policy.model_replay_buffer.ep_no / self.episodes_per_epoch)) - 1
 
         last_added_idxs = np.argwhere(self.policy.model_replay_buffer.ep_added > (self.policy.model_replay_buffer.ep_no - self.episodes_per_epoch))
-
         last_added_idxs = last_added_idxs.flatten()
-        # replay_idx = np.argmax(self.policy.model_replay_buffer.memory_value)
         last_added_values = np.take(self.policy.model_replay_buffer.memory_value, last_added_idxs)
-
         replay_idx = last_added_idxs[np.argmax(last_added_values)]
 
         highest_mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
@@ -199,7 +196,7 @@ class RolloutWorker(Rollout):
         else:
             mem_val_required = 0
 
-        if highest_mem_val > mem_val_required:
+        if highest_mem_val < mem_val_required:
             print("highes mem_val is {}, but {} required to be interesting enough for replay".format(highest_mem_val, mem_val_required))
             self.top_exp_replay_values = deque(np.array(self.top_exp_replay_values) * 0.95, maxlen=self.top_exp_replay_values.maxlen)
             return
@@ -216,7 +213,7 @@ class RolloutWorker(Rollout):
 
         print("Replaying experience {} with highest memory value {}, added in episode {}, initial max surprise {}".format(replay_idx, mem_val, ep_added, init_max_surprise))
 
-        replay_video_fpath = os.path.join(self.logger.get_dir(), "video_ep_{}_v_{:.2f}.mp4".format(current_epoch, highest_mem_val))
+        replay_video_fpath = os.path.join(self.logger.get_dir(), "v_{:.2f}_ep_{}_.mp4".format(highest_mem_val, current_epoch))
 
         buff_idxs = [replay_idx]
         env = self.envs[0].env
@@ -225,7 +222,7 @@ class RolloutWorker(Rollout):
 
             step_no = 0
 
-            if record_replay:
+            if self.record_replay:
                 frames = []
                 plots = []
             for o,o2,u in zip(self.policy.model_replay_buffer.buffers['o'][buff_idx],
@@ -235,7 +232,6 @@ class RolloutWorker(Rollout):
                 env.sim.set_state(self.policy.model_replay_buffer.mj_states[buff_idx][step_no])
                 obs_err = np.mean(abs(next_o['observation'] - o2))
 
-                # surprise = self.policy.model_replay_buffer.loss_history[buff_idx][step_no]
                 surprise_hist = self.policy.model_replay_buffer.loss_history[buff_idx][:step_no+1]
                 surprise = surprise_hist[-1]
                 steps = list(range(step_no+1))
@@ -246,16 +242,15 @@ class RolloutWorker(Rollout):
                 self.surprise_fig_ax.relim()
                 self.surprise_fig_ax.autoscale_view(True, True, True)
 
-
                 step_no += 1
 
-                if visualize_replay:
+                if self.visualize_replay:
                     viewer = env._get_viewer('human')
                     viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
                     viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Observation error:", "{:.2f}".format(obs_err))
                     self.surprise_fig.canvas.draw()
                     env.render()
-                if record_replay:
+                if self.record_replay:
                     record_viewer = env._get_viewer('rgb_array')
                     frame = record_viewer._read_pixels_as_in_window()
                     fig = self.surprise_fig
@@ -263,24 +258,18 @@ class RolloutWorker(Rollout):
                     frame_plot = frame_plot.reshape(fig.canvas.get_width_height()[::-1] + (3,))
                     plots.append(frame_plot)
                     frames.append(frame)
-            if record_replay and len(frames) > 0:
-                # graph_color =
+            if self.record_replay and len(frames) > 0:
                 video_writer = imageio.get_writer(replay_video_fpath, fps=10)
                 for frame, plot in zip(frames, plots):
                     f_width = frame.shape[1]
                     f_height = frame.shape[0]
                     p_width = plot.shape[1]
                     p_height = plot.shape[0]
-                    # plot_area = np.zeros(plot.shape)
-                    plot_area = np.where(plot == 0, 0, 1)
-
-                    # plot_area = np.uint8(plot_area)
-                    pad_values = ((f_height-p_height,0),(f_width-p_width,0), (0,0))
-                    large_plot = np.pad(plot, pad_values, 'constant', constant_values=0)
+                    plot_area = np.where(plot == 255, np.uint8(1), np.uint8(0))
+                    pad_values = ((0, f_height-p_height),(f_width-p_width,0), (0,0))
                     padded_plot_area = np.pad(plot_area, pad_values, 'constant', constant_values=1)
-                    # frame = np.int64(frame)
-                    frame_with_plot = (frame * padded_plot_area) + large_plot
-                    frame_with_plot = np.uint8(frame_with_plot)
+                    # large_plot = np.pad(plot, pad_values, 'constant', constant_values=255)
+                    frame_with_plot = (frame * padded_plot_area)
                     video_writer.append_data(frame_with_plot)
                 video_writer.close()
 
