@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from mujoco_py.generated import const as mj_const
 from plot.plot_model_train import plot_model_train
 from multiprocessing import Process, Queue
-
 import imageio
 
 
@@ -38,6 +37,7 @@ class RolloutWorker(Rollout):
         self.episodes_per_epoch = None
         self.visualize_replay = False
         self.record_replay = True
+        self.do_plot = False
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
@@ -45,13 +45,17 @@ class RolloutWorker(Rollout):
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
         for i,l in enumerate(self.loss_histories):
+            loss_key = 'loss-{}'.format(i)
+            loss_key_map = ['total loss', 'observation loss', 'loss prediction loss']
+            if i < len(loss_key_map):
+                loss_key = loss_key_map[i]
             if len(l) > 0:
-                logs += [('loss-{}'.format(i), l[-1])]
+                logs += [(loss_key, l[-1])]
             if len(l) > 1:
                 loss_grad = l[-1] / l[-2]
             else:
                 loss_grad = np.nan
-            logs += [('loss-{}-grad'.format(i), loss_grad)]
+            logs += [('{} grad'.format(loss_key), loss_grad)]
 
         if self.err is not None :
             logs += [('pred_err', self.err)]
@@ -99,17 +103,15 @@ class RolloutWorker(Rollout):
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
         self.replay_experience()
-        plot_model_train("/".join(self.logger.get_dir().split("/")[:-1]))
-        self.policy.model_replay_buffer.recompute_memory_values()
+        if self.do_plot:
+            plot_model_train("/".join(self.logger.get_dir().split("/")[:-1]))
         return updated_policy, time_durations
 
 
     def test_prediction_error(self, episode):
-        fwd_step = self.policy.forward_step_single
         this_err_hist = []
         this_std_hist = []
         this_pred_hist = []
-        ep_transitions = []
         for i1, eps_o in enumerate(episode['o']):
             transitions = []
             for i2,ep_o in enumerate(eps_o[:-1]):
@@ -125,7 +127,7 @@ class RolloutWorker(Rollout):
                 o = t['o']
                 u = t['u']
                 o2 = t['o2']
-                o2_pred, s = fwd_step(u,o,s)
+                o2_pred, l, s = self.policy.forward_step_single(u,o,s)
                 err = np.mean(abs(o2 - o2_pred))
                 ep_err_hist.append(err)
             ep_err_mean = np.mean(ep_err_hist)
@@ -141,7 +143,7 @@ class RolloutWorker(Rollout):
                 step += 1
                 u = t['u']
                 o2 = t['o2']
-                o, s = fwd_step(u, o, s)
+                o, l, s = self.policy.forward_step_single(u, o, s)
                 o_pred_g = self.policy.env._obs2goal(o)
                 o_g = self.policy.env._obs2goal(o2)
                 pred_success = self.policy.env._is_success(o_pred_g, o_g)
@@ -157,7 +159,6 @@ class RolloutWorker(Rollout):
         self.pred = pred_mean
 
     def init_surprise_plot(self):
-        plt.switch_backend('agg')
         self.surprise_fig = plt.figure(figsize=(10, 4), dpi=70)
         self.surprise_fig_ax = self.surprise_fig.add_subplot(111)
         self.surprise_fig_ax.set_facecolor('white')
@@ -169,18 +170,25 @@ class RolloutWorker(Rollout):
         # init with some X and Y data
         x = [0]
         y = [0]
-        self.surprise_fig_li, = self.surprise_fig_ax.plot(x, y,color=(0,0,0))
+        self.surprise_fig_li_loss, = self.surprise_fig_ax.plot(x, y,color=(0,0,0), label='surprise')
+        self.surprise_fig_li_pred_loss, = self.surprise_fig_ax.plot(x, y, color=(1, 0, 0), label='predicted surprise')
         self.surprise_fig_ax.relim()
         self.surprise_fig_ax.autoscale_view(True, True, True)
-        plt.ylabel('surprise')
+        # plt.ylabel('surprise')
         plt.pause(0.01)
         self.surprise_fig.canvas.draw()
         plt.pause(0.01)
-        if self.visualize_replay:
-            plt.show(block=False)
+        # if self.visualize_replay:
+        plt.show(block=False)
+        legend = plt.legend(frameon=0, loc='upper left')
+        frame = legend.get_frame()
+        frame.set_color('white')
+        frame.set_linewidth(0)
         plt.pause(0.01)
 
     def replay_experience(self):
+        if self.visualize_replay is False:
+            plt.switch_backend('agg')
         if self.surprise_fig is None:
             self.init_surprise_plot()
 
@@ -210,9 +218,8 @@ class RolloutWorker(Rollout):
 
         ep_added = self.policy.model_replay_buffer.ep_added[replay_idx]
         mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
-        init_max_surprise = max(self.policy.model_replay_buffer.loss_history[replay_idx])
 
-        print("Replaying experience {} with highest memory value {}, added in episode {}, initial max surprise {}".format(replay_idx, mem_val, ep_added, init_max_surprise))
+        print("Replaying experience {} with highest memory value {}, added in episode {}.".format(replay_idx, mem_val, ep_added))
 
         replay_video_fpath = os.path.join(self.logger.get_dir(), "v_{:.2f}_ep_{}_.mp4".format(highest_mem_val, current_epoch))
 
@@ -220,36 +227,41 @@ class RolloutWorker(Rollout):
         env = self.envs[0].env
 
         for buff_idx in buff_idxs:
-
-            step_no = 0
+            if current_epoch > 0:
+                print("ep {}".format(current_epoch))
 
             if self.record_replay:
                 frames = []
                 plots = []
-            for o,o2,u in zip(self.policy.model_replay_buffer.buffers['o'][buff_idx],
-                              self.policy.model_replay_buffer.buffers['o2'][buff_idx],
-                              self.policy.model_replay_buffer.buffers['u'][buff_idx]):
-                next_o, _, _, _ = env.step(u)
-                env.sim.set_state(self.policy.model_replay_buffer.mj_states[buff_idx][step_no])
-                obs_err = np.mean(abs(next_o['observation'] - o2))
 
-                surprise_hist = self.policy.model_replay_buffer.loss_history[buff_idx][:step_no+1]
-                surprise = surprise_hist[-1]
+            for step_no, mj_state in enumerate(self.policy.model_replay_buffer.mj_states[buff_idx]):
+                u = self.policy.model_replay_buffer.buffers['u'][buff_idx][step_no]
+                next_o, _, _, _ = env.step(u)
+                # env.sim.set_state(self.policy.model_replay_buffer.mj_states[buff_idx][step_no])
+                env.sim.set_state(mj_state)
+
+                surprise_hist = self.policy.model_replay_buffer.buffers['loss'][buff_idx][:step_no+1]
+                pred_surprise_hist = self.policy.model_replay_buffer.buffers['loss_pred'][buff_idx][:step_no+1]
+                # surprise = surprise_hist[-1]
                 steps = list(range(step_no+1))
 
                 plt.pause(0.0001)
-                self.surprise_fig_li.set_xdata(steps)
-                self.surprise_fig_li.set_ydata(surprise_hist)
+                try:
+                    self.surprise_fig_li_loss.set_xdata(steps)
+                    self.surprise_fig_li_pred_loss.set_xdata(steps)
+                except Exception as e:
+                    print("Something went wrong: {}".format(e))
+                self.surprise_fig_li_loss.set_ydata(surprise_hist)
+                self.surprise_fig_li_pred_loss.set_ydata(pred_surprise_hist)
                 self.surprise_fig_ax.relim()
                 self.surprise_fig_ax.autoscale_view(True, True, True)
 
                 step_no += 1
                 self.surprise_fig.canvas.draw()
+
                 if self.visualize_replay:
-                    viewer = env._get_viewer('human')
-                    viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Surprise:", "{:.2f}".format(surprise))
-                    viewer.add_overlay(mj_const.GRID_TOPRIGHT, "Observation error:", "{:.2f}".format(obs_err))
                     env.render()
+
                 if self.record_replay:
                     record_viewer = env._get_viewer('rgb_array')
                     frame = record_viewer._read_pixels_as_in_window()
@@ -260,18 +272,28 @@ class RolloutWorker(Rollout):
                     frames.append(frame)
             if self.record_replay and len(frames) > 0:
                 video_writer = imageio.get_writer(replay_video_fpath, fps=10)
+                # frame_writer = imageio.get_writer(replay_video_fpath+"_frame.mp4", fps=10)
+                # mask_writer = imageio.get_writer(replay_video_fpath + "_mask.mp4", fps=10)
+                # plot_writer = imageio.get_writer(replay_video_fpath + "_plot.mp4", fps=10)
                 for frame, plot in zip(frames, plots):
+                    # frame_writer.append_data(frame)
                     f_width = frame.shape[1]
                     f_height = frame.shape[0]
                     p_width = plot.shape[1]
                     p_height = plot.shape[0]
-                    plot_area = np.where(plot == 255, np.uint8(1), np.uint8(0))
                     pad_values = ((0, f_height-p_height),(f_width-p_width,0), (0,0))
-                    padded_plot_area = np.pad(plot_area, pad_values, 'constant', constant_values=1)
-                    # large_plot = np.pad(plot, pad_values, 'constant', constant_values=255)
-                    frame_with_plot = (frame * padded_plot_area)
+                    plot_mask = np.where(plot == 255, np.uint8(1), np.uint8(0))
+                    padded_plot_mask = np.pad(plot_mask, pad_values, 'constant', constant_values=1)
+                    # mask_writer.append_data(padded_plot_mask * 100)
+                    large_plot = np.pad(plot, pad_values, 'constant', constant_values=0)
+                    masked_large_plot = large_plot * padded_plot_mask
+                    # plot_writer.append_data(masked_large_plot * 100)
+                    frame_with_plot = (frame * padded_plot_mask) + masked_large_plot
                     video_writer.append_data(frame_with_plot)
                 video_writer.close()
+                # frame_writer.close()
+                # mask_writer.close()
+                # plot_writer.close()
 
 
 

@@ -29,7 +29,7 @@ class ModelReplayBuffer:
         self.memory_value = np.zeros([self.size])
 
         # For each replay rollout, stores the loss_history
-        self.loss_history = np.zeros([self.size, n_steps])
+        # self.loss_history = np.zeros([self.size, n_steps])
 
         # The mujoco simulation states. Required for visualizing the experience replay.
         self.mj_states = [[] for _ in range(self.size)]
@@ -50,26 +50,15 @@ class ModelReplayBuffer:
         with self.lock:
             return self.current_size == self.size
 
-    def update_with_loss(self, idxs, losses):
+    def update_with_loss(self, idxs, losses, losses_pred):
         with self.lock:
-            for l, idx in zip(losses, idxs):
-                self.loss_history[idx] = l
+            for l, lp, idx in zip(losses, losses_pred, idxs):
+                # self.loss_history[idx] = l
                 self.memory_value[idx] = np.max(l)
+                self.buffers['loss'][idx] = l.reshape((len(l), 1))
+                self.buffers['loss_pred'][idx] = lp.reshape((len(lp), 1))
 
         pass
-
-    def recompute_memory_values(self):
-        with self.lock:
-            for idx in range(len(self.memory_value)):
-                # age = self.ep_no - self.ep_added[idx]
-                # if age == 0:
-                #     age_factor = 1
-                # else:
-                #     age_factor = self.ep_no / age
-                age_factor = self.ep_added[idx] / self.ep_no
-                self.memory_value[idx] = max(self.loss_history[idx]) * age_factor
-
-
 
     def sample(self, batch_size=None, idxs=None):
         """Returns a dict {key: array(batch_size x shapes[key])}
@@ -128,20 +117,10 @@ class ModelReplayBuffer:
 
         return idxs
 
-    # def display_buffer_stats(self):
-    #     # Total buffer age
-    #     # Average episode age
-    #     # Episode age distribution
-    #     # Age vs. surprisal
-    #     # Average memory value
-    #     # Latest experience older than X.
+    # def get_latest_stored_experiences(self):
+    #     latest_idxs = np.argwhere(self.ep_added == max(self.ep_added) and self.ep_added < self.ep_no)
     #
-    #     print(self.current_size)
-
-    def get_latest_stored_experiences(self):
-        latest_idxs = np.argwhere(self.ep_added == max(self.ep_added) and self.ep_added < self.ep_no)
-
-        return latest_idxs
+    #     return latest_idxs
 
 
 
