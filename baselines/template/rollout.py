@@ -71,7 +71,7 @@ class Rollout:
         self.reset_all_rollouts()
 
         if return_states:
-            states = [[] for _ in range(self.rollout_batch_size)]
+            mj_states = [[] for _ in range(self.rollout_batch_size)]
 
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
@@ -88,7 +88,7 @@ class Rollout:
         for t in range(self.T):
             if return_states:
                 for i in range(self.rollout_batch_size):
-                    states[i].append(self.envs[i].env.sim.get_state())
+                    mj_states[i].append(self.envs[i].env.sim.get_state())
 
             if self.policy_action_params:
                 policy_output = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
@@ -140,8 +140,11 @@ class Rollout:
             ag[...] = ag_new
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
-        self.initial_o[:] = o
+        if return_states:
+            for i in range(self.rollout_batch_size):
+                mj_states[i].append(self.envs[i].env.sim.get_state())
 
+        self.initial_o[:] = o
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
@@ -161,7 +164,7 @@ class Rollout:
         self.n_episodes += self.rollout_batch_size
 
         if return_states:
-            ret = convert_episode_to_batch_major(episode), states
+            ret = convert_episode_to_batch_major(episode), mj_states
         return ret
 
     def clear_history(self):
