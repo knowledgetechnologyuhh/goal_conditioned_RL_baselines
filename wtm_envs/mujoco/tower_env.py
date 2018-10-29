@@ -111,11 +111,23 @@ class TowerEnv(robot_env.RobotEnv):
         self.step_ctr += 1
 
     def _obs2goal(self, obs):
-        if self.gripper_goal != 'gripper_none':
-            goal = obs[:self.goal_size]
+        if len(obs.shape) == 1:
+            obs_arr = np.array([obs])
         else:
-            goal = obs[3:self.goal_size+3]
-        return goal
+            obs_arr = obs
+        assert len(obs_arr.shape) == 2
+        goals = []
+        for o in obs_arr:
+            if self.gripper_goal != 'gripper_none':
+                g = o[:self.goal_size]
+            else:
+                g = o[3:self.goal_size+3]
+            goals.append(g)
+        goals = np.array(goals)
+        if len(obs.shape) == 1:
+            return goals[0]
+        else:
+            return goals
 
     def _get_obs(self):
         dt = self.sim.nsubsteps * self.sim.model.opt.timestep
