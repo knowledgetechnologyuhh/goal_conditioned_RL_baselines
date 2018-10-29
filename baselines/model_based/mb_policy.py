@@ -139,61 +139,6 @@ class MBPolicy(Policy):
         else:
             return u_s
 
-    # def get_actions_max_surprise_old(self, o, pred_lookahead):
-    #     u_s = []
-    #     for ro_idx in range(self.rollout_batch_size):
-    #         max_l_branch = np.finfo(np.float16).min
-    #         next_u = None
-    #         for branch in range(self.lookahead_branching_factor):
-    #             state = None
-    #             obs = o[ro_idx]
-    #             current_seq = []
-    #             for step in range(pred_lookahead):
-    #                 u = np.random.randn(self.dimu)
-    #                 current_seq.append(u)
-    #                 obs, loss, state = self.forward_step_single(u, obs, state)
-    #                 if loss[0] > max_l_branch:
-    #                     next_u = current_seq[0]
-    #                     max_l_branch = loss[0]
-    #
-    #         u_s.append(next_u)
-    #     u_s = np.array(u_s)
-    #     if len(u_s) == 1:
-    #         return u_s[0]
-    #     else:
-    #         return u_s
-
-    # This implements a random greedy beam search to maximize expected surprisal. It does not work well, because the agent will always take the action that is immediately highest surprise without planning in the long run.
-    def get_actions_max_surprise_greedy(self, o, pred_lookahead):
-        u_s = []
-        for ro_idx in range(self.rollout_batch_size):
-            current_seq = []
-            state = None
-            obs = o[ro_idx]
-            next_s = None
-            next_u = None
-            next_o = None
-            for step in range(pred_lookahead):
-                max_l_branch = np.finfo(np.float16).min
-                for branch in range(self.lookahead_branching_factor):
-                    u = np.random.randn(self.dimu)
-                    obs2, loss, s = self.forward_step_single(u, obs, state)
-                    if loss[0] > max_l_branch:
-                        next_u = u
-                        next_s = s
-                        next_o = obs2
-                        max_l_branch = loss[0]
-                state = next_s
-                obs = next_o
-                current_seq.append(next_u)
-            u_s.append(current_seq[0])
-        u_s = np.array(u_s)
-        if len(u_s) == 1:
-            return u_s[0]
-        else:
-            return u_s
-
-
     def get_actions_policy(self, o, ag, g, policy_action_params=None):
         batch = self.model_replay_buffer.sample(self.model_replay_buffer.current_size)
         ep_len = batch['o2'].shape[1]
