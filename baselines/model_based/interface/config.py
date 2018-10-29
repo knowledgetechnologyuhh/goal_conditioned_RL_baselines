@@ -39,8 +39,7 @@ EVAL_PARAMS = {
 
 OVERRIDE_PARAMS_LIST = list(DEFAULT_PARAMS.keys())
 #
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name']
-# ROLLOUT_PARAMS_LIST = []
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name', 'adaptive_model_lr']
 
 
 def cached_make_env(make_env):

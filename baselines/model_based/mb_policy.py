@@ -316,7 +316,7 @@ class MBPolicy(Policy):
 
     def logs(self, prefix=''):
         logs = []
-        # logs += [('stats/some_stat_value', 0)]
+        logs += [('mb_policy/model_lr', self.model_lr)]
         # logs = []
         # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
         # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]

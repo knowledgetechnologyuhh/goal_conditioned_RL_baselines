@@ -115,6 +115,14 @@ class RolloutWorker(Rollout):
         for idx,loss in enumerate(avg_epoch_losses):
             avg_loss = (loss / n_cycles) / n_batches
             self.loss_histories[idx].append(avg_loss)
+        # Update learning rate if loss gradient exceeds 1 for any loss history:
+        if self.adaptive_model_lr:
+            for l in self.loss_histories:
+                if len(l) >= 2:
+                    grad = l[-1] / l[-2]
+                    if grad > 1:
+                        self.policy.model_lr /= 2
+
         self.test_prediction_error(last_stored_idxs)
         dur_total = time.time() - dur_start
         updated_policy = self.policy
