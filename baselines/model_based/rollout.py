@@ -72,9 +72,9 @@ class RolloutWorker(Rollout):
             logs += [('acc. err', self.pred_accumulated_err)]
         if self.loss_pred_steps is not None:
             logs += [('loss_pred_steps', self.loss_pred_steps)]
-        if self.pred_err is not None :
+        if self.mj_pred_err is not None :
             logs += [('mj_pred_err', self.mj_pred_err)]
-        if self.pred_steps is not None:
+        if self.mj_pred_steps is not None:
             logs += [('mj_pred_steps', self.mj_pred_steps)]
         if self.mj_pred_accumulated_err is not None:
             logs += [('mj acc. err', self.mj_pred_accumulated_err)]
@@ -142,11 +142,10 @@ class RolloutWorker(Rollout):
         o_s_batch, o2_s_batch, u_s_batch, loss_s_batch, loss_pred_s_batch = batch[0], batch[1], batch[2], batch[3], batch[4]
 
         # Measure mean prediction error
-        for step in range(o_s_batch.shape[1]):
-            o_s_step, o2_s_step, u_s_step, loss_s_step, loss_pred_s_step = \
+        for step in range(self.T):
+            o_s_step, o2_s_step, u_s_step = \
                 o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
-                u_s_batch[:, step:step + 1, :], loss_s_batch[:, step:step + 1, :], \
-                loss_pred_s_batch[:, step:step + 1, :]
+                u_s_batch[:, step:step + 1, :]
             o2_pred, l_s, s = self.policy.forward_step(u_s_step, o_s_step, s)
             err = np.abs(o2_s_step - o2_pred)
             ep_err_mean_step = np.mean(err,axis=2)
@@ -155,36 +154,42 @@ class RolloutWorker(Rollout):
             this_pred_err_hist.append(ep_err_mean)
             this_pred_std_hist.append(ep_err_std)
 
-            # Test mujoco prediction error as baseline
-            if self.test_mujoco_err:
+        # Test mujoco prediction error as baseline
+        if self.test_mujoco_err:
+            for step in range(self.T):
+                o_s_step, o2_s_step, u_s_step = \
+                    o_s_batch[:, step, :], o2_s_batch[:, step, :], \
+                    u_s_batch[:, step, :]
                 assert len(self.envs) == len(buffer_idxs) # Number of parallel rollout environment instances must be equal to to batch size.
                 mj_states = [self.policy.model_replay_buffer.mj_states[buff_idx][step] for buff_idx in buffer_idxs]
                 [self.envs[i].env.sim.set_state(mj_state) for i, mj_state in enumerate(mj_states)]
-                next_mj_outs = [self.envs[i].env.step(u[0]) for i,u in enumerate(u_s_step)]
-                o2_pred = [mj_out[0]['observation'] for mj_out in next_mj_outs]
+                [self.envs[i].env.sim.forward() for i, mj_state in enumerate(mj_states)]
+                o_pred = np.array([self.envs[i].env._get_obs()['observation'] for i in range(len(buffer_idxs))])
+
+                # TODO: For debugging... tmp_err should be 0 or very close to 0, as we are just reloading the mujoco state that corresponds to the observation.
+                # TODO: However, tt is larger than expected. Specifically, it is larger that the accumulated mujoco error computed below.
+                # TODO: This should not be the case.
+                tmp_err = np.abs(o_s_step - o_pred)
+                tmp_err_mean = np.mean(tmp_err)
+
+                [self.envs[i].env.step(u) for i, u in enumerate(u_s_step)]
+                o2_pred = np.array([self.envs[i].env._get_obs()['observation'] for i in range(len(buffer_idxs))])
                 err = np.abs(o2_s_step - o2_pred)
-                ep_err_mean_step = np.mean(err, axis=2)
-                ep_err_mean = np.mean(ep_err_mean_step)
+                ep_err_mean = np.mean(err)
                 ep_err_std = np.std(err)
                 this_mj_pred_err_hist.append(ep_err_mean)
                 this_mj_pred_std_hist.append(ep_err_std)
 
 
-        # Measure the number of steps that can be forward predicted until the observation error gets larger than the goal achievement threshold.
+        # Measure the number of steps that can be forward propagated until the observation error gets larger than the goal achievement threshold.
         initial_o_s = o_s_batch[:,0:1,:]
         s = None
         this_pred_steps = [self.T for _ in initial_o_s]
         this_mj_pred_steps = [self.T for _ in initial_o_s]
         this_loss_pred_steps = [self.T for _ in initial_o_s]
-        # this_accumulated_pred_err = [None for _ in initial_o_s]
-        # this_mj_accumulated_pred_err = [None for _ in initial_o_s]
         o_s_step = initial_o_s
         for step in range(self.T):
-            _, o2_s_step, u_s_step, loss_s_step, loss_pred_s_step = \
-            o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
-            u_s_batch[:, step:step + 1,:], loss_s_batch[:, step:step + 1,:], \
-            loss_pred_s_batch[:, step:step + 1,:]
-
+            o2_s_step, u_s_step = o2_s_batch[:, step:step + 1, :], u_s_batch[:, step:step + 1, :]
             o_s_step, l_s, s = self.policy.forward_step(u_s_step, o_s_step, s)
             flattened_o_s_step = o_s_step[:, 0,:]
             flattened_o2_s_step = o2_s_step[:, 0, :]
@@ -200,25 +205,28 @@ class RolloutWorker(Rollout):
             if step == self.T - 1:
                 this_accumulated_pred_err = np.abs(flattened_o_s_step - flattened_o2_s_step)
 
-
-
+        # TODO: The accumulated mujoco error is smaller than the per-step mujoco error computed above. Also,
+        # TODO: Mujoco seems to always be able to reproduce all steps. This should also not be the case.
         if self.test_mujoco_err:
             assert len(self.envs) == len(buffer_idxs)  # Number of parallel rollout environment instances must be equal to to batch size.
             init_mj_states = [self.policy.model_replay_buffer.mj_states[buff_idx][0] for buff_idx in buffer_idxs]
             [self.envs[i].env.sim.set_state(mj_state) for i, mj_state in enumerate(init_mj_states)]
+            [self.envs[i].env.sim.forward() for i, mj_state in enumerate(mj_states)]
             for step in range(self.T):
-                o2_s_step, u_s_step = o2_s_batch[:, step:step + 1, :], u_s_batch[:, step:step + 1, :]
-                next_mj_outs = [self.envs[i].env.step(u[0]) for i, u in enumerate(u_s_step)]
-                o_s_step = np.array([mj_out[0]['observation'] for mj_out in next_mj_outs])
-                flattened_o2_s_step = o2_s_step[:, 0, :]
+                o2_s_step, u_s_step = o2_s_batch[:, step, :], u_s_batch[:, step, :]
+                [self.envs[i].env.step(u) for i, u in enumerate(u_s_step)]
+                o_s_step = np.array([self.envs[i].env._get_obs()['observation'] for i in range(len(buffer_idxs))])
                 fwd_goal_g = self.policy.env._obs2goal(o_s_step)
-                orig_g = self.policy.env._obs2goal(flattened_o2_s_step)
+                orig_g = self.policy.env._obs2goal(o2_s_step)
                 pred_successes = self.policy.env._is_success(fwd_goal_g, orig_g)
+                err = np.abs(o_s_step - o2_s_step)
+                tmp_mean_err = np.mean(err)
+                # print(tmp_mean_err)
                 for batch_idx, pred_success in enumerate(pred_successes):
                     if not pred_success and this_pred_steps[batch_idx] == self.T:
                         this_mj_pred_steps[batch_idx] = step
                 if step == self.T - 1:
-                    this_mj_accumulated_pred_err = np.abs(o_s_step - flattened_o2_s_step)
+                    this_mj_accumulated_pred_err = err
 
         pred_err_mean = np.mean(this_pred_err_hist)
         pred_err_std_mean = np.mean(this_pred_std_hist)
@@ -236,11 +244,11 @@ class RolloutWorker(Rollout):
             mj_pred_err_mean = np.mean(this_mj_pred_err_hist)
             mj_pred_err_std_mean = np.mean(this_mj_pred_std_hist)
             mj_pred_steps_mean = np.mean(this_mj_pred_steps)
-            this_mj_accumulated_pred_err_mean = np.mean(this_mj_accumulated_pred_err)
+            mj_accumulated_pred_err_mean = np.mean(this_mj_accumulated_pred_err)
             self.mj_pred_err = mj_pred_err_mean
             self.mj_pred_err_std = mj_pred_err_std_mean
             self.mj_pred_steps = mj_pred_steps_mean
-            self.mj_pred_accumulated_err = this_mj_accumulated_pred_err_mean
+            self.mj_pred_accumulated_err = mj_accumulated_pred_err_mean
 
 
     def init_surprise_plot(self):
@@ -259,11 +267,9 @@ class RolloutWorker(Rollout):
         self.surprise_fig_li_pred_loss, = self.surprise_fig_ax.plot(x, y, color=(1, 0, 0), label='predicted surprise')
         self.surprise_fig_ax.relim()
         self.surprise_fig_ax.autoscale_view(True, True, True)
-        # plt.ylabel('surprise')
         plt.pause(0.01)
         self.surprise_fig.canvas.draw()
         plt.pause(0.01)
-        # if self.visualize_replay:
         plt.show(block=False)
         legend = plt.legend(frameon=0, loc='upper left')
         frame = legend.get_frame()
@@ -320,12 +326,10 @@ class RolloutWorker(Rollout):
                 plots = []
 
             for step_no, mj_state in enumerate(self.policy.model_replay_buffer.mj_states[buff_idx][:-1]):
-                u = self.policy.model_replay_buffer.buffers['u'][buff_idx][step_no]
                 env.sim.set_state(mj_state)
-                next_o, _, _, _ = env.step(u)
+                env.sim.forward()
                 surprise_hist = self.policy.model_replay_buffer.buffers['loss'][buff_idx][:step_no+1]
                 pred_surprise_hist = self.policy.model_replay_buffer.buffers['loss_pred'][buff_idx][:step_no+1]
-                # surprise = surprise_hist[-1]
                 steps = list(range(step_no+1))
 
                 plt.pause(0.0001)
@@ -362,11 +366,7 @@ class RolloutWorker(Rollout):
                     frames.append(frame)
             if self.record_replay and len(frames) > 0:
                 video_writer = imageio.get_writer(replay_video_fpath, fps=10)
-                initial_shape = frames[0].shape
                 for frame, plot in zip(frames, plots):
-                    # if frame.shape != initial_shape:
-                    #     frame = frame[0:initial_shape[0]][0:initial_shape[1]][0:initial_shape[2]]
-                    # frame_writer.append_data(frame)
                     f_width = frame.shape[1]
                     f_height = frame.shape[0]
                     p_width = plot.shape[1]
@@ -374,10 +374,8 @@ class RolloutWorker(Rollout):
                     pad_values = ((0, f_height-p_height),(f_width-p_width,0), (0,0))
                     plot_mask = np.where(plot == 255, np.uint8(1), np.uint8(0))
                     padded_plot_mask = np.pad(plot_mask, pad_values, 'constant', constant_values=1)
-                    # mask_writer.append_data(padded_plot_mask * 100)
                     large_plot = np.pad(plot, pad_values, 'constant', constant_values=0)
                     masked_large_plot = large_plot * padded_plot_mask
-                    # plot_writer.append_data(masked_large_plot * 100)
                     frame_with_plot = (frame * padded_plot_mask) + masked_large_plot
                     try:
                         video_writer.append_data(frame_with_plot)

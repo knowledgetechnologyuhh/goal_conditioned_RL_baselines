@@ -20,6 +20,7 @@ DEFAULT_PARAMS = {
     'scope': 'mbpolicy',
     'model_lr': 0.001,
     'model_train_batch_size': 10,
+    'adaptive_model_lr': 0,
 }
 
 # POLICY_ACTION_PARAMS = {
