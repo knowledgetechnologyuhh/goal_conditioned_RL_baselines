@@ -136,77 +136,41 @@ class RolloutWorker(Rollout):
             this_pred_err_hist.append(ep_err_mean)
             this_pred_std_hist.append(ep_err_std)
 
-        # o = o_s_batch[:,0:1,:]
-        # step = 0
-        # s = None
-        # this_pred_hist_steps = [None for _ in o]
-        # this_loss_pred_hist_steps = [None for _ in o]
-        # for step in range(o_s_batch.shape[1]):
-        #     o_s_step, o2_s_step, u_s_step, loss_s_step, loss_pred_s_step = \
-        #     o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
-        #     u_s_batch[:, step:step + 1,:], loss_s_batch[:, step:step + 1,:], \
-        #     loss_pred_s_batch[:, step:step + 1,:]
-        #
-        # # for o2, u, loss, in zip(o2_s, u_s, loss_s):
-        #     o2_pred, l_s, s = self.policy.forward_step(u_s_step, o_s_step, s)
-        #     o_pred_g = self.policy.env._obs2goal(o)
-        #     o_g = self.policy.env._obs2goal(o2_s_step)
-        #     pred_successes = self.policy.env._is_success(o_pred_g, o_g)
-        #     for batch_idx, pred_success in enumerate(pred_successes):
-        #         if not pred_success and this_pred_hist_steps[batch_idx] is None:
-        #             this_pred_hist_steps[batch_idx] = step
-        #         loss_pred_ok = loss_s_batch[batch_idx][step] + (loss_s_batch[batch_idx][step] * loss_pred_threshold_perc / 100) < l_s[batch_idx][0]
-        #         if not loss_pred_ok and this_loss_pred_hist_steps[batch_idx] is None:
-        #             this_loss_pred_hist_steps[batch_idx] = step
-        #     # if not pred_success and not loss_pred_ok:
-        #     #     break
-        #
-        # # TODO: This is not working, values are different from computation below.
-        # this_pred_hist = this_pred_hist_steps
-        # this_loss_pred_hist = this_loss_pred_hist_steps
+        initial_o_s = o_s_batch[:,0:1,:]
+        s = None
+        this_pred_hist_steps = [None for _ in initial_o_s]
+        this_loss_pred_hist_steps = [None for _ in initial_o_s]
+        o_s_step = initial_o_s
+        for step in range(o_s_batch.shape[1]):
+            _, o2_s_step, u_s_step, loss_s_step, loss_pred_s_step = \
+            o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
+            u_s_batch[:, step:step + 1,:], loss_s_batch[:, step:step + 1,:], \
+            loss_pred_s_batch[:, step:step + 1,:]
 
-
-
-        # for o_s, o2_s, u_s, loss_s, loss_pred_s in zip(batch[0], batch[1], batch[2], batch[3], batch[4]):
-        #     # ep_err_hist = []
-        #     # s = None
-        #     # for o, o2, u, loss, loss_pred in zip(o_s, o2_s, u_s, loss_s, loss_pred_s):
-        #     #     o2_pred, l, s = self.policy.forward_step_single(u,o,s)
-        #     #     err = np.mean(abs(o2 - o2_pred))
-        #     #     ep_err_hist.append(err)
-        #     # ep_err_mean = np.mean(ep_err_hist)
-        #     # ep_err_std = np.std(ep_err_hist)
-        #     # this_err_hist.append(ep_err_mean)
-        #     # this_std_hist.append(ep_err_std)
-        #
-        #     # Test how many steps can be predicted without the error exceeding the goal achievement threshold and the loss prediction threshold.
-        #     o = o_s[0]
-        #     step = 0
-        #     s = None
-        #     this_pred_hist_steps = None
-        #     this_loss_pred_hist_steps = None
-        #     for o2, u, loss, in zip(o2_s, u_s, loss_s):
-        #         step += 1
-        #         o, l, s = self.policy.forward_step_single(u, o, s)
-        #         o_pred_g = self.policy.env._obs2goal(o)
-        #         o_g = self.policy.env._obs2goal(o2)
-        #         pred_success = self.policy.env._is_success(o_pred_g, o_g)
-        #         if not pred_success and this_pred_hist_steps is None:
-        #             this_pred_hist_steps = step-1
-        #         loss_pred_ok = loss[0] + (loss[0] * loss_pred_threshold_perc / 100) < l[0]
-        #         if not loss_pred_ok and this_loss_pred_hist_steps is None:
-        #             this_loss_pred_hist_steps = step-1
-        #         if not pred_success and not loss_pred_ok:
-        #             break
-        #
-        #     this_pred_hist.append(this_pred_hist_steps)
-        #     this_loss_pred_hist.append(this_loss_pred_hist_steps)
-
+        # for o2, u, loss, in zip(o2_s, u_s, loss_s):
+            o_s_step, l_s, s = self.policy.forward_step(u_s_step, o_s_step, s)
+            flattened_o_s_step = o_s_step[:, 0,:]
+            flattened_o2_s_step = o2_s_step[:, 0, :]
+            fwd_goal_g = self.policy.env._obs2goal(flattened_o_s_step)
+            orig_g = self.policy.env._obs2goal(flattened_o2_s_step)
+            pred_successes = self.policy.env._is_success(fwd_goal_g, orig_g)
+            for batch_idx, pred_success in enumerate(pred_successes):
+                if not pred_success and this_pred_hist_steps[batch_idx] is None:
+                    this_pred_hist_steps[batch_idx] = step
+                else:
+                    print("Predicting something")
+                loss_pred_ok = loss_s_batch[batch_idx][step] + (loss_s_batch[batch_idx][step] * loss_pred_threshold_perc / 100) < l_s[batch_idx][0]
+                if not loss_pred_ok and this_loss_pred_hist_steps[batch_idx] is None:
+                    this_loss_pred_hist_steps[batch_idx] = step
+                else:
+                    print("Predicting something")
+            if None not in this_pred_hist_steps and None not in this_loss_pred_hist_steps:
+                break
 
         pred_err_mean = np.mean(this_pred_err_hist)
         pred_err_std_mean = np.mean(this_pred_std_hist)
-        pred_steps_mean = np.mean(this_pred_hist)
-        loss_pred_mean = np.mean(this_loss_pred_hist)
+        pred_steps_mean = np.mean(this_pred_hist_steps)
+        loss_pred_mean = np.mean(this_loss_pred_hist_steps)
         self.pred_err = pred_err_mean
         self.pred_err_std = pred_err_std_mean
         self.pred_steps = pred_steps_mean
