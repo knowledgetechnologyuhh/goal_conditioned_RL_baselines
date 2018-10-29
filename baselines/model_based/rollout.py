@@ -27,8 +27,8 @@ class RolloutWorker(Rollout):
         """
         Rollout.__init__(self, make_env, policy, dims, logger, T, **kwargs)
 
-        self.err = None
-        self.err_std = None
+        self.pred_err = None
+        self.pred_err_std = None
         self.pred_steps = None
         self.loss_pred_steps = None
         self.loss_histories = []
@@ -58,8 +58,8 @@ class RolloutWorker(Rollout):
                 loss_grad = np.nan
             logs += [('{} grad'.format(loss_key), loss_grad)]
 
-        if self.err is not None :
-            logs += [('pred_err', self.err)]
+        if self.pred_err is not None :
+            logs += [('pred_err', self.pred_err)]
         if self.pred_steps is not None:
             logs += [('pred_steps', self.pred_steps)]
         if self.loss_pred_steps is not None:
@@ -73,13 +73,12 @@ class RolloutWorker(Rollout):
         dur_train = 0
         dur_start = time.time()
         avg_epoch_losses = []
-        last_episode_batch = None
+        last_stored_idxs = []
         self.episodes_per_epoch = n_cycles
         for cyc in range(n_cycles):
             print("episode {} / {}".format(cyc, n_cycles))
             ro_start = time.time()
             episode, mj_states = self.generate_rollouts(return_states=True)
-            # last_episode_batch = episode
             stored_idxs = self.policy.store_episode(episode, mj_states=mj_states)
             last_stored_idxs = stored_idxs
             for i in stored_idxs:
@@ -100,7 +99,7 @@ class RolloutWorker(Rollout):
                     avg_epoch_losses[idx] += loss
             dur_train += time.time() - train_start
         for idx,loss in enumerate(avg_epoch_losses):
-            avg_loss = loss / n_cycles
+            avg_loss = (loss / n_cycles) / n_batches
             self.loss_histories[idx].append(avg_loss)
         self.test_prediction_error(last_stored_idxs)
         dur_total = time.time() - dur_start
@@ -113,56 +112,104 @@ class RolloutWorker(Rollout):
 
 
     def test_prediction_error(self, batch_idxs):
-        this_err_hist = []
-        this_std_hist = []
+        this_pred_err_hist = []
+        this_pred_std_hist = []
         this_pred_hist = []
         this_loss_pred_hist = []
         loss_pred_threshold_perc = 20 # Loss prediction threshold in %
 
         batch, idxs = self.policy.sample_batch(idxs=batch_idxs)
-        for o_s, o2_s, u_s, loss_s, loss_pred_s in zip(batch[0], batch[1], batch[2], batch[3], batch[4]):
-            ep_err_hist = []
-            s = None
-            for o, o2, u, loss, loss_pred in zip(o_s, o2_s, u_s, loss_s, loss_pred_s):
-                o2_pred, l, s = self.policy.forward_step_single(u,o,s)
-                err = np.mean(abs(o2 - o2_pred))
-                ep_err_hist.append(err)
-            ep_err_mean = np.mean(ep_err_hist)
-            ep_err_std = np.std(ep_err_hist)
-            this_err_hist.append(ep_err_mean)
-            this_std_hist.append(ep_err_std)
+        s = None
 
-            # Test how many steps can be predicted without the error exceeding the goal achievement threshold and the loss prediction threshold.
-            o = o_s[0]
-            step = 0
-            s = None
-            this_pred_hist_steps = None
-            this_loss_pred_hist_steps = None
-            for o2, u, loss, in zip(o2_s, u_s, loss_s):
-                step += 1
-                o, l, s = self.policy.forward_step_single(u, o, s)
-                o_pred_g = self.policy.env._obs2goal(o)
-                o_g = self.policy.env._obs2goal(o2)
-                pred_success = self.policy.env._is_success(o_pred_g, o_g)
-                if not pred_success and this_pred_hist_steps is None:
-                    this_pred_hist_steps = step-1
-                loss_pred_ok = loss[0] + (loss[0] * loss_pred_threshold_perc / 100) < l[0]
-                if not loss_pred_ok and this_loss_pred_hist_steps is None:
-                    this_loss_pred_hist_steps = step-1
-                if not pred_success and not loss_pred_ok:
-                    break
+        o_s_batch, o2_s_batch, u_s_batch, loss_s_batch, loss_pred_s_batch = batch[0], batch[1], batch[2], batch[3], batch[4]
 
-            this_pred_hist.append(this_pred_hist_steps)
-            this_loss_pred_hist.append(this_loss_pred_hist_steps)
+        for step in range(o_s_batch.shape[1]):
+            o_s_step, o2_s_step, u_s_step, loss_s_step, loss_pred_s_step = \
+                o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
+                u_s_batch[:, step:step + 1, :], loss_s_batch[:, step:step + 1, :], \
+                loss_pred_s_batch[:, step:step + 1, :]
+            o2_pred, l_s, s = self.policy.forward_step(u_s_step, o_s_step, s)
+            err = np.abs(o2_s_step - o2_pred)
+            ep_err_mean_step = np.mean(err,axis=2)
+            ep_err_mean = np.mean(ep_err_mean_step)
+            ep_err_std = np.std(err)
+            this_pred_err_hist.append(ep_err_mean)
+            this_pred_std_hist.append(ep_err_std)
+
+        # o = o_s_batch[:,0:1,:]
+        # step = 0
+        # s = None
+        # this_pred_hist_steps = [None for _ in o]
+        # this_loss_pred_hist_steps = [None for _ in o]
+        # for step in range(o_s_batch.shape[1]):
+        #     o_s_step, o2_s_step, u_s_step, loss_s_step, loss_pred_s_step = \
+        #     o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
+        #     u_s_batch[:, step:step + 1,:], loss_s_batch[:, step:step + 1,:], \
+        #     loss_pred_s_batch[:, step:step + 1,:]
+        #
+        # # for o2, u, loss, in zip(o2_s, u_s, loss_s):
+        #     o2_pred, l_s, s = self.policy.forward_step(u_s_step, o_s_step, s)
+        #     o_pred_g = self.policy.env._obs2goal(o)
+        #     o_g = self.policy.env._obs2goal(o2_s_step)
+        #     pred_successes = self.policy.env._is_success(o_pred_g, o_g)
+        #     for batch_idx, pred_success in enumerate(pred_successes):
+        #         if not pred_success and this_pred_hist_steps[batch_idx] is None:
+        #             this_pred_hist_steps[batch_idx] = step
+        #         loss_pred_ok = loss_s_batch[batch_idx][step] + (loss_s_batch[batch_idx][step] * loss_pred_threshold_perc / 100) < l_s[batch_idx][0]
+        #         if not loss_pred_ok and this_loss_pred_hist_steps[batch_idx] is None:
+        #             this_loss_pred_hist_steps[batch_idx] = step
+        #     # if not pred_success and not loss_pred_ok:
+        #     #     break
+        #
+        # # TODO: This is not working, values are different from computation below.
+        # this_pred_hist = this_pred_hist_steps
+        # this_loss_pred_hist = this_loss_pred_hist_steps
 
 
-        err_mean = np.mean(this_err_hist)
-        err_std_mean = np.mean(this_std_hist)
-        pred_mean = np.mean(this_pred_hist)
+
+        # for o_s, o2_s, u_s, loss_s, loss_pred_s in zip(batch[0], batch[1], batch[2], batch[3], batch[4]):
+        #     # ep_err_hist = []
+        #     # s = None
+        #     # for o, o2, u, loss, loss_pred in zip(o_s, o2_s, u_s, loss_s, loss_pred_s):
+        #     #     o2_pred, l, s = self.policy.forward_step_single(u,o,s)
+        #     #     err = np.mean(abs(o2 - o2_pred))
+        #     #     ep_err_hist.append(err)
+        #     # ep_err_mean = np.mean(ep_err_hist)
+        #     # ep_err_std = np.std(ep_err_hist)
+        #     # this_err_hist.append(ep_err_mean)
+        #     # this_std_hist.append(ep_err_std)
+        #
+        #     # Test how many steps can be predicted without the error exceeding the goal achievement threshold and the loss prediction threshold.
+        #     o = o_s[0]
+        #     step = 0
+        #     s = None
+        #     this_pred_hist_steps = None
+        #     this_loss_pred_hist_steps = None
+        #     for o2, u, loss, in zip(o2_s, u_s, loss_s):
+        #         step += 1
+        #         o, l, s = self.policy.forward_step_single(u, o, s)
+        #         o_pred_g = self.policy.env._obs2goal(o)
+        #         o_g = self.policy.env._obs2goal(o2)
+        #         pred_success = self.policy.env._is_success(o_pred_g, o_g)
+        #         if not pred_success and this_pred_hist_steps is None:
+        #             this_pred_hist_steps = step-1
+        #         loss_pred_ok = loss[0] + (loss[0] * loss_pred_threshold_perc / 100) < l[0]
+        #         if not loss_pred_ok and this_loss_pred_hist_steps is None:
+        #             this_loss_pred_hist_steps = step-1
+        #         if not pred_success and not loss_pred_ok:
+        #             break
+        #
+        #     this_pred_hist.append(this_pred_hist_steps)
+        #     this_loss_pred_hist.append(this_loss_pred_hist_steps)
+
+
+        pred_err_mean = np.mean(this_pred_err_hist)
+        pred_err_std_mean = np.mean(this_pred_std_hist)
+        pred_steps_mean = np.mean(this_pred_hist)
         loss_pred_mean = np.mean(this_loss_pred_hist)
-        self.err = err_mean
-        self.err_std = err_std_mean
-        self.pred_steps = pred_mean
+        self.pred_err = pred_err_mean
+        self.pred_err_std = pred_err_std_mean
+        self.pred_steps = pred_steps_mean
         self.loss_pred_steps = loss_pred_mean
         self.policy.loss_pred_reliable_fwd_steps = self.loss_pred_steps
 
@@ -245,7 +292,6 @@ class RolloutWorker(Rollout):
             for step_no, mj_state in enumerate(self.policy.model_replay_buffer.mj_states[buff_idx]):
                 u = self.policy.model_replay_buffer.buffers['u'][buff_idx][step_no]
                 next_o, _, _, _ = env.step(u)
-                # env.sim.set_state(self.policy.model_replay_buffer.mj_states[buff_idx][step_no])
                 env.sim.set_state(mj_state)
 
                 surprise_hist = self.policy.model_replay_buffer.buffers['loss'][buff_idx][:step_no+1]
@@ -261,11 +307,19 @@ class RolloutWorker(Rollout):
                     print("Something went wrong: {}".format(e))
                 self.surprise_fig_li_loss.set_ydata(surprise_hist)
                 self.surprise_fig_li_pred_loss.set_ydata(pred_surprise_hist)
-                self.surprise_fig_ax.relim()
+                try:
+                    self.surprise_fig_ax.relim()
+                except Exception as e:
+                    print("Something went wrong: {}".format(e))
                 self.surprise_fig_ax.autoscale_view(True, True, True)
 
                 step_no += 1
-                self.surprise_fig.canvas.draw()
+
+                try:
+                    self.surprise_fig.canvas.draw()
+                except Exception as e:
+                    print("Something went wrong: {}".format(e))
+
 
                 if self.visualize_replay:
                     env.render()
@@ -280,13 +334,10 @@ class RolloutWorker(Rollout):
                     frames.append(frame)
             if self.record_replay and len(frames) > 0:
                 video_writer = imageio.get_writer(replay_video_fpath, fps=10)
-                # frame_writer = imageio.get_writer(replay_video_fpath+"_frame.mp4", fps=10)
-                # mask_writer = imageio.get_writer(replay_video_fpath + "_mask.mp4", fps=10)
-                # plot_writer = imageio.get_writer(replay_video_fpath + "_plot.mp4", fps=10)
                 initial_shape = frames[0].shape
                 for frame, plot in zip(frames, plots):
-                    if frame.shape != frames[0].shape:
-                        frame = frame[0:initial_shape[0]][0:initial_shape[1]][0:initial_shape[2]]
+                    # if frame.shape != initial_shape:
+                    #     frame = frame[0:initial_shape[0]][0:initial_shape[1]][0:initial_shape[2]]
                     # frame_writer.append_data(frame)
                     f_width = frame.shape[1]
                     f_height = frame.shape[0]
@@ -307,9 +358,7 @@ class RolloutWorker(Rollout):
                         print("PS: {}, {}".format(plot.shape, plots[0].shape))
                         print(e)
                 video_writer.close()
-                # frame_writer.close()
-                # mask_writer.close()
-                # plot_writer.close()
+
 
 
 
