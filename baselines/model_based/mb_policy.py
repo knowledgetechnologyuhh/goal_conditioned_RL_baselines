@@ -337,8 +337,8 @@ class MBPolicy(Policy):
         else:
             o2, l = np.array(self.sess.run(fetches, feed_dict=fd)[0])
             s2 = None
-        next_o = o2
-        pred_l = l
+        next_o = o2[:len(o)]
+        pred_l = l[:len(o)]
         return next_o, pred_l, s2
 
     def _update(self, model_grads):
@@ -363,10 +363,11 @@ class MBPolicy(Policy):
     def train(self, stage=False):
         batch, buffer_idxs = self.sample_batch()
         total_model_loss, obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, model_grads = self.get_grads(batch)
+        mean_obs_loss = np.mean(obs_loss_per_step)
+        mean_loss_loss = np.mean(loss_loss_per_step)
         self.model_replay_buffer.update_with_loss(buffer_idxs, obs_loss_per_step, loss_pred_per_step)
         self._update(model_grads)
-        # self.model_loss_history.append(total_model_loss)
-        return total_model_loss, np.mean(obs_loss_per_step), np.mean(loss_loss_per_step)
+        return total_model_loss, mean_obs_loss, mean_loss_loss
 
     def logs(self, prefix=''):
         logs = []
