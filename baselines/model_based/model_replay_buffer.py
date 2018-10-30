@@ -102,7 +102,6 @@ class ModelReplayBuffer:
         with self.lock:
             assert self.current_size > 0
             replace = self.current_size < self.size
-            self.current_size = int(self.current_size)
             # Sample those rollouts that have a high maximal loss prediction error.
             if self.sampling_method == 'random':
                 prob_dist = np.ones(self.current_size)
@@ -111,9 +110,9 @@ class ModelReplayBuffer:
             elif self.sampling_method == 'mean_loss_pred_err':
                 prob_dist = np.mean(np.abs(self.buffers['loss'] - self.buffers['loss_pred']), axis=1)[:self.current_size]
             elif self.sampling_method == 'max_loss':
-                prob_dist = np.max(self.buffers['loss'])[:self.current_size]
+                prob_dist = np.max(self.buffers['loss'][:self.current_size])
             elif self.sampling_method == 'mean_loss':
-                prob_dist = np.mean(self.buffers['loss'])[:self.current_size]
+                prob_dist = np.mean(self.buffers['loss'][:self.current_size])
 
             else:
                 print("Error, none or invalid replay sampling method specified.")
