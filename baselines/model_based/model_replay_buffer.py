@@ -102,7 +102,7 @@ class ModelReplayBuffer:
         with self.lock:
             assert self.current_size > 0
             replace = self.current_size < self.size
-
+            self.current_size = int(self.current_size)
             # Sample those rollouts that have a high maximal loss prediction error.
             if self.sampling_method == 'random':
                 prob_dist = np.ones(self.current_size)
