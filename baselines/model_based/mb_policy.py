@@ -19,7 +19,7 @@ def dims_to_shapes(input_dims):
 
 class MBPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, model_buffer_size, model_network_class, scope, T, rollout_batch_size, model_lr, model_train_batch_size, **kwargs):
+    def __init__(self, input_dims, model_buffer_size, model_network_class, scope, T, rollout_batch_size, model_lr, model_train_batch_size, buff_sampling, memval_method, **kwargs):
 
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
         self.env = kwargs['env']
@@ -51,7 +51,7 @@ class MBPolicy(Policy):
             self._create_network(reuse=False)
 
         # Initialize the model replay buffer.
-        self.model_replay_buffer = ModelReplayBuffer(self.model_shapes, model_buffer_size)
+        self.model_replay_buffer = ModelReplayBuffer(self.model_shapes, model_buffer_size, buff_sampling, memval_method)
         # pass
         self.loss_pred_reliable_fwd_steps = 0
         # self.lookahead_branching_factor = 5
@@ -87,21 +87,29 @@ class MBPolicy(Policy):
             self.prediction_model = self.create_model(model_batch_tf, **self.__dict__)
             ms.reuse_variables()
 
-        model_grads = tf.gradients(self.prediction_model.total_loss_tf, self._vars('model/ModelRNN'))
+        model_grads = tf.gradients(self.prediction_model.obs_loss_tf, self._vars('model/ModelRNN'))
         self.model_grads_tf = flatten_grads(grads=model_grads, var_list=self._vars('model/ModelRNN'))
 
         # # optimizers
-        self.pred_adam = MpiAdam(self._vars('model/ModelRNN'), scale_grad_by_procs=False)
+        self.obs_pred_adam = MpiAdam(self._vars('model/ModelRNN'), scale_grad_by_procs=False)
+        self.loss_pred_adam = MpiAdam(self._vars('model/LossPredNN'), scale_grad_by_procs=False)
+
+        obs_model_grads = tf.gradients(self.prediction_model.obs_loss_tf, self._vars('model/ModelRNN'))
+        self.obs_model_grads_tf = flatten_grads(grads=obs_model_grads, var_list=self._vars('model/ModelRNN'))
+
+        loss_model_grads = tf.gradients(self.prediction_model.loss_loss_tf, self._vars('model/LossPredNN'))
+        self.loss_model_grads_tf = flatten_grads(grads=loss_model_grads, var_list=self._vars('model/LossPredNN'))
 
         # # initialize all variables
         tf.variables_initializer(self._global_vars('')).run()
         self._sync_optimizers()
 
     def get_actions(self, o, ag, g, policy_action_params=None):
-        # return self.get_actions_random()
-        # pred_lookahead = max(1,int(self.loss_pred_reliable_fwd_steps))
-        pred_lookahead = 15
-        return self.get_actions_max_surprise(o, pred_lookahead)
+        if self.action_selection == 'random':
+            u = self.get_actions_random()
+        elif self.action_selection == 'max_pred_surprise':
+            u = self.get_actions_max_surprise(o)
+        return u
 
     def get_actions_random(self):
         u_s = []
@@ -114,7 +122,7 @@ class MBPolicy(Policy):
         else:
             return u_s
 
-    def get_actions_max_surprise(self, o, pred_lookahead):
+    def get_actions_max_surprise(self, o, pred_lookahead=15):
         u_s = []
         for ro_idx in range(self.rollout_batch_size):
             max_l_branch = np.finfo(np.float16).min
@@ -125,7 +133,6 @@ class MBPolicy(Policy):
             for step in range(pred_lookahead):
                 u = np.random.rand(self.model_train_batch_size, 1, self.dimu) * 2 - 1
                 current_seq.append(u)
-                # state = None
                 obs, loss, state = self.forward_step(u, obs, state)
                 if np.max(loss) > max_l_branch:
                     next_u = current_seq[0][np.argmax(loss)][0]
@@ -224,7 +231,7 @@ class MBPolicy(Policy):
             assert False
         padded_buffer_idxs = buffer_idxs + [0] * batch_size_diff
         batch, idxs = self.sample_batch(idxs=padded_buffer_idxs)
-        total_model_loss, obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, model_grads = self.get_grads(batch)
+        obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads = self.get_grads(batch)
         self.model_replay_buffer.update_with_loss(buffer_idxs, obs_loss_per_step[:len(buffer_idxs)], loss_pred_per_step[:len(buffer_idxs)])
         pass
 
@@ -242,9 +249,12 @@ class MBPolicy(Policy):
         return new_idxs
     
     def sample_batch(self, batch_size=None, idxs=None):
-        if idxs is None and batch_size is None:
-            batch_size = self.model_train_batch_size
-        batch_dict, idxs = self.model_replay_buffer.sample(batch_size=batch_size, idxs=idxs)
+        if idxs is not None:
+            batch_dict, idxs = self.model_replay_buffer.get_rollouts_by_idx(idxs)
+        else:
+            if batch_size is None:
+                batch_size = self.model_train_batch_size
+            batch_dict, idxs = self.model_replay_buffer.sample(batch_size)
         batch = [batch_dict[key] for key in self.model_shapes.keys()]
         return batch, idxs
 
@@ -276,8 +286,8 @@ class MBPolicy(Policy):
             fd[self.prediction_model.initial_state] = padded_s
 
         fetches = [self.prediction_model.output, self.prediction_model.loss_prediction_tf]
-        if 'state' in self.prediction_model.__dict__:
-            fetches.append(self.prediction_model.state)
+        if 'rnn_state' in self.prediction_model.__dict__:
+            fetches.append(self.prediction_model.rnn_state)
             o2, l, s2 = self.sess.run(fetches, feed_dict=fd)
         else:
             o2, l = np.array(self.sess.run(fetches, feed_dict=fd)[0])
@@ -286,33 +296,34 @@ class MBPolicy(Policy):
         pred_l = l[:len(o)]
         return next_o, pred_l, s2
 
-    def _update(self, model_grads):
-        self.pred_adam.update(model_grads, self.model_lr)
+    def _update(self, model_grads, loss_grads):
+        self.obs_pred_adam.update(model_grads, self.model_lr)
+        self.loss_pred_adam.update(loss_grads, self.model_lr)
 
     def get_grads(self, batch):
         fetches = [
-            self.prediction_model.total_loss_tf,
             self.prediction_model.obs_loss_per_step_tf,
             self.prediction_model.loss_loss_per_step_tf,
             self.prediction_model.loss_prediction_tf,
-            self.model_grads_tf
+            self.obs_model_grads_tf,
+            self.loss_model_grads_tf
         ]
         fd = {self.prediction_model.o_tf: batch[0],
               self.prediction_model.o2_tf: batch[1],
               self.prediction_model.u_tf: batch[2],
               self.prediction_model.loss_tf: batch[3]}
-        total_model_loss, obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, model_grads = self.sess.run(fetches, fd)
-        return total_model_loss, obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, model_grads
+        obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads = self.sess.run(fetches, fd)
+        return obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads
 
 
     def train(self, stage=False):
         batch, buffer_idxs = self.sample_batch()
-        total_model_loss, obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, model_grads = self.get_grads(batch)
+        obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads = self.get_grads(batch)
         mean_obs_loss = np.mean(obs_loss_per_step)
         mean_loss_loss = np.mean(loss_loss_per_step)
         self.model_replay_buffer.update_with_loss(buffer_idxs, obs_loss_per_step, loss_pred_per_step)
-        self._update(model_grads)
-        return total_model_loss, mean_obs_loss, mean_loss_loss
+        self._update(obs_model_grads, loss_model_grads)
+        return mean_obs_loss, mean_loss_loss
 
     def logs(self, prefix=''):
         logs = []
@@ -333,7 +344,8 @@ class MBPolicy(Policy):
         return res
 
     def _sync_optimizers(self):
-        self.pred_adam.sync()
+        self.obs_pred_adam.sync()
+        self.loss_pred_adam.sync()
 
     def __getstate__(self):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.

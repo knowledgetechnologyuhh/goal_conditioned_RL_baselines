@@ -5,7 +5,7 @@ from collections import deque
 
 
 class ModelReplayBuffer:
-    def __init__(self, buffer_shapes, size):
+    def __init__(self, buffer_shapes, size, sampling_method, memval_method):
         """Creates a replay buffer to train the model.
 
         Args:
@@ -43,7 +43,16 @@ class ModelReplayBuffer:
         # memory management
         self.current_size = 0
 
+        # The sampling method
+        self.sampling_method = sampling_method
+
+        # The memory value computation method
+        self.memval_method = memval_method
+
+
+
         self.lock = threading.Lock()
+
 
     @property
     def full(self):
@@ -54,19 +63,36 @@ class ModelReplayBuffer:
         with self.lock:
             for l, lp, idx in zip(losses, losses_pred, idxs):
                 # self.loss_history[idx] = l
-                self.memory_value[idx] = np.max(l)
+                if self.memval_method == 'uniform':
+                    self.memory_value[idx] = 1.0
+                elif self.memval_method == 'max_obs_loss':
+                    self.memory_value[idx] = np.max(l)
+                elif self.memval_method == 'mean_obs_loss':
+                    self.memory_value[idx] = np.mean(l)
                 self.buffers['loss'][idx] = l.reshape((len(l), 1))
                 self.buffers['loss_pred'][idx] = lp.reshape((len(lp), 1))
 
         pass
 
-    def sample(self, batch_size=None, idxs=None):
+
+    def get_rollouts_by_idx(self, idxs):
+        batch = {}
+        batch_size = len(idxs)
+        for key in self.buffers.keys():
+            batch[key] = np.zeros((batch_size, self.buffers[key].shape[1], self.buffers[key].shape[2]))
+        if self.current_size == 0:
+            return batch
+
+        with self.lock:
+            for b_idx, idx in enumerate(idxs):
+                for key in self.buffers.keys():
+                    batch[key][b_idx] = self.buffers[key][idx]
+
+            return batch, idxs
+
+    def sample(self, batch_size):
         """Returns a dict {key: array(batch_size x shapes[key])}
         """
-        assert not (batch_size is None and idxs is None)
-        if batch_size is None:
-            batch_size = len(idxs)
-        # buffers = {}
         batch = {}
         for key in self.buffers.keys():
             batch[key] = np.zeros((batch_size, self.buffers[key].shape[1], self.buffers[key].shape[2]))
@@ -76,14 +102,25 @@ class ModelReplayBuffer:
         with self.lock:
             assert self.current_size > 0
             replace = self.current_size < self.size
-            if idxs is not None:
-                sample_idxs = idxs
-            else:
-                # Sample those rollouts that have a high maximal loss prediction error.
+
+            # Sample those rollouts that have a high maximal loss prediction error.
+            if self.sampling_method == 'random':
+                prob_dist = np.ones(self.current_size)
+            elif self.sampling_method == 'max_loss_pred_err':
                 prob_dist = np.max(np.abs(self.buffers['loss'] - self.buffers['loss_pred']), axis=1)[:self.current_size]
-                prob_dist = prob_dist / np.sum(prob_dist)
-                prob_dist = prob_dist.flatten()
-                sample_idxs = np.random.choice(self.current_size, batch_size, replace=replace, p=prob_dist)
+            elif self.sampling_method == 'mean_loss_pred_err':
+                prob_dist = np.mean(np.abs(self.buffers['loss'] - self.buffers['loss_pred']), axis=1)[:self.current_size]
+            elif self.sampling_method == 'max_loss':
+                prob_dist = np.max(self.buffers['loss'])[:self.current_size]
+            elif self.sampling_method == 'mean_loss':
+                prob_dist = np.mean(self.buffers['loss'])[:self.current_size]
+
+            else:
+                print("Error, none or invalid replay sampling method specified.")
+                assert False
+            prob_dist = prob_dist / np.sum(prob_dist)
+            prob_dist = prob_dist.flatten()
+            sample_idxs = np.random.choice(self.current_size, batch_size, replace=replace, p=prob_dist)
             for b_idx,idx in enumerate(sample_idxs):
                 for key in self.buffers.keys():
                     batch[key][b_idx] = self.buffers[key][idx]
@@ -97,6 +134,7 @@ class ModelReplayBuffer:
         with self.lock:
             self.ep_no += 1
             space_left = self.size - self.current_size
+            old_size = self.current_size
             for _ in range(space_left):
                 ins_idx = self.current_size
                 idxs.append(ins_idx)
@@ -108,8 +146,9 @@ class ModelReplayBuffer:
 
             if n_remaining_idxs > 0:
                 # select indexes of replay buffer with lowest memory values.
-                replacement_idxs = self.memory_value.argsort()[:n_remaining_idxs]
-
+                prob_dist = self.memory_value[:old_size]
+                prob_dist /= np.sum(self.memory_value[:old_size])
+                replacement_idxs = np.random.choice(old_size, n_remaining_idxs, replace=False, p=prob_dist)
                 idxs += list(replacement_idxs)
 
             for buf_idx, ro, ro_idx in zip(idxs, episode, range(len(episode))):
@@ -121,10 +160,14 @@ class ModelReplayBuffer:
 
         return idxs
 
-    # def get_latest_stored_experiences(self):
-    #     latest_idxs = np.argwhere(self.ep_added == max(self.ep_added) and self.ep_added < self.ep_no)
-    #
-    #     return latest_idxs
+
+    def get_variance(self, column):
+        obs_buf = self.buffers[column][:self.current_size]
+        obs_list = obs_buf.reshape([obs_buf.shape[0] * obs_buf.shape[1], obs_buf.shape[2]])
+        obs_var = np.var(obs_list, axis=0)
+        mean_variance = np.mean(obs_var)
+        return mean_variance
+
 
 
 

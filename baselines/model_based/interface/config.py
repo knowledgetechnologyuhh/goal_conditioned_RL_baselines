@@ -21,6 +21,10 @@ DEFAULT_PARAMS = {
     'model_lr': 0.001,
     'model_train_batch_size': 10,
     'adaptive_model_lr': 0,
+    'buff_sampling': 'random',
+    'memval_method': 'random',
+    'clip_grads': 1,
+    'action_selection': 'random',
 }
 
 # POLICY_ACTION_PARAMS = {
@@ -96,6 +100,9 @@ def configure_policy(dims, params):
                         'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
                         'env': env.env,
+                        'buff_sampling': params['buff_sampling'],
+                        'memval_method': params['memval_method'],
+                        'action_selection': params['action_selection']
                         })
     policy_params['info'] = {
         'env_name': params['env_name'],

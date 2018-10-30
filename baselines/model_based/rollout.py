@@ -37,6 +37,7 @@ class RolloutWorker(Rollout):
         self.mj_pred_steps = None
         self.loss_pred_steps = None
         self.loss_histories = []
+        self.buff_obs_variance = None
         self.surprise_fig = None
         self.replayed_episodes = []
         self.top_exp_replay_values = deque(maxlen=10)
@@ -45,6 +46,7 @@ class RolloutWorker(Rollout):
         self.record_replay = True
         self.do_plot = False
         self.test_mujoco_err = True
+        self.acc_err_steps = 5 # Number of steps to accumulate the prediction error
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
@@ -53,7 +55,7 @@ class RolloutWorker(Rollout):
         logs += [('success_rate', np.mean(self.success_history))]
         for i,l in enumerate(self.loss_histories):
             loss_key = 'loss-{}'.format(i)
-            loss_key_map = ['total loss', 'observation loss', 'loss prediction loss']
+            loss_key_map = ['observation loss', 'loss prediction loss']
             if i < len(loss_key_map):
                 loss_key = loss_key_map[i]
             if len(l) > 0:
@@ -78,29 +80,35 @@ class RolloutWorker(Rollout):
             logs += [('mj_pred_steps', self.mj_pred_steps)]
         if self.mj_pred_accumulated_err is not None:
             logs += [('mj acc. err', self.mj_pred_accumulated_err)]
+        if self.buff_obs_variance is not None:
+            logs += [('buffer observation variance', self.buff_obs_variance)]
+        if self.buff_obs_variance is not None and self.pred_accumulated_err is not None:
+            logs += [('variance_times_acc_err', self.buff_obs_variance * self.pred_accumulated_err)]
         logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)
 
-    def generate_rollouts_update(self, n_cycles, n_batches):
+    def generate_rollouts_update(self, n_episodes, n_train_batches):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
         avg_epoch_losses = []
         last_stored_idxs = []
-        self.episodes_per_epoch = n_cycles
-        for cyc in range(n_cycles):
-            print("episode {} / {}".format(cyc, n_cycles))
+        self.episodes_per_epoch = n_episodes
+        for episode in range(n_episodes):
+            print("episode {} / {}".format(episode, n_episodes))
             ro_start = time.time()
             episode, mj_states = self.generate_rollouts(return_states=True)
             stored_idxs = self.policy.store_episode(episode, mj_states=mj_states)
             last_stored_idxs = stored_idxs
+            # Remove old rollouts from already replayed episodes.
             for i in stored_idxs:
                 if i in self.replayed_episodes:
                     self.replayed_episodes.remove(i)
+
             dur_ro += time.time() - ro_start
             train_start = time.time()
-            for _ in range(n_batches):
+            for _ in range(n_train_batches):
                 losses = self.policy.train()
                 if not isinstance(losses, tuple):
                     losses = [losses]
@@ -113,16 +121,17 @@ class RolloutWorker(Rollout):
                     avg_epoch_losses[idx] += loss
             dur_train += time.time() - train_start
         for idx,loss in enumerate(avg_epoch_losses):
-            avg_loss = (loss / n_cycles) / n_batches
+            avg_loss = (loss / n_episodes) / n_train_batches
             self.loss_histories[idx].append(avg_loss)
         # Update learning rate if loss gradient exceeds 1 for any loss history:
         if self.adaptive_model_lr:
             for l in self.loss_histories:
                 if len(l) >= 2:
                     grad = l[-1] / l[-2]
-                    if grad > 1:
-                        self.policy.model_lr /= 2
+                    if grad > 1.1:
+                        self.policy.model_lr *= 0.95
 
+        self.buff_obs_variance = self.policy.model_replay_buffer.get_variance(column='o')
         self.test_prediction_error(last_stored_idxs)
         dur_total = time.time() - dur_start
         updated_policy = self.policy
@@ -141,6 +150,7 @@ class RolloutWorker(Rollout):
         this_mj_pred_err_hist = []
         this_mj_accumulated_pred_err = []
         this_mj_pred_std_hist = []
+
 
         loss_pred_threshold_perc = 20 # Loss prediction threshold in %
 
@@ -210,7 +220,7 @@ class RolloutWorker(Rollout):
                 loss_pred_ok = loss_s_batch[batch_idx][step] + (loss_s_batch[batch_idx][step] * loss_pred_threshold_perc / 100) < l_s[batch_idx][0]
                 if not loss_pred_ok and this_loss_pred_steps[batch_idx] == self.T:
                     this_loss_pred_steps[batch_idx] = step
-            if step == self.T - 1:
+            if step == self.acc_err_steps:
                 this_accumulated_pred_err = np.abs(flattened_o_s_step - flattened_o2_s_step)
 
         # TODO: The accumulated mujoco error is smaller than the per-step mujoco error computed above. Also,
@@ -233,7 +243,7 @@ class RolloutWorker(Rollout):
                 for batch_idx, pred_success in enumerate(pred_successes):
                     if not pred_success and this_pred_steps[batch_idx] == self.T:
                         this_mj_pred_steps[batch_idx] = step
-                if step == self.T - 1:
+                if step == self.acc_err_steps:
                     this_mj_accumulated_pred_err = err
 
         pred_err_mean = np.mean(this_pred_err_hist)

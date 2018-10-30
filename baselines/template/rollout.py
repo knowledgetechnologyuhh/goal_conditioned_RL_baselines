@@ -165,6 +165,8 @@ class Rollout:
 
         if return_states:
             ret = convert_episode_to_batch_major(episode), mj_states
+        else:
+            ret = convert_episode_to_batch_major(episode)
         return ret
 
     def clear_history(self):
