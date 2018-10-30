@@ -33,7 +33,7 @@ def mpi_average(value):
 
 
 def train(rollout_worker, evaluator,
-          n_epochs, n_test_rollouts, n_cycles, n_batches, policy_save_interval,
+          n_epochs, n_test_rollouts, n_episodes, n_train_batches, policy_save_interval,
           save_policies, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank()
 
@@ -51,7 +51,7 @@ def train(rollout_worker, evaluator,
         # train
         logger.info("Training epoch {}".format(epoch))
         rollout_worker.clear_history()
-        policy, time_durations = rollout_worker.generate_rollouts_update(n_cycles, n_batches)
+        policy, time_durations = rollout_worker.generate_rollouts_update(n_episodes, n_train_batches)
         logger.info('Time for epoch {}: {:.2f}. Rollout time: {:.2f}, Training time: {:.2f}'.format(epoch, time_durations[0], time_durations[1], time_durations[2]))
 
         # eval
@@ -134,7 +134,7 @@ def launch(
     # Prepare params.
     params = config.DEFAULT_PARAMS
     params['env_name'] = env
-    params['n_cycles'] = kwargs['n_train_rollouts']
+    params['n_episodes'] = kwargs['n_episodes']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
     params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
@@ -189,7 +189,7 @@ def launch(
     train(
         logdir=logdir, rollout_worker=rollout_worker,
         evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
-        n_cycles=params['n_cycles'], n_batches=params['n_batches'],
+        n_episodes=params['n_episodes'], n_train_batches=params['n_train_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate)
     print("Done training")
 
