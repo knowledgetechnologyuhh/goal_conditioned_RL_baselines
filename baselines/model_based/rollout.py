@@ -305,10 +305,11 @@ class RolloutWorker(Rollout):
 
         last_added_idxs = np.argwhere(self.policy.model_replay_buffer.ep_added > (self.policy.model_replay_buffer.ep_no - self.episodes_per_epoch))
         last_added_idxs = last_added_idxs.flatten()
-        last_added_values = np.take(self.policy.model_replay_buffer.memory_value, last_added_idxs)
-        replay_idx = last_added_idxs[np.argmax(last_added_values)]
+        last_added_losses = np.take(self.policy.model_replay_buffer.buffers['loss'], last_added_idxs, axis=0)
+        last_added_max_losses = np.max(last_added_losses, axis=1)
+        replay_idx = last_added_idxs[np.argmax(last_added_max_losses)]
 
-        highest_mem_val = self.policy.model_replay_buffer.memory_value[replay_idx]
+        highest_mem_val = np.max(last_added_max_losses)
         if len(self.top_exp_replay_values) == self.top_exp_replay_values.maxlen:
             mem_val_required = min(self.top_exp_replay_values)
         else:
