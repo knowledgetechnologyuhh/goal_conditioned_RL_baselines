@@ -25,6 +25,7 @@ DEFAULT_PARAMS = {
     'memval_method': 'random',
     'clip_grads': 1,
     'action_selection': 'random',
+    'n_train_batches': 10,
 }
 
 # POLICY_ACTION_PARAMS = {
@@ -102,7 +103,8 @@ def configure_policy(dims, params):
                         'env': env.env,
                         'buff_sampling': params['buff_sampling'],
                         'memval_method': params['memval_method'],
-                        'action_selection': params['action_selection']
+                        'action_selection': params['action_selection'],
+                        'n_train_batches': params['n_train_batches']
                         })
     policy_params['info'] = {
         'env_name': params['env_name'],

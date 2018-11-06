@@ -47,14 +47,12 @@ def test_objective(space_sample):
         print("Done executing hyperopt run.")
         time.sleep(10)
         res_str = str(result).split("--------------------------------------------------------------")[-2]
-        trial_value = res_str.split("train/variance_times_acc_err")[1]
+        trial_value = res_str.split("train/variance_div_acc_err")[1]
         trial_value = trial_value.split("|")[1]
         trial_value = float(trial_value)
 
         print("New score for {}: {}".format(cmd_arr, trial_value))
-        # except:
-        #     score = 100 + n_epochs
-        #     print("Error executing command!!!! Setting score for {} to max: {}.".format(cmd_arr, score))
+
         time.sleep(5)
         results.append(trial_value)
 
@@ -91,7 +89,7 @@ if __name__ == '__main__':
                     max_evals=r,
                     verbose=1)
         print("Performed {} of {} runs.".format(r, runs))
-        # pickle.dump(trials, open(trials_f_name, "wb"))
+        pickle.dump(trials, open(trials_f_name, "wb"))
         print(best)
         # print(trials)
     print("done!")
