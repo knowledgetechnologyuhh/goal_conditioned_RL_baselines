@@ -83,7 +83,7 @@ class RolloutWorker(Rollout):
         if self.buff_obs_variance is not None:
             logs += [('buffer observation variance', self.buff_obs_variance)]
         if self.buff_obs_variance is not None and self.pred_accumulated_err is not None:
-            logs += [('variance_times_acc_err', self.buff_obs_variance * self.pred_accumulated_err)]
+            logs += [('variance_div_acc_err', self.buff_obs_variance / self.pred_accumulated_err)]
         logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)

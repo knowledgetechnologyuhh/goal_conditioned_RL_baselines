@@ -24,7 +24,7 @@ buff_sampling=$5
 
 env="BuildTowerMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
 
-cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.model_based --rollout_batch_size ${rollout_batch_size} --n_train_batches ${n_train_batches} --n_epochs ${n_epochs} --n_episodes ${n_episodes} --base_logdir /data/eppe/baselines_data --render 0 --buff_sampling ${buff_sampling} --memval_method ${memval_method} --action_selection ${action_selection}"
+cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.model_based --rollout_batch_size ${rollout_batch_size} --n_train_batches ${n_train_batches} --n_epochs ${n_epochs} --n_episodes ${n_episodes} --base_logdir /data/eppe/baselines_data --render 0 --buff_sampling ${buff_sampling} --memval_method ${memval_method} --action_selection ${action_selection} --model_lr ${model_lr} --n_train_batches ${n_train_batches}"
 
 echo ${cmd}
 

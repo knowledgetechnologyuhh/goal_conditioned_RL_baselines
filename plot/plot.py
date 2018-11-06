@@ -98,7 +98,7 @@ def draw_var_param_plots(data, var_param_keys, inter_dict, fig_dir,  y_axis_titl
             plt.savefig(os.path.join(fig_dir, 'fig-{}:{}_{}.png'.format(config_split, conf_val, y_axis_title.replace("/", "_"))))
 
 
-def draw_all_data_plot(data, fig_dir, y_axis_title=None):
+def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     plt.clf()
     # plt.figure(figsize=(20, 8))
     fig = plt.figure(figsize=(20, 8))
@@ -141,7 +141,11 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None):
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
 
-        plt.plot(x_vals, median, label=label, color=color)
+        if lin_log == 'lin':
+            plt.plot(x_vals, median, label=label, color=color)
+        elif lin_log == 'log':
+            plt.semilogy(x_vals, median, label=label, color=color)
+
         plt.fill_between(x_vals, np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25, color=color)
 
         # plt.plot(x_vals, mean, label=label+"-mean")
@@ -385,6 +389,8 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
         # print('loading {} ({})'.format(curr_path, len(results['epoch'])))
         with open(os.path.join(curr_path, 'params.json'), 'r') as f:
             params = json.load(f)
+        if col_to_display not in results.keys():
+            continue
         this_data = np.array(results[col_to_display])
 
         epoch = np.array(results['epoch']) + 1
@@ -422,7 +428,33 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
     return data
 
 
-def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate'):
+def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
+    d_keys = [key for key in sorted(data.keys())]
+    if sort_order == 'max':
+        best_vals = [0 for _ in range(n_best)]
+    elif sort_order == 'min':
+        best_vals = [np.iinfo(np.int16).max for _ in range(n_best)]
+    best_keys = ['' for _ in range(n_best)]
+    for key in d_keys:
+        last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if len(data[key][i][1]) > avg_last_steps])
+        last_n_avg = np.mean(last_vals)
+        if sort_order == 'max':
+            if last_n_avg > np.min(best_vals):
+                ri = np.argmin(best_vals)
+                best_vals[ri] = last_n_avg
+                best_keys[ri] = key
+        elif sort_order == 'min':
+            if last_n_avg < np.max(best_vals):
+                ri = np.argmax(best_vals)
+                best_vals[ri] = last_n_avg
+                best_keys[ri] = key
+    best_data = {}
+    for key in best_keys:
+        if key in data.keys():
+            best_data[key] = data[key]
+    return best_data
+
+def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='min', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
 
@@ -433,9 +465,12 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
 
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
 
+    if get_best != '':
+        data = get_best_data(data, get_best, n_best=5, avg_last_steps=5)
+
     # draw_var_param_plots(data, var_param_keys, inter_dict, data_dir, y_axis_title=col_to_display)
 
-    draw_all_data_plot(data, data_dir, y_axis_title=col_to_display)
+    draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
     # draw_all_data_plot_rg_c_conv(data, args.dir)
     # rate_to_achieve = 0.5
