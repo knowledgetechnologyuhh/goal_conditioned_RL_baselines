@@ -52,14 +52,16 @@ def test_objective(space_sample):
         trial_value = float(trial_value)
 
         print("New score for {}: {}".format(cmd_arr, trial_value))
-
+        # except:
+        #     score = 100 + n_epochs
+        #     print("Error executing command!!!! Setting score for {} to max: {}.".format(cmd_arr, score))
         time.sleep(5)
         results.append(trial_value)
 
 
-    res_score = np.mean(results)
-    print("Final average score for {}: {}".format(cmd_arr, res_score))
-    return res_score
+    res_cost = -np.mean(results)
+    print("Final average cost for {}: {}".format(cmd_arr, res_cost))
+    return res_cost
 
 
 if __name__ == '__main__':
