@@ -75,11 +75,26 @@ if __name__ == '__main__':
     space['memval_method'] = hp.choice('memval_method', ['uniform'])
     space['buff_sampling'] = hp.choice('buff_sampling', ['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss'])
 
-    trials_f_name = "hyperopt_trials_last.pkl"
-    if os.path.isfile(trials_f_name):
-        trials = pickle.load(open(trials_f_name, "rb"))
-    else:
+    trials_fname = "hyperopt_trials_{}.pkl"
+    max_parallel = 4
+
+    trials = None
+    this_trials_fname = 'trials.pkl'
+    for i in range(max_parallel):
+        this_trials_fname = trials_fname.format(i)
+        if os.path.isfile(this_trials_fname):
+            trials = pickle.load(open(trials_fname, "rb"))
+            # Make file unavailable for other processes that have been started in parallel
+            os.rename(this_trials_fname, this_trials_fname+'.bak')
+    if trials is None:
+        for i in range(max_parallel):
+            this_trials_fname = trials_fname.format(i)+'.bak'
+            if not os.path.isfile(this_trials_fname):
+                this_trials_fname = trials_fname.format(i)
         trials = Trials()
+
+
+
     runs = 3000
     r = 0
     while r < runs:
@@ -91,7 +106,7 @@ if __name__ == '__main__':
                     max_evals=r,
                     verbose=1)
         print("Performed {} of {} runs.".format(r, runs))
-        pickle.dump(trials, open(trials_f_name, "wb"))
+        pickle.dump(trials, open(this_trials_fname, "wb"))
         print(best)
         # print(trials)
     print("done!")
