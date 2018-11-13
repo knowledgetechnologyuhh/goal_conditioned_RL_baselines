@@ -1,0 +1,75 @@
+<mujoco>
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="0.44 0.85 0.56" rgb2="0.46 0.87 0.58" width="32" height="32"></texture>
+        <texture name="texture_block" file="block.png" gridsize="3 4" gridlayout=".U..LFRB.D.."></texture>
+
+        <material name="floor_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+        <material name="table_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.93 0.93 0.93 1"></material>
+        <material name="block_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+        <material name="puck_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
+        <material name="robot0:geomMat" shininess="0.03" specular="0.4"></material>
+        <material name="robot0:gripper_finger_mat" shininess="0.03" specular="0.4" reflectance="0"></material>
+        <material name="robot0:gripper_mat" shininess="0.03" specular="0.4" reflectance="0"></material>
+        <material name="robot0:arm_mat" shininess="0.03" specular="0.4" reflectance="0"></material>
+        <material name="robot0:head_mat" shininess="0.03" specular="0.4" reflectance="0"></material>
+        <material name="robot0:torso_mat" shininess="0.03" specular="0.4" reflectance="0"></material>
+        <material name="robot0:base_mat" shininess="0.03" specular="0.4" reflectance="0"></material>
+
+        <mesh name="torso_iam_fb80b350" file="torso_iam_fb80b350.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_shoulder_up_iam_34db21c8" file="right_shoulder_up_iam_34db21c8.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_upper_arm_iam_e3e9c979" file="right_upper_arm_iam_e3e9c979.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_lower_arm1_iam_65a34910" file="right_lower_arm1_iam_65a34910.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_wrist_iam_771ea33e" file="right_wrist_iam_771ea33e.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_wrist_iam_81504746" file="right_wrist_iam_81504746.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_palm_iam_583b22df" file="right_palm_iam_583b22df.STL" scale="0.001 0.001 0.001" />
+        <mesh name="finger_segment_ipt_50d2a7f4" file="finger_segment_ipt_50d2a7f4.STL" scale="0.001 0.001 0.001" />
+        <mesh name="fingertip_ipt_8417b8a9" file="fingertip_ipt_8417b8a9.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_hip_up_iam_f46f7684" file="right_hip_up_iam_f46f7684.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_hip_up2_iam_f4f7d16a" file="right_hip_up2_iam_f4f7d16a.STL" scale="0.001 0.001 0.001" />
+        <mesh name="Thigh_right_complete_iam_6502f197" file="Thigh_right_complete_iam_6502f197.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_shank_iam_7a73fe91" file="right_shank_iam_7a73fe91.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_ankle_iam_f4f7d16a" file="right_ankle_iam_f4f7d16a.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_foot_iam_3ff7356a" file="right_foot_iam_3ff7356a.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_hip_up_MIR_iam_386ac7b2" file="right_hip_up_MIR_iam_386ac7b2.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_hip_up2_MIR_iam_b8a74a0a" file="right_hip_up2_MIR_iam_b8a74a0a.STL" scale="0.001 0.001 0.001" />
+        <mesh name="Thigh_left_complete_iam_5a6ba909" file="Thigh_left_complete_iam_5a6ba909.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_shank_MIR_iam_a2a9b5d0" file="right_shank_MIR_iam_a2a9b5d0.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_ankle_MIR_iam_c5a384f4" file="right_ankle_MIR_iam_c5a384f4.STL" scale="0.001 0.001 0.001" />
+        <mesh name="left_foot_iam_620666ef" file="left_foot_iam_620666ef.STL" scale="0.001 0.001 0.001" />
+        <mesh name="neck_iam_61141f4f" file="neck_iam_61141f4f.STL" scale="0.001 0.001 0.001" />
+        <mesh name="head_iam_b9cf2ea" file="head_iam_b9cf2ea.STL" scale="0.001 0.001 0.001" />
+        <mesh name="left_shoulder_up_iam_1ca4d925" file="left_shoulder_up_iam_1ca4d925.STL" scale="0.001 0.001 0.001" />
+        <mesh name="left_upper_arm_iam_49d50008" file="left_upper_arm_iam_49d50008.STL" scale="0.001 0.001 0.001" />
+        <mesh name="left_lower_arm_iam_5be2a521" file="left_lower_arm_iam_5be2a521.STL" scale="0.001 0.001 0.001" />
+        <mesh name="right_wrist_MIR_iam_dcfe6de3" file="right_wrist_MIR_iam_dcfe6de3.STL" scale="0.001 0.001 0.001" />
+        <mesh name="left_wrist_iam_c75e4b6f" file="left_wrist_iam_c75e4b6f.STL" scale="0.001 0.001 0.001" />
+        <mesh name="left_palm_iam_b92c61b5" file="left_palm_iam_b92c61b5.STL" scale="0.001 0.001 0.001" />
+    </asset>
+
+    <equality>
+        <weld body1="robot0:mocap" body2="robot0:gripper_link" solimp="0.9 0.95 0.001" solref="0.02 1"></weld>
+    </equality>
+
+    <contact>
+        <exclude body1="robot0:r_gripper_finger_link" body2="robot0:l_gripper_finger_link"></exclude>
+    </contact>
+
+    <default>
+        <default class="robot0:fetch">
+            <geom margin="0.001" material="robot0:geomMat" rgba="1 1 1 1" solimp="0.99 0.99 0.01" solref="0.01 1" type="mesh" user="0"></geom>
+            <joint armature="1" damping="50" frictionloss="0" stiffness="0"></joint>
+
+            <default class="robot0:fetchGripper">
+                <geom condim="4" margin="0.001" type="box" user="0" rgba="0.356 0.361 0.376 1.0"></geom>
+                <joint armature="100" damping="1000" limited="true" solimplimit="0.99 0.999 0.01" solreflimit="0.01 1" type="slide"></joint>
+            </default>
+
+            <default class="robot0:grey">
+                <geom rgba="0.356 0.361 0.376 1.0"></geom>
+            </default>
+            <default class="robot0:blue">
+                <geom rgba="0.086 0.506 0.767 1.0"></geom>
+            </default>
+        </default>
+    </default>
+</mujoco>
