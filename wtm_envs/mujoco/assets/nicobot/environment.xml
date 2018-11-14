@@ -22,7 +22,7 @@
 		<include file="robot.xml"></include>
 
 		<body pos="0.95 0.25 0.25" name="table0">
-			<geom size="0.75 0.75 0.25" type="box" mass="2000" material="table_mat" rgba="1 1 1 0.5"></geom>
+			<geom size="0.35 0.55 0.25" type="box" mass="2000" material="table_mat" rgba="1 1 1 1"></geom>
 		</body>
 
 		<body name="object0" pos="0.025 0.025 0.025">
@@ -54,8 +54,9 @@
 		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
 	</worldbody>
 	<actuator>
-		<position ctrllimited="true" ctrlrange="0 0.2" joint="robot0:l_gripper_finger_joint" kp="30000" name="robot0:l_gripper_finger_joint" user="1"></position>
-		<position ctrllimited="true" ctrlrange="0 0.2" joint="robot0:r_gripper_finger_joint" kp="30000" name="robot0:r_gripper_finger_joint" user="1"></position>
+		<position ctrllimited="true"  joint="robot0:l_gripper_finger_joint" ctrlrange="-1 1" kp="8000" forcerange="-4.785 4.785" name="robot0:l_gripper_finger_joint" user="1"></position>
+		<position ctrllimited="true"  joint="robot0:i_gripper_finger_joint" ctrlrange="-1 1" kp="8000" forcerange="-4.785 4.785" name="robot0:i_gripper_finger_joint" user="1"></position>
+		<position ctrllimited="true" joint="robot0:r_gripper_finger_joint" ctrlrange="-1 1" kp="8000" forcerange="-4.785 4.785"  name="robot0:r_gripper_finger_joint" user="1"></position>
 	</actuator>
 
 </mujoco>

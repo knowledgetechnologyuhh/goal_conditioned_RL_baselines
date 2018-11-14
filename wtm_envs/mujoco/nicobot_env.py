@@ -55,9 +55,9 @@ class NicobotEnv(tower_env.TowerEnv):
         self.sim.forward()
 
         # Move end effector into position.
-        gripper_target = np.array([0.54, 0.1, 0.0 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
+        gripper_target = np.array([0.64, 0.1, 0.0 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
             'robot0:grip')
-        gripper_rotation = np.array([1., 0., -1., 0.])
+        gripper_rotation = np.array([1., 0.3, -0.5, 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
         for _ in range(10):
@@ -65,9 +65,9 @@ class NicobotEnv(tower_env.TowerEnv):
 
         # Offset the random goal if gripper random is used
         if self.gripper_relative_target:
-            self.random_gripper_goal_pos_offset = (0.43, 0.0, 0.0)
+            self.random_gripper_goal_pos_offset = (0.23, 0.0, 0.0)
         else:
-            self.random_gripper_goal_pos_offset = (0.43, 0.0, 0.0)
+            self.random_gripper_goal_pos_offset = (0.13, 0.0, 0.0)
 
         # Extract information for sampling goals.
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
