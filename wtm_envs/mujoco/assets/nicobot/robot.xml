@@ -184,8 +184,8 @@
                 <joint type="hinge" name="head_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.553 1.379" />
                 <geom pos="-0.003998 -0.016462 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_front_b9cf2ea" />
                 <geom pos="-0.003998 -0.016462 0.04478" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_front_b9cf2ea" />
-                <geom pos="-0.003998 -0.015962 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
-                <geom pos="-0.003998 -0.015962 0.04478" type="mesh" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
+                <geom pos="-0.003998 -0.015262 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
+                <geom pos="-0.003998 -0.015262 0.04478" type="mesh" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
                 <geom pos="0.08458 0.012762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
                 <geom pos="0.08458 -0.057762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
             </body>
