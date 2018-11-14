@@ -182,8 +182,12 @@
             <body name="head:21" pos="0 0.023001 0.0745">
                 <inertial pos="0.01525 -0.023771 0.09423" quat="0.334184 0.616818 0.636951 0.319608" mass="0.294137" diaginertia="0.00159006 0.00154287 0.00136607" />
                 <joint name="head_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.553 1.379" />
-                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_b9cf2ea" />
-                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_b9cf2ea" />
+                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_front_b9cf2ea" />
+                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_front_b9cf2ea" />
+                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
+                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
+                <geom pos="0.08458 0.012762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
+                <geom pos="0.08458 -0.057762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
             </body>
         </body>
         <body name="left_shoulder:11" pos="0.026783 0.049488 0.748809" quat="0.999952 0 0 0.00980834">
@@ -270,7 +274,7 @@
                                             <body name="robot0:gripper_link" pos="0 0.04475 0">
                                                                     <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
                                                                     <!-- change axis in motor 6 to 0 0 1 -->
-                                                                    <joint name="motor6" pos="0 0 0" axis="0 0 1" limited="true" range="-2.6 2.6" />
+                                                                    <joint name="motor6" pos="0 0 0" axis="0 1 0" limited="true" range="-2.6 2.6" />
                                                                     <geom size="0.0125 0.0175" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
                                                                     <body childclass="robot0:fetchGripper" name="robot0:r_gripper_finger_link" pos="0 0.0159 0">
                                                                         <inertial diaginertia="0.1 0.1 0.1" mass="4" pos="-0.01 0 0"></inertial>

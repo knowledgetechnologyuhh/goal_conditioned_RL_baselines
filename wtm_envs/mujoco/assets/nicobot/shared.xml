@@ -38,6 +38,8 @@
         <mesh name="left_foot_iam_620666ef" file="left_foot_iam_620666ef.STL" scale="0.001 0.001 0.001" />
         <mesh name="neck_iam_61141f4f" file="neck_iam_61141f4f.STL" scale="0.001 0.001 0.001" />
         <mesh name="head_iam_b9cf2ea" file="head_iam_b9cf2ea.STL" scale="0.001 0.001 0.001" />
+        <mesh name="head_iam_front_b9cf2ea" file="head_iam_front_b9cf2ea.STL" scale="0.001 0.001 0.001" />
+        <mesh name="head_iam_back_b9cf2ea" file="head_iam_back_b9cf2ea.STL" scale="0.001 0.001 0.001" />
         <mesh name="left_shoulder_up_iam_1ca4d925" file="left_shoulder_up_iam_1ca4d925.STL" scale="0.001 0.001 0.001" />
         <mesh name="left_upper_arm_iam_49d50008" file="left_upper_arm_iam_49d50008.STL" scale="0.001 0.001 0.001" />
         <mesh name="left_lower_arm_iam_5be2a521" file="left_lower_arm_iam_5be2a521.STL" scale="0.001 0.001 0.001" />

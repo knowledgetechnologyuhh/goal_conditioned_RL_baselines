@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mujoco>
 	<compiler angle="radian" coordinate="local" meshdir="../stls/nicobot" texturedir="../textures" discardvisual="false" inertiafromgeom="true" balanceinertia="true"></compiler>
-	<!--<size njmax="500" nconmax="100" />-->
+	<size njmax="500" nconmax="100" />
 	<option timestep="0.002">
 		<flag warmstart="enable"></flag>
 	</option>
