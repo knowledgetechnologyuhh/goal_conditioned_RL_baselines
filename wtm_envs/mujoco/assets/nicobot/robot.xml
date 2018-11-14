@@ -14,47 +14,47 @@
         <geom pos="-0.026368 -0.075212 0.525308" type="mesh" rgba="0.270588 0.270588 0.270588 1" mesh="torso_iam_fb80b350" />
         <body name="right_shoulder:11" pos="0.026783 -0.049912 0.748809" quat="0.99478 0 0 -0.102042">
             <inertial pos="0.005637 0.000876 0.033153" quat="0.421242 0.476871 0.383076 0.669628" mass="0.084038" diaginertia="3.42047e-05 3.34346e-05 2.53606e-05" />
-            <joint name="r_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-1.745 2.182" />
+            <joint type="hinge" name="r_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-1.745 2.182" />
             <geom pos="-0.062271 0.032843 -0.74045" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_shoulder_up_iam_34db21c8" />
             <geom pos="-0.062271 0.032843 -0.74045" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_shoulder_up_iam_34db21c8" />
             <body name="right_collarbone:11" pos="0.026211 -0.018056 0.037" quat="0.99478 0 0 0.102042">
                 <inertial pos="0 -0.041345 -0.002364" quat="0.468459 0.529666 -0.529666 0.468459" mass="0.024811" diaginertia="1.91231e-05 1.4e-05 1.08769e-05" />
-                <joint name="r_shoulder_y" pos="0 0 0" axis="0 -1 0" limited="true" range="-3.142 3.124" />
+                <joint type="hinge" name="r_shoulder_y" pos="0 0 0" axis="0 -1 0" limited="true" range="-3.142 3.124" />
                 <geom pos="-0.0285 -0.054827 -0.000102" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_upper_arm_iam_e3e9c979" />
                 <geom pos="-0.0285 -0.054827 -0.000102" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_upper_arm_iam_e3e9c979" />
                 <body name="right_upper_arm:11" pos="0.0245 -0.073664 -0.022853">
                     <inertial pos="-0.02306 -0.000321 -0.0866" quat="0.707103 -0.00220134 0.00220134 0.707103" mass="0.189729" diaginertia="0.000851031 0.000851 4.79689e-05" />
-                    <joint name="r_arm_x" pos="0 0 0" axis="1 0 0" limited="true" range="-3.002 1.8675" />
+                    <joint type="hinge" name="r_arm_x" pos="0 0 0" axis="1 0 0" limited="true" range="-3.002 1.8675" />
                     <geom pos="-0.044001 -0.021 -0.139458" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_lower_arm1_iam_65a34910" />
                     <geom pos="-0.044001 -0.021 -0.139458" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_lower_arm1_iam_65a34910" />
                     <body name="right_lower_arm:11" pos="-0.023001 -0.024001 -0.1732">
                         <inertial pos="0 0.022485 -0.081055" quat="0.999909 -0.0135 0 0" mass="0.076793" diaginertia="0.000104 9.5054e-05 2.0946e-05" />
-                        <joint name="r_elbow_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.745 1.745" />
+                        <joint type="hinge" name="r_elbow_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.745 1.745" />
                         <geom pos="-0.0168 -0.0018 -0.123873" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_wrist_iam_771ea33e" />
                         <geom pos="-0.0168 -0.0018 -0.123873" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_wrist_iam_771ea33e" />
                         <body name="right_wrist:11" pos="0 0.0102 -0.12605" quat="0.999895 0 0 0.0144725">
                             <inertial pos="3.1e-05 -0.011056 -0.0675" quat="0.668956 -0.158036 -0.000322711 0.726308" mass="0.028397" diaginertia="5.96504e-05 4.38724e-05 2.64772e-05" />
-                            <joint name="r_wrist_z" pos="0 0 0" axis="0 0 1" limited="true" range="-1.571 1.571" />
+                            <joint type="hinge" name="r_wrist_z" pos="0 0 0" axis="0 0 1" limited="true" range="-1.571 1.571" />
                             <geom pos="-0.000319 0.006617 -0.070181" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="right_wrist_iam_81504746" />
                             <geom pos="-0.000319 0.006617 -0.070181" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="right_wrist_iam_81504746" />
                             <body name="right_palm:11" pos="0.023416 0.006052 -0.070337" quat="0.976645 -0.21486 0 0">
                                 <inertial pos="-0.029511 0.002253 -0.023968" quat="0.6183 0.224212 -0.00570587 0.753261" mass="0.005332" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                <joint name="r_wrist_x" pos="0 0 0" axis="1 0 0" limited="true" range="0 0.872665" />
+                                <joint type="hinge" name="r_wrist_x" pos="0 0 0" axis="1 0 0" limited="true" range="0 0.872665" />
                                 <geom pos="-0.022933 0.001906 -0.017233" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="right_palm_iam_583b22df" />
                                 <geom pos="-0.022933 0.001906 -0.017233" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="right_palm_iam_583b22df" />
                                 <body name="finger_segment:23" pos="-0.001139 0.006226 -0.040004" quat="0.00896353 0.0301423 0.284902 -0.958041">
                                     <inertial pos="0.004909 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                    <joint name="r_indexfingers_x" pos="0 0 0" axis="0.998022 0.00962907 0.0621208" limited="true" range="-1.309 0" />
+                                    <joint type="hinge" name="r_indexfingers_x" pos="0 0 0" axis="0.998022 0.00962907 0.0621208" limited="true" range="-1.309 0" />
                                     <geom pos="-0.006681 -0.015507 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <geom pos="-0.006681 -0.015507 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <body name="finger_segment:13" pos="-0.0005 0 -0.015999" quat="0.998866 -0.047605 0 0">
                                         <inertial pos="0.005409 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                        <joint name="r_indexfinger_1st_x" pos="0 0 0" axis="0.998022 0.00962907 0.0621208" limited="true" range="-1.309 0" />
+                                        <joint type="hinge" name="r_indexfinger_1st_x" pos="0 0 0" axis="0.998022 0.00962907 0.0621208" limited="true" range="-1.309 0" />
                                         <geom pos="-0.006181 -0.015507 -0.007417" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <geom pos="-0.006181 -0.015507 -0.007417" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <body name="fingertip:13" pos="0 0 -0.016" quat="0.998498 -0.0547796 0 0">
                                             <inertial pos="0.005013 0.000408 -0.010216" quat="0.6183 0.224212 -0.00570587 0.753261" mass="8e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                            <joint name="r_indexfinger_2nd_x" pos="0 0 0" axis="0.998022 0.00962907 0.0621208" limited="true" range="-1.309 0" />
+                                            <joint type="hinge" name="r_indexfinger_2nd_x" pos="0 0 0" axis="0.998022 0.00962907 0.0621208" limited="true" range="-1.309 0" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                         </body>
@@ -62,17 +62,17 @@
                                 </body>
                                 <body name="finger_segment:22" pos="-0.035879 0.006226 -0.040569" quat="-0.00883942 -0.0301789 0.280947 -0.959208">
                                     <inertial pos="0.004909 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                    <joint name="r_ringfingers_x" pos="0 0 0" axis="0.998022 -0.00962907 -0.0621208" limited="true" range="-1.309 0" />
+                                    <joint type="hinge" name="r_ringfingers_x" pos="0 0 0" axis="0.998022 -0.00962907 -0.0621208" limited="true" range="-1.309 0" />
                                     <geom pos="-0.006681 -0.015507 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <geom pos="-0.006681 -0.015507 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <body name="finger_segment:12" pos="-0.0005 0 -0.016" quat="0.998866 -0.0476045 0 0">
                                         <inertial pos="0.005409 0.000556 -0.005752" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                        <joint name="r_ringfinger_1st_x" pos="0 0 0" axis="0.998022 -0.00962907 -0.0621208" limited="true" range="-1.309 0" />
+                                        <joint type="hinge" name="r_ringfinger_1st_x" pos="0 0 0" axis="0.998022 -0.00962907 -0.0621208" limited="true" range="-1.309 0" />
                                         <geom pos="-0.006181 -0.015507 -0.007417" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <geom pos="-0.006181 -0.015507 -0.007417" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <body name="fingertip:12" pos="0 0 -0.016" quat="0.998498 -0.0547796 0 0">
                                             <inertial pos="0.005013 0.000407 -0.010215" quat="0.6183 0.224212 -0.00570587 0.753261" mass="8e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                            <joint name="r_ringfinger_2nd_x" pos="0 0 0" axis="0.998022 -0.00962907 -0.0621208" limited="true" range="-1.309 0" />
+                                            <joint type="hinge" name="r_ringfinger_2nd_x" pos="0 0 0" axis="0.998022 -0.00962907 -0.0621208" limited="true" range="-1.309 0" />
                                             <geom pos="0.005514 0.000373 -0.010171" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                             <geom pos="0.005514 0.000373 -0.010171" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                         </body>
@@ -80,17 +80,17 @@
                                 </body>
                                 <body name="finger_segment:21" pos="-0.0275 0.0199 -0.00842" quat="0.57536 0.8179 0 0">
                                     <inertial pos="0.004909 0.000556 -0.005752" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                    <joint name="r_thumb_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
+                                    <joint type="hinge" name="r_thumb_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
                                     <geom pos="-0.006681 -0.015507 -0.007417" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <geom pos="-0.006681 -0.015507 -0.007417" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <body name="finger_segment:11" pos="-0.0005 -1e-06 -0.016001" quat="0.998866 -0.047605 0 0">
                                         <inertial pos="0.005409 0.000557 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                        <joint name="r_thumb_1st_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
+                                        <joint type="hinge" name="r_thumb_1st_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
                                         <geom pos="-0.006181 -0.015507 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <geom pos="-0.006181 -0.015507 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <body name="fingertip:11" pos="0 1e-06 -0.015999" quat="0.998498 -0.0547796 0 0">
                                             <inertial pos="0.005013 0.000408 -0.010216" quat="0.6183 0.224212 -0.00570587 0.753261" mass="8e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                            <joint name="r_thumb_2nd_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
+                                            <joint type="hinge" name="r_thumb_2nd_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                         </body>
@@ -104,32 +104,32 @@
         </body>
         <body name="right_hip_up:11" pos="0.010783 -0.055212 0.519208">
             <inertial pos="0.005067 2e-05 -0.012737" quat="0.466387 0.531491 0.531491 0.466387" mass="0.026572" diaginertia="4.3e-05 4.05242e-05 9.47583e-06" />
-            <joint name="r_hip_z" pos="0 0 0" axis="0 0 1" limited="true" range="-0.698132 0.698132" />
+            <joint type="hinge" name="r_hip_z" pos="0 0 0" axis="0 0 1" limited="true" range="-0.698132 0.698132" />
             <geom pos="-0.05 -0.018 -0.002769" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up_iam_f46f7684" />
             <geom pos="-0.05 -0.018 -0.002769" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up_iam_f46f7684" />
             <body name="right_hip_low:11" pos="-0.046 0 -0.0414" quat="1 0.000256 0 0">
                 <inertial pos="0.04747 0.000227 -0.015465" quat="0.501517 0.49194 0.517016 0.48905" mass="0.178341" diaginertia="0.00015705 0.00012998 7.69691e-05" />
-                <joint name="r_hip_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.418879 1.22173" />
+                <joint type="hinge" name="r_hip_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.418879 1.22173" />
                 <geom pos="0.0031 -0.023 -0.025201" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up2_iam_f4f7d16a" />
                 <geom pos="0.0031 -0.023 -0.025201" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up2_iam_f4f7d16a" />
                 <body name="right_thigh:11" pos="0.0692 0.0261 0" quat="0.99996 0 0.00899238 0">
                     <inertial pos="-0.029925 -0.02577 -0.151364" quat="0.998315 0.00241749 0.0575509 0.00695866" mass="0.177251" diaginertia="0.00092877 0.000883003 0.000114227" />
-                    <joint name="r_hip_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.5708 0.5585" />
+                    <joint type="hinge" name="r_hip_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.5708 0.5585" />
                     <geom pos="-0.04583 -0.056 -0.070383" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="Thigh_right_complete_iam_6502f197" />
                     <geom pos="-0.04583 -0.056 -0.070383" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="Thigh_right_complete_iam_6502f197" />
                     <body name="right_shank:11" pos="-0.048258 0.0001 -0.214642" quat="0.999961 0 -0.00880939 0">
                         <inertial pos="0.015999 -0.026 -0.104866" quat="0.999436 0 -0.033574 0" mass="0.084704" diaginertia="0.000449682 0.000404 7.63185e-05" />
-                        <joint name="r_knee_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.53589 1.29154" />
+                        <joint type="hinge" name="r_knee_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.53589 1.29154" />
                         <geom pos="-0.004901 -0.056 -0.081799" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_shank_iam_7a73fe91" />
                         <geom pos="-0.004901 -0.056 -0.081799" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_shank_iam_7a73fe91" />
                         <body name="right_ankle:11" pos="0.03924 -0.052 -0.216472" quat="1 0 -0.000146 0">
                             <inertial pos="-0.02173 0.025873 0.015465" quat="0.517016 0.48905 0.501517 0.49194" mass="0.178341" diaginertia="0.00015705 0.00012998 7.69691e-05" />
-                            <joint name="r_ankle_y" pos="0 0 0" axis="0 1 0" limited="true" range="-0.785398 0.785398" />
+                            <joint type="hinge" name="r_ankle_y" pos="0 0 0" axis="0 1 0" limited="true" range="-0.785398 0.785398" />
                             <geom pos="-0.0661 0.0031 -0.011201" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_ankle_iam_f4f7d16a" />
                             <geom pos="-0.0661 0.0031 -0.011201" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_ankle_iam_f4f7d16a" />
                             <body name="right_foot:11" pos="-0.0709 0.0261 0" quat="0.999972 -0.00749143 0 0">
                                 <inertial pos="0.074125 -0.00893 -0.031819" quat="-0.0078116 0.705577 -0.0191211 0.708332" mass="0.072801" diaginertia="0.000362118 0.000282933 9.69482e-05" />
-                                <joint name="r_ankle_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.785398 0.785398" />
+                                <joint type="hinge" name="r_ankle_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.785398 0.785398" />
                                 <geom pos="-0.004 -0.024 -0.009365" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_foot_iam_3ff7356a" />
                                 <geom pos="-0.004 -0.024 -0.009365" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_foot_iam_3ff7356a" />
                             </body>
@@ -140,32 +140,32 @@
         </body>
         <body name="left_hip_up:11" pos="0.010783 0.054788 0.519208">
             <inertial pos="0.005067 -1e-06 -0.012736" quat="0.468459 0.529666 0.529666 0.468459" mass="0.072012" diaginertia="0.000117 0.000109231 2.67689e-05" />
-            <joint name="l_hip_z" pos="0 0 0" axis="0 0 1" limited="true" range="-0.698132 0.698132" />
+            <joint type="hinge" name="l_hip_z" pos="0 0 0" axis="0 0 1" limited="true" range="-0.698132 0.698132" />
             <geom pos="-0.05 -0.018 -0.0007" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up_MIR_iam_386ac7b2" />
             <geom pos="-0.05 -0.018 -0.0007" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up_MIR_iam_386ac7b2" />
             <body name="left_hip_low:11" pos="-0.046 0 -0.0414">
                 <inertial pos="0.04747 0.00023 -0.015465" quat="0.501517 0.49194 0.517016 0.48905" mass="0.17834" diaginertia="0.00015705 0.00012998 7.69691e-05" />
-                <joint name="l_hip_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.22173 0.418879" />
+                <joint type="hinge" name="l_hip_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.22173 0.418879" />
                 <geom pos="0.0031 -0.023 -0.025201" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up2_MIR_iam_b8a74a0a" />
                 <geom pos="0.0031 -0.023 -0.025201" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_hip_up2_MIR_iam_b8a74a0a" />
                 <body name="left_thigh:11" pos="0.0692 0.0261 0" quat="0.999959 0 0.00910687 0">
                     <inertial pos="-0.029925 -0.02577 -0.151365" quat="0.998315 0.00241749 0.0575509 0.00695866" mass="0.177251" diaginertia="0.00092877 0.000883003 0.000114227" />
-                    <joint name="l_hip_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.57 0.698132" />
+                    <joint type="hinge" name="l_hip_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.57 0.698132" />
                     <geom pos="-0.04583 -0.056 -0.100647" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="Thigh_left_complete_iam_5a6ba909" />
                     <geom pos="-0.04583 -0.056 -0.100647" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="Thigh_left_complete_iam_5a6ba909" />
                     <body name="left_shank:11" pos="-0.048258 0.0018 -0.214642" quat="0.999955 0 -0.00952686 0">
                         <inertial pos="0.015999 -0.026 -0.104866" quat="0.999436 0 -0.033574 0" mass="0.084704" diaginertia="0.000449682 0.000404 7.63185e-05" />
-                        <joint name="l_knee_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.53589 1.29154" />
+                        <joint type="hinge" name="l_knee_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.53589 1.29154" />
                         <geom pos="-0.004901 -0.056 -0.03453" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_shank_MIR_iam_a2a9b5d0" />
                         <geom pos="-0.004901 -0.056 -0.03453" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_shank_MIR_iam_a2a9b5d0" />
                         <body name="left_ankle:11" pos="0.03924 0 -0.216473" quat="1 0 0.00042 0">
                             <inertial pos="-0.021584 -0.026039 0.015361" quat="0.494883 0.504828 0.485687 0.514147" mass="0.179549" diaginertia="0.000158038 0.00013198 7.79815e-05" />
-                            <joint name="l_ankle_y" pos="0 0 0" axis="0 1 0" limited="true" range="-0.785398 0.785398" />
+                            <joint type="hinge" name="l_ankle_y" pos="0 0 0" axis="0 1 0" limited="true" range="-0.785398 0.785398" />
                             <geom pos="-0.0661 -0.0491 0.025201" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_ankle_MIR_iam_c5a384f4" />
                             <geom pos="-0.0661 -0.0491 0.025201" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_ankle_MIR_iam_c5a384f4" />
                             <body name="left_foot:11" pos="-0.0709 -0.0261 0">
                                 <inertial pos="0.074087 0.008929 -0.031819" quat="0.0078116 0.705577 0.0191211 0.708332" mass="0.072801" diaginertia="0.000362118 0.000282933 9.69482e-05" />
-                                <joint name="l_ankle_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.785398 0.785398" />
+                                <joint type="hinge" name="l_ankle_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.785398 0.785398" />
                                 <geom pos="-0.004 -0.024 -0.033621" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="left_foot_iam_620666ef" />
                                 <geom pos="-0.004 -0.024 -0.033621" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="left_foot_iam_620666ef" />
                             </body>
@@ -176,122 +176,110 @@
         </body>
         <body name="neck:11" pos="0.001283 -0.000212 0.756309">
             <inertial pos="0 0.000266 0.050352" quat="0.999909 -0.0135 0 0" mass="0.090439" diaginertia="6e-05 5.6027e-05 1.8973e-05" />
-            <joint name="head_z" pos="0 0 0" axis="0 0 1" limited="true" range="-3.124 3.142" />
+            <joint type="hinge" name="head_z" pos="0 0 0" axis="0 0 1" limited="true" range="-3.124 3.142" />
             <geom pos="-0.015583 -0.0205 0" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="neck_iam_61141f4f" />
             <geom pos="-0.015583 -0.0205 0" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="neck_iam_61141f4f" />
             <body name="head:21" pos="0 0.023001 0.0745">
                 <inertial pos="0.01525 -0.023771 0.09423" quat="0.334184 0.616818 0.636951 0.319608" mass="0.294137" diaginertia="0.00159006 0.00154287 0.00136607" />
-                <joint name="head_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.553 1.379" />
+                <joint type="hinge" name="head_y" pos="0 0 0" axis="0 1 0" limited="true" range="-1.553 1.379" />
                 <geom pos="-0.003998 -0.016462 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_front_b9cf2ea" />
                 <geom pos="-0.003998 -0.016462 0.04478" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="head_iam_front_b9cf2ea" />
-                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
-                <geom pos="-0.003998 -0.016462 0.04478" type="mesh" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
+                <geom pos="-0.003998 -0.015962 0.04478" type="mesh" contype="0" conaffinity="0" group="1" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
+                <geom pos="-0.003998 -0.015962 0.04478" type="mesh" rgba="0 0 0 1" mesh="head_iam_back_b9cf2ea" />
                 <geom pos="0.08458 0.012762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
                 <geom pos="0.08458 -0.057762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
             </body>
         </body>
         <body name="left_shoulder:11" pos="0.026783 0.049488 0.748809" quat="0.999952 0 0 0.00980834">
             <inertial pos="0.005702 0.000175 0.033153" quat="0.421242 0.476871 0.383076 0.669628" mass="0.084038" diaginertia="3.42047e-05 3.34346e-05 2.53606e-05" />
-            <joint name="l_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-2.182 1.745" />
+            <joint type="hinge" name="l_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-2.182 1.745" />
             <geom pos="0.014919 0.097299 -0.01461" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="left_shoulder_up_iam_1ca4d925" />
             <geom pos="0.014919 0.097299 -0.01461" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="left_shoulder_up_iam_1ca4d925" />
             <body name="left_collarbone:11" pos="0.022445 0.022567 0.037" quat="0.99995 -2.17357e-05 -0.00222489 -0.00976882">
                 <inertial pos="0 0.041345 -0.002364" quat="0.529666 0.468459 -0.468459 0.529666" mass="0.024811" diaginertia="1.91231e-05 1.4e-05 1.08769e-05" />
-                <joint name="l_shoulder_y" pos="0 0 0" axis="0 1 0" limited="true" range="-3.124 3.142" />
+                <joint type="hinge" name="l_shoulder_y" pos="0 0 0" axis="0 1 0" limited="true" range="-3.124 3.142" />
                 <geom pos="-0.00032 -0.000277 0.000298" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="left_upper_arm_iam_49d50008" />
                 <geom pos="-0.00032 -0.000277 0.000298" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="left_upper_arm_iam_49d50008" />
                 <body name="left_upper_arm:11" pos="0.0245 0.073663 -0.022853" quat="0.999671 0.000340939 -0.0256382 -8.7388e-06">
                     <inertial pos="-0.028636 -0.000703 -0.084224" quat="0.979254 -0.00563397 0.0306535 -0.200227" mass="0.192388" diaginertia="0.000853147 0.000852975 4.88781e-05" />
-                    <joint name="l_arm_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.8675 3.002" />
+                    <joint type="hinge" name="l_arm_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.8675 3.002" />
                     <geom pos="-0.044837 -0.009349 -0.161585" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="left_lower_arm_iam_5be2a521" />
                     <geom pos="-0.044837 -0.009349 -0.161585" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="left_lower_arm_iam_5be2a521" />
                     <body name="left_lower_arm:11" pos="-0.034583 0.023066 -0.169859" quat="0.999608 0 0.0279843 0">
                         <inertial pos="0 -0.022485 -0.081055" quat="0.999909 0.0135 0 0" mass="0.076791" diaginertia="0.000104 9.5054e-05 2.0946e-05" />
-                        <joint name="l_elbow_y" pos="0 0 0" axis="0 -1 0" limited="true" range="-1.745 1.745" />
+                        <joint type="hinge" name="l_elbow_y" pos="0 0 0" axis="0 -1 0" limited="true" range="-1.745 1.745" />
                         <geom pos="1.7e-05 -0.010775 -0.12546" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="right_wrist_MIR_iam_dcfe6de3" />
                         <geom pos="1.7e-05 -0.010775 -0.12546" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="right_wrist_MIR_iam_dcfe6de3" />
                         <body name="left_wrist:11" pos="0 -0.010201 -0.12555" quat="-1.73187e-07 0.999897 0.014351 -2.48567e-09">
                             <inertial pos="7e-05 -0.011053 0.067769" quat="0.700954 0.0930803 -0.0930803 0.700954" mass="0.028361" diaginertia="4.08924e-05 3.8e-05 1.31076e-05" />
-                            <joint name="l_wrist_z" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.571 1.571" />
+                            <joint type="hinge" name="l_wrist_z" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.571 1.571" />
                             <geom pos="-0.000319 0.006617 0.070682" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="left_wrist_iam_c75e4b6f" />
                             <geom pos="-0.000319 0.006617 0.070682" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="left_wrist_iam_c75e4b6f" />
-                            <body name="left_palm:11" pos="0.023416 0.006052 0.070837" quat="0.973559 0.228436 0 0">
+                            <body name="robot0:gripper_link" pos="0.023416 0.006052 0.070837" quat="0.973559 0.228436 0 0">
                                 <inertial pos="-0.027199 0.000117 0.017191" quat="0.5 0.5 0.5 0.5" mass="0.005222" diaginertia="2e-06 2e-06 1e-06" />
-                                <joint name="l_wrist_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.872665 0" />
+                                <joint type="hinge" name="l_wrist_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.872665 0" />
                                 <geom pos="-0.023233 0.001906 0.017234" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="left_palm_iam_b92c61b5" />
                                 <geom pos="-0.023233 0.001906 0.017234" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="left_palm_iam_b92c61b5" />
-                                <body name="finger_segment:24" pos="-0.028 0.0199 0.00842" quat="-1.46262e-07 9.27758e-08 0.535641 -0.844446">
+
+                                <body childclass="robot0:fetchGripper" name="robot0:l_gripper_finger_link" pos="-0.028 0.0199 0.00842" quat="-1.46262e-07 9.27758e-08 0.535641 -0.844446">
                                     <inertial pos="-0.004101 0.000556 -0.005752" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                    <joint name="l_thumb_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
-                                    <geom pos="-0.015691 -0.015508 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
+                                    <joint type="hinge" name="robot0:l_gripper_finger_joint"  pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
+                                    <geom pos="-0.015691 -0.015508 -0.007416" type="mesh" name="robot0:l_gripper_finger_link" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <geom pos="-0.015691 -0.015508 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <body name="finger_segment:14" pos="-0.00951 0 -0.016" quat="0.998866 -0.047605 0 0">
                                         <inertial pos="0.005409 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                        <joint name="l_thumb_1st_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
+                                        <joint type="hinge" name="l_thumb_1st_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
                                         <geom pos="-0.006181 -0.015507 -0.007417" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <geom pos="-0.006181 -0.015507 -0.007417" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <body name="fingertip:14" pos="0 0 -0.016" quat="0.998498 -0.0547796 0 0">
                                             <inertial pos="0.005013 0.000408 -0.010216" quat="0.6183 0.224212 -0.00570587 0.753261" mass="8e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                            <joint name="l_thumb_2nd_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
+                                            <joint type="hinge" name="l_thumb_2nd_x" pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                         </body>
                                     </body>
                                 </body>
-                                <body name="finger_segment:25" pos="-0.001439 0.006226 0.040004" quat="0.31851 0.947398 0.0100211 -0.0298074">
+
+                                <body childclass="robot0:fetchGripper" name="robot0:i_gripper_finger_link" pos="-0.001439 0.006226 0.040004" quat="0.31851 0.947398 0.0100211 -0.0298074">
                                     <inertial pos="-0.004101 0.000556 -0.005752" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                    <joint name="l_indexfingers_x" pos="0 0 0" axis="0.99794 -0.0170003 -0.0618655" limited="true" range="-1.309 0" />
-                                    <geom pos="-0.015691 -0.015506 -0.007417" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
+                                    <joint type="hinge" name="robot0:i_gripper_finger_joint" pos="0 0 0" axis="0.99794 -0.0170003 -0.0618655" limited="true" range="-1.309 0" />
+                                    <geom pos="-0.015691 -0.015506 -0.007417"  name="robot0:i_gripper_finger_link" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <geom pos="-0.015691 -0.015506 -0.007417" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <body name="finger_segment:15" pos="-0.00951 0 -0.016" quat="0.998866 -0.0476045 0 0">
                                         <inertial pos="0.005409 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                        <joint name="l_indexfinger_1st_x" pos="0 0 0" axis="0.99794 -0.0170003 -0.0618655" limited="true" range="-1.309 0" />
+                                        <joint type="hinge" name="l_indexfinger_1st_x" pos="0 0 0" axis="0.99794 -0.0170003 -0.0618655" limited="true" range="-1.309 0" />
                                         <geom pos="-0.006181 -0.015507 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <geom pos="-0.006181 -0.015507 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <body name="fingertip:15" pos="0 0 -0.016" quat="0.998498 -0.0547796 0 0">
                                             <inertial pos="0.005013 0.000408 -0.010216" quat="0.6183 0.224212 -0.00570587 0.753261" mass="8e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                            <joint name="l_indexfinger_2nd_x" pos="0 0 0" axis="0.99794 -0.0170003 -0.0618655" limited="true" range="-1.309 0" />
+                                            <joint type="hinge" name="l_indexfinger_2nd_x" pos="0 0 0" axis="0.99794 -0.0170003 -0.0618655" limited="true" range="-1.309 0" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                         </body>
                                     </body>
                                 </body>
-                                <body name="finger_segment:26" pos="-0.036179 0.006226 0.04057" quat="0.315401 0.948437 -0.00992327 0.0298401">
+
+                                <body childclass="robot0:fetchGripper" name="robot0:r_gripper_finger_link" pos="-0.036179 0.006226 0.04057" quat="0.315401 0.948437 -0.00992327 0.0298401">
                                     <inertial pos="-0.004101 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                    <joint name="l_ringfingers_x" pos="0 0 0" axis="0.998051 0.00234199 0.0623629" limited="true" range="-1.309 0" />
-                                    <geom pos="-0.015691 -0.015507 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
+                                    <joint type="hinge" name="robot0:r_gripper_finger_joint" pos="0 0 0" axis="0.998051 0.00234199 0.0623629" limited="true" range="-1.309 0"/>
+                                    <geom pos="-0.015691 -0.015507 -0.007416" name="robot0:r_gripper_finger_link"  type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <geom pos="-0.015691 -0.015507 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                     <body name="finger_segment:16" pos="-0.00951 0 -0.016" quat="0.998866 -0.047605 0 0">
                                         <inertial pos="0.005409 0.000556 -0.005751" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                        <joint name="l_ringfinger_1st_x" pos="0 0 0" axis="0.998051 0.00234199 0.0623629" limited="true" range="-1.309 0" />
+                                        <joint type="hinge" name="l_ringfinger_1st_x" pos="0 0 0" axis="0.998051 0.00234199 0.0623629" limited="true" range="-1.309 0" />
                                         <geom pos="-0.006181 -0.015508 -0.007416" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <geom pos="-0.006181 -0.015508 -0.007416" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="finger_segment_ipt_50d2a7f4" />
                                         <body name="fingertip:16" pos="0 0 -0.015999" quat="0.998498 -0.0547791 0 0">
                                             <inertial pos="0.005013 0.000408 -0.010216" quat="0.6183 0.224212 -0.00570587 0.753261" mass="8e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
-                                            <joint name="l_ringfinger_2nd_x" pos="0 0 0" axis="0.998051 0.00234199 0.0623629" limited="true" range="-1.309 0" />
+                                            <joint type="hinge" name="l_ringfinger_2nd_x" pos="0 0 0" axis="0.998051 0.00234199 0.0623629" limited="true" range="-1.309 0" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
                                             <geom pos="0.005514 0.000374 -0.010171" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="fingertip_ipt_8417b8a9" />
-                                            <body name="robot0:gripper_link" pos="0 0.04475 0">
-                                                                    <inertial pos="0 0 0" mass="10" diaginertia="0.4 0.4 0.2" />
-                                                                    <!-- change axis in motor 6 to 0 0 1 -->
-                                                                    <joint name="motor6" pos="0 0 0" axis="0 1 0" limited="true" range="-2.6 2.6" />
-                                                                    <geom size="0.0125 0.0175" type="cylinder" contype="0" conaffinity="0" group="1" rgba="1 1 1 1" />
-                                                                    <body childclass="robot0:fetchGripper" name="robot0:r_gripper_finger_link" pos="0 0.0159 0">
-                                                                        <inertial diaginertia="0.1 0.1 0.1" mass="4" pos="-0.01 0 0"></inertial>
-                                                                        <joint axis="0 1 0" name="robot0:r_gripper_finger_joint" range="0 0.05"></joint>
-                                                                        <geom pos="0 -0.008 0" size="0.0385 0.007 0.0335" type="box" name="robot0:r_gripper_finger_link" material="robot0:gripper_finger_mat" condim="4" friction="1 0.05 0.01"></geom>
-                                                                    </body>
-                                                                    <body childclass="robot0:fetchGripper" name="robot0:l_gripper_finger_link" pos="0 -0.0159 0">
-                                                                        <inertial diaginertia="0.1 0.1 0.1" mass="4" pos="-0.01 0 0"></inertial>
-                                                                        <joint axis="0 -1 0" name="robot0:l_gripper_finger_joint" range="0 0.05"></joint>
-                                                                        <geom pos="0 0.008 0" size="0.0385 0.007 0.0335" type="box" name="robot0:l_gripper_finger_link" material="robot0:gripper_finger_mat" condim="4" friction="1 0.05 0.01"></geom>
-                                                                    </body>
-                                                                    <site name="robot0:grip" pos="0.02 0 0" rgba="0 0 0 0" size="0.02 0.02 0.02"></site>
-
-                                            </body>
                                         </body>
                                     </body>
                                 </body>
+
+                                <site name="robot0:grip" pos="0.02 0 0" rgba="0 0 0 0" size="0.02 0.02 0.02"></site>
+
                             </body>
                         </body>
                     </body>
