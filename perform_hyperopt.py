@@ -76,24 +76,26 @@ if __name__ == '__main__':
     space['buff_sampling'] = hp.choice('buff_sampling', ['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss'])
 
     trials_fname = "hyperopt_trials_{}.pkl"
-    max_parallel = 4
+    max_parallel = 10
 
     trials = None
     this_trials_fname = 'trials.pkl'
     for i in range(max_parallel):
         this_trials_fname = trials_fname.format(i)
-        if os.path.isfile(this_trials_fname):
-            trials = pickle.load(open(trials_fname, "rb"))
-            # Make file unavailable for other processes that have been started in parallel
-            os.rename(this_trials_fname, this_trials_fname+'.bak')
+        if os.path.isfile(this_trials_fname) and not os.path.isfile(this_trials_fname+'.used'):
+            trials = pickle.load(open(this_trials_fname, "rb"))
+            print("Resuming trials {}".format(this_trials_fname))
+            # Make file unavailable for other processes that have been started in parallel by creating an empty file
+            open(this_trials_fname+'.used', 'a').close()
+            break
     if trials is None:
         for i in range(max_parallel):
-            this_trials_fname = trials_fname.format(i)+'.bak'
-            if not os.path.isfile(this_trials_fname):
-                this_trials_fname = trials_fname.format(i)
+            this_trials_fname = trials_fname.format(i)
+            if not os.path.isfile(this_trials_fname) and not os.path.isfile(this_trials_fname+'.used'):
+                open(this_trials_fname + '.used', 'a').close()
+                print("Starting trials {}".format(this_trials_fname))
+                break
         trials = Trials()
-
-
 
     runs = 3000
     r = 0
