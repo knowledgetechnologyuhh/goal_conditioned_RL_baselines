@@ -163,10 +163,10 @@ class TowerEnv(robot_env.RobotEnv):
         gripper_state = robot_qpos[-2:]
         gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
 
-        # obs = np.concatenate([
-        #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-        #     object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
-        # ])
+        obs = np.concatenate([
+            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
+            object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
+        ])
 
         obs = np.concatenate([
             grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
@@ -259,9 +259,6 @@ class TowerEnv(robot_env.RobotEnv):
 
         self.sim.forward()
         return True
-
-
-
 
     def _sample_goal(self):
         obs = self._get_obs()
