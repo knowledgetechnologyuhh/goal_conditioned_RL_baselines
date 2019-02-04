@@ -46,7 +46,6 @@ def train(rollout_worker, evaluator,
     # if the std dev of the success rate of the last epochs is larger than X do early stopping.
     n_epochs_avg_for_early_stop = 4
 
-    # avg_success_for_early_stop = 0.95
     for epoch in range(n_epochs):
         # train
         logger.info("Training epoch {}".format(epoch))
@@ -57,7 +56,6 @@ def train(rollout_worker, evaluator,
         # eval
         logger.info("Evaluating epoch {}".format(epoch))
         evaluator.clear_history()
-        # evaluator.render = epoch % policy_save_interval == 0
 
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
