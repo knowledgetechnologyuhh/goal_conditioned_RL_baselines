@@ -7,14 +7,19 @@ click.option('--model_lr', type=float, default=0.001, help='The initial learning
 click.option('--adaptive_model_lr', type=int, default=0, help='Whether or not the learning rate is adaptive.'),
 click.option('--model_network_class', type=str, default='baselines.model_based.model_rnn:ModelRNN', help='The network model class to use for the forward model.'),
 click.option('--buff_sampling', type=str, default='random',
-             help='The method to sample from the replay buffer.'
-                  'choices=[random, max_loss_pred_err, mean_loss_pred_err, max_loss, mean_loss]'),
+                # choices=['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss']),
+                help='The method to sample from the replay buffer.'
+             ),
 click.option('--memval_method', type=str, default='uniform',
              help='The method to assess the memory value of each rollout. The memory value is important for forgetting '
                   'training rollouts, i.e., those with the lowest memory value have a high probability to be '
-                  'forgotten. choices=[uniform, mean_obs_loss, max_obs_loss]'),
-click.option('--action_selection', type=str, default='random',
-             help='The method to select actions. choices=[random, max_pred_surprise]'),
+                  'forgotten.'
+             # type=click.Choice(['uniform', 'mean_obs_loss', 'max_obs_loss'])
+            ),
+click.option('--action_selection', default='random',
+             help='The method to select actions.'
+             # type=click.Choice(['random', 'max_pred_surprise'])
+            )
 ]
 
 def click_main(func):
