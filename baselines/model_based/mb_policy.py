@@ -52,10 +52,7 @@ class MBPolicy(Policy):
 
         # Initialize the model replay buffer.
         self.model_replay_buffer = ModelReplayBuffer(self.model_shapes, model_buffer_size, buff_sampling, memval_method)
-        # pass
         self.loss_pred_reliable_fwd_steps = 0
-        # self.lookahead_branching_factor = 5
-        # self.obs_pred_reliable_fwd_steps = 0
         print("done init MBPolicy")
 
 

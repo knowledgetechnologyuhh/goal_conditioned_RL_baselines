@@ -15,8 +15,6 @@ click.option('--memval_method', type=str, default='uniform',
                   'forgotten. choices=[uniform, mean_obs_loss, max_obs_loss]'),
 click.option('--action_selection', type=str, default='random',
              help='The method to select actions. choices=[random, max_pred_surprise]'),
-# click.option('--rnn_layer_sizes', type=str, default='[100,100]', help='The sizes of the rnn layers'),
-# click.option('--loss_pred_layer_sizes', type=str, default='[100,100]', help='The sizes of the loss prediction layers')
 ]
 
 def click_main(func):
