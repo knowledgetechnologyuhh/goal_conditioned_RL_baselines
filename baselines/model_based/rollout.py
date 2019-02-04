@@ -60,11 +60,6 @@ class RolloutWorker(Rollout):
                 loss_key = loss_key_map[i]
             if len(l) > 0:
                 logs += [(loss_key, l[-1])]
-            # if len(l) > 1:
-            #     loss_grad = l[-1] / l[-2]
-            # else:
-            #     loss_grad = np.nan
-            # logs += [('{} grad'.format(loss_key), loss_grad)]
 
         if self.pred_err is not None :
             logs += [('pred_err', self.pred_err)]
@@ -88,7 +83,14 @@ class RolloutWorker(Rollout):
 
         return logger(logs, prefix)
 
+
     def generate_rollouts_update(self, n_episodes, n_train_batches):
+        '''
+        Start Main loop where rollouts happen and model is trained based on replay buffer.
+        :param n_episodes:
+        :param n_train_batches:
+        :return:
+        '''
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
