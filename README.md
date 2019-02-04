@@ -21,6 +21,10 @@ General command line options can be found in `experiment/click_options.py`
 
 Algoritm specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
 
+---
+header-includes:
+  - \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+---
 # Main algorithm
 \begin{algorithm}[H]
 \DontPrintSemicolon
