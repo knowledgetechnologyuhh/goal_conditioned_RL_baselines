@@ -3,44 +3,48 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.random_dummy.random_policy import RandomPolicy
+from baselines.model_based.mb_policy import MBPolicy
 
-
-DEFAULT_ENV_PARAMS = {
-    'FetchReach-v1': {
-        'n_cycles': 20
-    },
-}
-
+DEFAULT_ENV_PARAMS = {}
 
 DEFAULT_PARAMS = {
     # training
-    'n_cycles': 50,  # per epoch
-    'rollout_batch_size': 1,  # per mpi thread
-    'n_batches': 40,  # training batches per cycle
-    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
-    'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-
+    'n_train_rollouts': 50,  # training rollouts per epoch per rollout batch
+    'rollout_batch_size': 1,  # batches (parallel rollouts) per mpi thread
+    # 'n_batches': 40,  # training batches per cycle for neural network training
+    # 'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    'n_test_rollouts': 0,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
+    'model_buffer_size': 1200, # number of rollouts to store for model training
+    'max_u': 1.,  # max absolute value of actions on different coordinates
+    'model_network_class': 'baselines.model_based.model_rnn:ModelRNN',
+    'scope': 'mbpolicy',
+    'model_lr': 0.001,
+    'model_train_batch_size': 10,
+    'adaptive_model_lr': 0,
+    'buff_sampling': 'random',
+    'memval_method': 'random',
+    'clip_grads': 1,
+    'action_selection': 'random',
+    'n_train_batches': 10,
 }
 
-POLICY_ACTION_PARAMS = {
-
-    }
+# POLICY_ACTION_PARAMS = {
+#
+#     }
 
 CACHED_ENVS = {}
 
 ROLLOUT_PARAMS = {
-        'T': 50,
         'policy_action_params': {}
     }
-
+#
 EVAL_PARAMS = {
         'policy_action_params': {}
     }
 
-OVERRIDE_PARAMS_LIST = ['rollout_batch_size']
-
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name']
+OVERRIDE_PARAMS_LIST = list(DEFAULT_PARAMS.keys())
+#
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name', 'adaptive_model_lr']
 
 
 def cached_make_env(make_env):
@@ -57,7 +61,7 @@ def cached_make_env(make_env):
 
 def prepare_params(kwargs):
     # policy params
-    ddpg_params = dict()
+    policy_params = dict()
 
     env_name = kwargs['env_name']
 
@@ -68,7 +72,9 @@ def prepare_params(kwargs):
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    kwargs['policy_params'] = ddpg_params
+    for name in ['model_buffer_size', 'model_network_class', 'max_u', 'scope', 'model_lr', 'model_train_batch_size']:
+        policy_params[name] = DEFAULT_PARAMS[name]
+    kwargs['policy_params'] = policy_params
 
     return kwargs
 
@@ -94,11 +100,16 @@ def configure_policy(dims, params):
     policy_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
+                        'env': env.env,
+                        'buff_sampling': params['buff_sampling'],
+                        'memval_method': params['memval_method'],
+                        'action_selection': params['action_selection'],
+                        'n_train_batches': params['n_train_batches']
                         })
     policy_params['info'] = {
         'env_name': params['env_name'],
     }
-    policy = RandomPolicy(**policy_params)
+    policy = MBPolicy(**policy_params)
     return policy
 
 def load_policy(restore_policy_file, params):

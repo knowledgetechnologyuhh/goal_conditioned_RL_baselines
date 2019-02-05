@@ -3,6 +3,8 @@ import random
 
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
+from mujoco_py.generated import const as mj_const
+import mujoco_py
 
 
 def goal_distance(goal_a, goal_b):
@@ -54,26 +56,31 @@ class TowerEnv(robot_env.RobotEnv):
         self.obj_height = obj_height
         self.min_tower_height = min_tower_height
         self.max_tower_height = max_tower_height
+        self.step_ctr = 0
 
         self.goal = []
         self.goal_size = (n_objects * 3)
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
-        self.gripper_has_target = (gripper_goal != 'gripper_none')
+        # self.gripper_has_target = (gripper_goal != 'gripper_none')
+
+        self._viewers = {}
 
         super(TowerEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
+        pass
+
     # GoalEnv methods
     # ----------------------------
 
     def compute_reward(self, achieved_goal, goal, info):
-        # Compute distance between goal and the achieved goal.
-        d = goal_distance(achieved_goal, goal)
         if self.reward_type == 'sparse':
-            return -(d > self.distance_threshold).astype(np.float32)
+            success = self._is_success(achieved_goal, goal)
+            return (success - 1).astype(np.float32)
         else:
+            d = goal_distance(achieved_goal, goal)
             return -d
 
     # RobotEnv methods
@@ -101,6 +108,26 @@ class TowerEnv(robot_env.RobotEnv):
         # Apply action to simulation.
         utils.ctrl_set_action(self.sim, action)
         utils.mocap_set_action(self.sim, action)
+        self.step_ctr += 1
+
+    def _obs2goal(self, obs):
+        if len(obs.shape) == 1:
+            obs_arr = np.array([obs])
+        else:
+            obs_arr = obs
+        assert len(obs_arr.shape) == 2
+        goals = []
+        for o in obs_arr:
+            if self.gripper_goal != 'gripper_none':
+                g = o[:self.goal_size]
+            else:
+                g = o[3:self.goal_size+3]
+            goals.append(g)
+        goals = np.array(goals)
+        if len(obs.shape) == 1:
+            return goals[0]
+        else:
+            return goals
 
     def _get_obs(self, grip_pos=None, grip_velp=None):
         # If the grip position and grip velp are provided externally, the external values will be used.
@@ -145,34 +172,43 @@ class TowerEnv(robot_env.RobotEnv):
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
 
-        gripper_achieved_goal = obs[:3]
-        target_achieved_goal = obs[3:6]
+        obs = np.concatenate([
+            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
+        ])
 
-        if not self.gripper_has_target:
-            gripper_achieved_goal = []
-
-        achieved_goal = np.concatenate([gripper_achieved_goal, target_achieved_goal])
+        achieved_goal = self._obs2goal(obs)
 
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy()}
-
-        if self.gripper_goal != 'gripper_none':
-            obs['achieved_goal'] = obs['observation'][:self.goal_size]
-        else:
-            obs['achieved_goal'] = obs['observation'][3:self.goal_size+3]
+        obs['achieved_goal'] = self._obs2goal(obs['observation'])
 
         return obs
 
-    def _viewer_setup(self):
+    def _get_viewer(self, mode='human'):
+        viewer = self._viewers.get(mode)
+        if viewer is None:
+            if mode == 'human':
+                viewer = mujoco_py.MjViewer(self.sim)
+            elif mode == 'rgb_array' or mode == 'depth_array':
+                viewer = mujoco_py.MjViewer(self.sim)
+                # The following should work but it does not. Therefore, replaced by human rendering (with MjViewer, the line above) now.
+                # viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
+            self._viewers[mode] = viewer
+            self._viewer_setup(mode=mode)
+
+        return self._viewers[mode]
+
+    def _viewer_setup(self,mode='human'):
         body_id = self.sim.model.body_name2id('robot0:gripper_link')
         lookat = self.sim.data.body_xpos[body_id]
         for idx, value in enumerate(lookat):
-            self.viewer.cam.lookat[idx] = value
-        self.viewer.cam.distance = 2.5
-        self.viewer.cam.azimuth = 132.
-        self.viewer.cam.elevation = -14.
+            self._viewers[mode].cam.lookat[idx] = value
+        self._viewers[mode].cam.distance = 2.5
+        self._viewers[mode].cam.azimuth = 132.
+        self._viewers[mode].cam.elevation = -14.
 
     def _render_callback(self):
         # Visualize target.
+
         sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
 
         obj_goal_start_idx = 0
@@ -196,6 +232,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.sim.forward()
 
     def _reset_sim(self):
+        self.step_ctr = 0
         self.sim.set_state(self.initial_state)
 
         # Randomize start position of objects.
@@ -293,6 +330,7 @@ class TowerEnv(robot_env.RobotEnv):
                         gripper_goal_pos[0] += self.random_gripper_goal_pos_offset[0]
                         gripper_goal_pos[1] += self.random_gripper_goal_pos_offset[1]
                         gripper_goal_pos[2] += self.random_gripper_goal_pos_offset[2]
+
                         if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
                             too_close = False
                 goal[:3] = gripper_goal_pos
@@ -303,7 +341,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
-
         return (d < self.distance_threshold).astype(np.float32)
 
     def _env_setup(self, initial_qpos):
@@ -321,7 +358,8 @@ class TowerEnv(robot_env.RobotEnv):
             self.sim.step()
 
         # offset the random goal if gripper random is used
-        self.random_gripper_goal_pos_offset = (0.2, 0.0, 0.0)
+        # self.random_gripper_goal_pos_offset = (0.2, 0.0, 0.0)
+        self.random_gripper_goal_pos_offset = (0.0, 0.0, 0.14)
 
         # Extract information for sampling goals.
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
