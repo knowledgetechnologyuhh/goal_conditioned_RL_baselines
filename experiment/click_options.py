@@ -2,9 +2,9 @@ import click
 import importlib
 
 _global_options = [
-click.option('--env', type=str, default='BuildTowerMujocoEnv-sparse-gripper_random-o3-h1-3-v1', help='the name of the OpenAI Gym environment that you want to train on'),
-click.option('--algorithm', default='baselines.model_based', help='the name of the algothim to be used'
-             # type=click.Choice(['baselines.her', 'baselines.model_based'])
+click.option('--env', type=str, default='TowerBuildMujocoEnv-sparse-gripper_random-o3-h1-3-v1', help='the name of the OpenAI Gym environment that you want to train on'),
+click.option('--algorithm', default='baselines.model_based', help='the name of the algothim to be used',
+             type=click.Choice(['baselines.her', 'baselines.model_based'])
              ),
 click.option('--base_logdir', type=str, default='logs', help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/'),
 click.option('--n_epochs', type=int, default=300, help='the max. number of training epochs to run'),
@@ -14,7 +14,7 @@ click.option('--policy_save_interval', type=int, default=50, help='the interval 
 click.option('--restore_policy', type=str, default=None, help='The pretrained policy file to start with to avoid learning from scratch again. Useful for interrupting and restoring training sessions.'),
 click.option('--rollout_batch_size', type=int, default=2, help='The number of simultaneous rollouts.'),
 click.option('--n_episodes', type=int, default=50, help='The number of episodes (parallel rollouts) per epoch.'),
-click.option('--render', type=int, default=1, help='Whether or not to render the rollouts.'),
+click.option('--render', type=int, default=1, help='Whether or not to render the rollout execution.'),
 click.option('--max_try_idx', type=int, default=199, help='Max. number of tries for this training config.'),
 click.option('--try_start_idx', type=int, default=100, help='Index for first try.'),
 click.option('--early_stop_success_rate', type=int, default=95, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping')

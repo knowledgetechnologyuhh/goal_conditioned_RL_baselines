@@ -6,19 +6,19 @@ click.option('--model_train_batch_size', type=int, default=40, help='The batch s
 click.option('--model_lr', type=float, default=0.001, help='The initial learning rate.'),
 click.option('--adaptive_model_lr', type=int, default=0, help='Whether or not the learning rate is adaptive.'),
 click.option('--model_network_class', type=str, default='baselines.model_based.model_rnn:ModelRNN', help='The network model class to use for the forward model.'),
-click.option('--buff_sampling', type=str, default='random',
-                # choices=['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss']),
+click.option('--buff_sampling', default='random',
+                type=click.Choice(['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss']),
                 help='The method to sample from the replay buffer.'
              ),
-click.option('--memval_method', type=str, default='uniform',
+click.option('--memval_method', default='uniform',
              help='The method to assess the memory value of each rollout. The memory value is important for forgetting '
                   'training rollouts, i.e., those with the lowest memory value have a high probability to be '
-                  'forgotten.'
-             # type=click.Choice(['uniform', 'mean_obs_loss', 'max_obs_loss'])
+                  'forgotten.',
+             type=click.Choice(['uniform', 'mean_obs_loss', 'max_obs_loss'])
             ),
 click.option('--action_selection', default='random',
-             help='The method to select actions.'
-             # type=click.Choice(['random', 'max_pred_surprise'])
+             help='The method to select actions.',
+             type=click.Choice(['random', 'max_pred_surprise'])
             )
 ]
 
