@@ -30,18 +30,18 @@ class RolloutWorker(Rollout):
         """
         Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
 
-    def generate_rollouts_update(self, n_cycles, n_batches):
+    def generate_rollouts_update(self, n_episodes, n_train_batches):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
-        for cyc in range(n_cycles):
+        for cyc in range(n_episodes):
             # logger.info("Performing ")
             ro_start = time.time()
             episode = self.generate_rollouts()
             self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
-            for _ in range(n_batches):
+            for _ in range(n_train_batches):
                 self.policy.train()
             self.policy.update_target_net()
             dur_train += time.time() - train_start

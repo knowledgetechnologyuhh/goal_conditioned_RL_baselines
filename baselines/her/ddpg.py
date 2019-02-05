@@ -324,6 +324,7 @@ class DDPG(Policy):
     def __getstate__(self):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
+        # [print(key, ": ", item) for key,item in self.__dict__.items()]
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic']

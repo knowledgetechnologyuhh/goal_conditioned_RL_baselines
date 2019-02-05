@@ -1,5 +1,10 @@
 import os
 import sys
+this_path =os.getcwd()
+print(this_path)
+sys.path.append(this_path)
+os.chdir(this_path)
+
 import click
 import numpy as np
 import json
@@ -11,9 +16,11 @@ from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
 from baselines.util import mpi_fork
 import experiment.click_options as main_linker
-
 from subprocess import CalledProcessError
 import subprocess
+
+
+# sys.path.append(os.getcwd())
 
 import wtm_envs.register_envs
 
@@ -26,7 +33,7 @@ def mpi_average(value):
 
 
 def train(rollout_worker, evaluator,
-          n_epochs, n_test_rollouts, n_cycles, n_batches, policy_save_interval,
+          n_epochs, n_test_rollouts, n_episodes, n_train_batches, policy_save_interval,
           save_policies, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank()
 
@@ -39,17 +46,17 @@ def train(rollout_worker, evaluator,
     # if the std dev of the success rate of the last epochs is larger than X do early stopping.
     n_epochs_avg_for_early_stop = 4
 
-    # avg_success_for_early_stop = 0.95
     for epoch in range(n_epochs):
         # train
         logger.info("Training epoch {}".format(epoch))
         rollout_worker.clear_history()
-        policy, time_durations = rollout_worker.generate_rollouts_update(n_batches, n_cycles)
+        policy, time_durations = rollout_worker.generate_rollouts_update(n_episodes, n_train_batches)
         logger.info('Time for epoch {}: {:.2f}. Rollout time: {:.2f}, Training time: {:.2f}'.format(epoch, time_durations[0], time_durations[1], time_durations[2]))
 
         # eval
         logger.info("Evaluating epoch {}".format(epoch))
         evaluator.clear_history()
+
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
 
@@ -63,6 +70,7 @@ def train(rollout_worker, evaluator,
             logger.record_tabular(key, mpi_average(val))
 
         if rank == 0:
+            print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
 
         # save the policy if it's better than the previous ones
@@ -78,16 +86,11 @@ def train(rollout_worker, evaluator,
             logger.info('Saving periodic policy to {} ...'.format(policy_path))
             evaluator.save_policy(policy_path)
         if len(success_rates) > n_epochs_avg_for_early_stop:
-            # stddev = np.std(success_rates[-n_epochs_avg_for_early_stop:])
             avg = np.mean(success_rates[-n_epochs_avg_for_early_stop:])
             logger.info('Mean of success rate of last {} epochs: {}'.format(n_epochs_avg_for_early_stop, avg))
             if avg >= kwargs['early_stop_success_rate'] and kwargs['early_stop_success_rate'] != 0:
                 logger.info('Policy is good enough now, early stopping')
                 break
-            # if stddev < n_epochs_avg_for_early_stop:
-            #     logger.info(
-            #         'Not getting any better, early stopping')
-            #     break
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -95,7 +98,6 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
-
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
@@ -130,7 +132,7 @@ def launch(
     # Prepare params.
     params = config.DEFAULT_PARAMS
     params['env_name'] = env
-    params['n_cycles'] = kwargs['n_train_rollout_cycles']
+    params['n_episodes'] = kwargs['n_episodes']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
     params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
@@ -152,16 +154,11 @@ def launch(
         logger.warn('****************')
         logger.warn()
 
-    # if env.find("HLMG") == 0:
-    #     dims = config.configure_masked_dims(params)
-    # else:
-    #     dims = config.configure_dims(params)
-
     dims = config.configure_dims(params)
     if restore_policy is None:
         policy = config.configure_policy(dims=dims, params=params)
     else:
-        policy = config.load_policy(restore_policy_file = restore_policy,  params=params)
+        policy = config.load_policy(restore_policy_file=restore_policy,  params=params)
         loaded_env_name = policy.info['env_name']
         assert loaded_env_name == env
 
@@ -190,7 +187,7 @@ def launch(
     train(
         logdir=logdir, rollout_worker=rollout_worker,
         evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
-        n_cycles=params['n_cycles'], n_batches=params['n_batches'],
+        n_episodes=params['n_episodes'], n_train_batches=params['n_train_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate)
     print("Done training")
 
@@ -205,14 +202,15 @@ def main(ctx, **kwargs):
     global config, RolloutWorker, policy_linker
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
-    policy_args.update({ctx.args[i][2:]: ctx.args[i + 1] for i in range(0, len(ctx.args), 2)})
+    cmd_line_update_args = {ctx.args[i][2:]: type(policy_args[ctx.args[i][2:]])(ctx.args[i + 1]) for i in range(0, len(ctx.args), 2)}
+    policy_args.update(cmd_line_update_args)
     kwargs.update(policy_args)
 
-    kwargs['batch_size'] = kwargs['train_batch_size']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
     for op in override_params:
-        kwargs['override_params'][op] = kwargs[op]
+        if op in kwargs.keys():
+            kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
     try:
         git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
@@ -232,16 +230,10 @@ def main(ctx, **kwargs):
             logdir = os.path.join(kwargs['base_logdir'], kwargs['env'], param_subdir)
         subdir_exists = os.path.exists(logdir)
         ctr += 1
-    print("Data dir: {}".format(logdir))
-    os.makedirs(logdir, exist_ok=False)
-
-    time.sleep(10)
 
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
 
-    # Check if training is necessary. It is not if the last run for this configuration did not achieve at least 40% success rate.
-    min_succ_rate = 0.08
     do_train = True
     trial_no = ctr - 1
     print("Trying this config for {}th time. ".format(trial_no))
@@ -253,6 +245,8 @@ def main(ctx, **kwargs):
         do_train = True
     else:
         try:
+            # Check if training is necessary. It is not if the last run for this configuration did not achieve at least X% success rate.
+            min_succ_rate = 0.08
             pass
             # last_res = load_results(last_res_file)
             # if len(last_res['test/success_rate']) == kwargs['n_epochs']:
@@ -271,6 +265,7 @@ def main(ctx, **kwargs):
     if do_train:
         print("Launching training")
         launch(**kwargs)
+
 
 if __name__ == '__main__':
     main()

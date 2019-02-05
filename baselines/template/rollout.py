@@ -23,7 +23,6 @@ class Rollout:
             noise_eps (float): scale of the additive Gaussian noise
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
-
         """
         self.policy = policy
         self.dims = dims
@@ -65,11 +64,14 @@ class Rollout:
         for i in range(self.rollout_batch_size):
             self.reset_rollout(i)
 
-    def generate_rollouts(self):
+    def generate_rollouts(self, return_states=False):
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
         policy acting on it accordingly.
         """
         self.reset_all_rollouts()
+
+        if return_states:
+            mj_states = [[] for _ in range(self.rollout_batch_size)]
 
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
@@ -84,6 +86,10 @@ class Rollout:
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]
         for t in range(self.T):
+            if return_states:
+                for i in range(self.rollout_batch_size):
+                    mj_states[i].append(self.envs[i].env.sim.get_state())
+
             if self.policy_action_params:
                 policy_output = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             else:
@@ -134,8 +140,11 @@ class Rollout:
             ag[...] = ag_new
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
-        self.initial_o[:] = o
+        if return_states:
+            for i in range(self.rollout_batch_size):
+                mj_states[i].append(self.envs[i].env.sim.get_state())
 
+        self.initial_o[:] = o
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
@@ -154,7 +163,11 @@ class Rollout:
                 self.custom_histories[history_index].append([x[history_index] for x in other_histories])
         self.n_episodes += self.rollout_batch_size
 
-        return convert_episode_to_batch_major(episode)
+        if return_states:
+            ret = convert_episode_to_batch_major(episode), mj_states
+        else:
+            ret = convert_episode_to_batch_major(episode)
+        return ret
 
     def clear_history(self):
         """Clears all histories that are used for statistics
