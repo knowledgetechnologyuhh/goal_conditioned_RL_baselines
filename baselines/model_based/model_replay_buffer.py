@@ -113,7 +113,6 @@ class ModelReplayBuffer:
                 prob_dist = np.max(self.buffers['loss'][:self.current_size], axis=1)
             elif self.sampling_method == 'mean_loss':
                 prob_dist = np.mean(self.buffers['loss'][:self.current_size], axis=1)
-
             else:
                 print("Error, none or invalid replay sampling method specified.")
                 assert False
