@@ -75,7 +75,6 @@ def prepare_params(kwargs):
     for name in ['model_buffer_size', 'model_network_class', 'max_u', 'scope', 'model_lr', 'model_train_batch_size']:
         policy_params[name] = DEFAULT_PARAMS[name]
     kwargs['policy_params'] = policy_params
-
     return kwargs
 
 

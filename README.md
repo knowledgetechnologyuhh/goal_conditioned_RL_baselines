@@ -41,5 +41,7 @@ Algoritm specific command line options can be found in `baselines/<alg name>/int
 
 # TODO
 1. Currently, the action selection in the exploration phase is random, and the surprise prediction is used to select the action out of a candidate set of actions that is supposed to maximize the model error (kind of beam search). Instead of this approach, use another RL algorithm, e.g. PPO, to maximize the model loss during exploration. We can later combine that algorithm also with the model, but this should happen in a second step.
+
+   To this end, we should start by adding a command line option for `action_selection` [here](baselines/model_based/interface/click_options.py), and add the respective functionality in the `get_action` function of [MBPolicy](baselines/model_based/mb_policy.py).
 2. Implement Exploitation Phase
 
