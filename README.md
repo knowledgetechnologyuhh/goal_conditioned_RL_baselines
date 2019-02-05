@@ -22,27 +22,24 @@ General command line options can be found in `experiment/click_options.py`
 Algoritm specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
 
 
----
-header-includes:
-  - \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
----
 # Main algorithm
-\begin{algorithm}[H]
-\DontPrintSemicolon
-\SetAlgoLined
-\KwResult{Write here the result}
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\Input{Write here the input}
-\Output{Write here the output}
-\BlankLine
-\While{While condition}{
-    instructions\;
-    \eIf{condition}{
-        instructions1\;
-        instructions2\;
-    }{
-        instructions3\;
-    }
-}
-\caption{While loop with If/Else condition}
-\end{algorithm}
+1. Initialize replay buffer (The replay buffer is implemented in the class [ModelReplayBuffer](baselines/model_based/mb_policy.py) and initialized as part of the class [MBPolicy](baselines/model_based/mb_policy.py).)
+2. **Exploration Phase**
+    1. For each epoch (in function [train](experiment/train.py))
+        1. For each episode (in function  [generate_rollouts_update](baselines/model_based/rollout.py) in class `RolloutWorker`)
+            1. Generate Rollouts: For each step (in function `generate_rollouts` in [Rollout](baselines/template/rollout.py)
+                1. policy.get_actions (in function [MBPolicy](baselines/model_based/mb_policy.py))
+                1. Return rollouts
+            1. `policy.store_episode` (This is implemented in class [ModelReplayBuffer](baselines/model_based/model_replay_buffer.py) May throw away other rollouts if they are not interesting anymore. The computation of the "level of interestingness", represented by variable `ModelReplayBuffer.memory_value`, is determined by command line argument `--memval_method`)
+            1. For each sampled train_batch: (batch sampling is realized by command line argument `buff_sampling', default is "random")
+                1. `losses = policy.train()`
+                1. Recompute `ModelReplayBuffer.memory_value` for those samples that were included in the batch.
+            1. Execute `test_prediction_error` to count the number of successive forward modeling steps that are possible without moving away too much from ground truth. (Maybe good for evaluating when to move from exploration to exploitation)
+            
+3. **Exploitation Phase**
+    As in HER, but instead of generating actions in `policy.get_actions`, generate multiple candidate-actions (e.g. by adding noise to observations) and use the model to select the most promising one.
+
+# TODO
+1. Currently, the action selection in the exploration phase is random, and the surprise prediction is used to select the action out of a candidate set of actions that is supposed to maximize the model error (kind of beam search). Instead of this approach, use another RL algorithm, e.g. PPO, to maximize the model loss during exploration. We can later combine that algorithm also with the model, but this should happen in a second step.
+2. Implement Exploitation Phase
+
