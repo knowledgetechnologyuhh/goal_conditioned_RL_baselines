@@ -1,5 +1,5 @@
 from collections import deque
-
+from baselines.her_pddl.pddl.pddl_util import obs_to_preds
 import numpy as np
 import pickle
 from mujoco_py import MujocoException
@@ -123,6 +123,9 @@ class Rollout:
                         info_values[idx][t, i] = info[key]
                     if self.render:
                         self.envs[i].render()
+                        preds = obs_to_preds(curr_o_new['observation'], curr_o_new['desired_goal'], n_objects=1)
+                        print(preds)
+
                 except MujocoException as e:
                     return self.generate_rollouts()
 
