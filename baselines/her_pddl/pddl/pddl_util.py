@@ -6,6 +6,22 @@ def obs_to_preds(obs, goal, n_objects,
                  grasp_xy_threshold=[0.0, 0.025], grasp_z_threshold=[-0.015, 0.02],
                  grip_open_threshold=[0.038, 1.0], grip_closed_threshold=[0.0, 0.025],
                  on_z_threshold=[0.047, 0.053], xyz_tgt_threshold=[0.0,0.05]):
+    preds, n_hots = [], []
+    for o,g in zip(obs,goal):
+        p,nh = obs_to_preds_single(o,g,n_objects, grasp_xy_threshold, grasp_z_threshold,
+                 grip_open_threshold, grip_closed_threshold,
+                 on_z_threshold, xyz_tgt_threshold)
+        preds.append(p)
+        n_hots.append(nh)
+
+    return preds, n_hots
+
+
+def obs_to_preds_single(obs, goal, n_objects,
+                 grasp_xy_threshold=[0.0, 0.025], grasp_z_threshold=[-0.015, 0.02],
+                 grip_open_threshold=[0.038, 1.0], grip_closed_threshold=[0.0, 0.025],
+                 on_z_threshold=[0.047, 0.053], xyz_tgt_threshold=[0.0,0.05]):
+
 
     preds = {}
     gripper_pos = obs[0:3]
@@ -46,7 +62,7 @@ def obs_to_preds(obs, goal, n_objects,
             pred_name = 'o{}_on_o{}'.format(o1,o2)
             o2_pos = get_o_pos(obs, o2)
             xyd = np.linalg.norm(o1_pos[:2] - o2_pos[:2], axis=-1)
-            xyd_ok = int(xyd < (grasp_xy_threshold*1.5))
+            xyd_ok = int(xyd > grasp_xy_threshold[0] and xyd < grasp_xy_threshold[1])
             zd = o2_pos[2] - o1_pos[2]
             zd_ok = int(zd > on_z_threshold[0] and zd < on_z_threshold[1])
             on = int(xyd_ok and zd_ok)
@@ -64,7 +80,6 @@ def obs_to_preds(obs, goal, n_objects,
         g_pos = get_o_goal_pos(goal, o)
         xyzd = np.linalg.norm(g_pos - o_pos, axis=-1)
         preds[pred_name] = int(xyzd >= xyz_tgt_threshold[0] and xyzd <= xyz_tgt_threshold[1])
-    # Determine whether gripper is at target (this is always the last subgoal, so it never is at the target location)
 
     if gripper_in_goal:
         xyzd = np.linalg.norm(gripper_pos - goal[:3], axis=-1)
@@ -72,15 +87,13 @@ def obs_to_preds(obs, goal, n_objects,
     else:
         preds['gripper_at_target'] = 1
 
-
-
     one_hot = [preds[k] for k in sorted(preds.keys())]
     return preds, one_hot
 
 
-def gen_pddl_domain_problem(preds, tower_height, dom_file='pddl/build_tower/domain.pddl', prob_file='pddl/build_tower/problem.pddl', gripper_has_target=True):
+def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
 
-    head = "(define (domain dinner) (:requirements :strips) \n{})\n"
+    head = "(define (domain tower) (:requirements :strips) \n{})\n"
 
     predicates = "(:predicates \n"
     for p in sorted(preds.keys()):
@@ -167,7 +180,7 @@ def gen_pddl_domain_problem(preds, tower_height, dom_file='pddl/build_tower/doma
 
 
     # Define problem
-    problem = "(define (problem pb1) (:domain dinner)\n {}\n)\n"
+    problem = "(define (problem pb1) (:domain tower)\n {}\n)\n"
 
     # Define initial state
     init_str = "(:init\n"
@@ -193,35 +206,36 @@ def gen_pddl_domain_problem(preds, tower_height, dom_file='pddl/build_tower/doma
         pred_val = "gripper_at_target"
         goal_str += "\t ({})\n".format(pred_val)
     else:
-        pred_val = "o{}_at_target".format(0)
+        pred_val = "o{}_at_target".format(tower_height - 1)
         goal_str += "\t ({})\n".format(pred_val)
+        for o in range(tower_height - 1):
+            pred_val = "o{}_on_o{}".format(o, o + 1)
+            goal_str += "\t ({})\n".format(pred_val)
     goal_str += '))\n\n'
 
     problem = problem.format(init_str + goal_str)
 
-    # if dom_file is not None:
-    #     with open(dom_file, 'w') as df:
-    #         df.write(domain)
-    #
-    # if prob_file is not None:
-    #     with open(prob_file, 'w') as pf:
-    #         pf.write(problem)
-
     return domain, problem
 
+def gen_plans(preds, gripper_has_target, tower_height):
+    plans = []
+    for p in preds:
+        plan = gen_plan_single(p, gripper_has_target, tower_height)
+        plans.append(plan)
+    return plans
 
-def gen_plan(preds, gripper_has_target, tower_height):
+def gen_plan_single(preds, gripper_has_target, tower_height):
 
-    dom_file = None
-    prob_file = None
+    # dom_file = None
+    # prob_file = None
 
     hl_obs = [preds[k] for k in sorted(preds.keys())]
     prob_key = str(hl_obs) + "_" + str(tower_height)
 
-    dom_file = 'pddl/build_tower/{}_domain.pddl'.format(prob_key)
-    prob_file = 'pddl/build_tower/{}_problem.pddl'.format(prob_key)
+    # dom_file = 'pddl/build_tower/{}_domain.pddl'.format(prob_key)
+    # prob_file = 'pddl/build_tower/{}_problem.pddl'.format(prob_key)
 
-    domain, problem = gen_pddl_domain_problem(preds, tower_height, dom_file=dom_file, prob_file=prob_file, gripper_has_target=gripper_has_target)
+    domain, problem = gen_pddl_domain_problem(preds, tower_height, gripper_has_target=gripper_has_target)
 
     planner = Propositional_Planner()
     plan_start = time.time()
@@ -231,7 +245,7 @@ def gen_plan(preds, gripper_has_target, tower_height):
     if plan:
         # print('plan:')
         for i, act in enumerate(plan):
-            # print('Act {}: {}'.format(i, act))
+            print('Act {}: {}'.format(i, act))
             plan_acts.append(act.name)
     else:
         print('No plan was found')
