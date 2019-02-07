@@ -98,4 +98,3 @@ for n_objects in range(-1, 5):
                         max_episode_steps=max_ep_steps,
                     )
 
-# TODO (fabawi): register seperate environment for each task (More aligned to the original implementation)
