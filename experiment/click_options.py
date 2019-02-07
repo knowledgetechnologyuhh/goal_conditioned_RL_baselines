@@ -13,7 +13,7 @@ click.option('--seed', type=int, default=0, help='the random seed used to seed b
 click.option('--policy_save_interval', type=int, default=50, help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.'),
 click.option('--restore_policy', type=str, default=None, help='The pretrained policy file to start with to avoid learning from scratch again. Useful for interrupting and restoring training sessions.'),
 click.option('--rollout_batch_size', type=int, default=2, help='The number of simultaneous rollouts.'),
-click.option('--n_episodes', type=int, default=0, help='The number of training episodes (parallel rollouts) per epoch.'),
+click.option('--n_episodes', type=int, default=50, help='The number of training episodes (parallel rollouts) per epoch.'),
 click.option('--render', type=int, default=1, help='Whether or not to render the rollout execution.'),
 click.option('--max_try_idx', type=int, default=199, help='Max. number of tries for this training config.'),
 click.option('--try_start_idx', type=int, default=100, help='Index for first try.'),

@@ -106,10 +106,13 @@ class HierarchicalRollout(Rollout):
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             # ignore opening of gripper and closing of gripper, because these actions are irrelevant for subgoal generation.
-            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=['open_gripper', 'grasp__o0'])
+            # new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=['open_gripper', 'grasp__o0'])
+            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=[])
             # Comput subgoal success by checking whether plan has lost first action.
             for i in range(self.rollout_batch_size):
                 if new_plans[i][0] == []:
+                    subgoal_success[i] = 1.0
+                elif len(plans[i][0]) > len(new_plans[i][0]):
                     subgoal_success[i] = 1.0
                 elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
                     subgoal_success[i] = 1.0
