@@ -85,7 +85,8 @@ class HierarchicalRollout(Rollout):
                 self.logger.warn('Action "u" is not a Numpy array.')
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
-            success = np.zeros(self.rollout_batch_size)
+            subgoal_success = np.zeros(self.rollout_batch_size)
+            overall_success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
                 try:
@@ -93,13 +94,15 @@ class HierarchicalRollout(Rollout):
                     # for HER.
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     if 'is_success' in info:
-                        success[i] = info['is_success']
+                        subgoal_success[i] = info['is_success']
+                        overall_success[i] = subgoal_success[i] and self.subg == self.g
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
                     for idx, key in enumerate(self.info_keys):
                         info_values[idx][t, i] = info[key]
                     if self.render:
                         self.envs[i].render()
+
 
                 except MujocoException as e:
                     return self.generate_rollouts()
@@ -111,7 +114,8 @@ class HierarchicalRollout(Rollout):
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
-            successes.append(success.copy())
+
+            successes.append(overall_success.copy())
             acts.append(u.copy())
             goals.append(self.g.copy())
             subgoals.append(self.subg.copy())

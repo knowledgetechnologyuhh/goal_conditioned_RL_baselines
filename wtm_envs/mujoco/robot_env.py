@@ -69,6 +69,11 @@ class RobotEnv(gym.GoalEnv):
         reward = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], info)
         return obs, reward, done, info
 
+    def goal_achieved(self):
+        obs = self._get_obs()
+        is_success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
+        return is_success
+
     def reset(self):
         # Attempt to reset the simulator. Since we randomize initial conditions, it
         # is possible to get into a state with numerical issues (e.g. due to penetration or
