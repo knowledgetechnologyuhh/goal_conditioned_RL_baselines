@@ -95,7 +95,7 @@ class HierarchicalRollout(Rollout):
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     if 'is_success' in info:
                         subgoal_success[i] = info['is_success']
-                        overall_success[i] = subgoal_success[i] and self.subg == self.g
+                        overall_success[i] = subgoal_success[i] and self.subg[i] == self.g[i]
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
                     for idx, key in enumerate(self.info_keys):
