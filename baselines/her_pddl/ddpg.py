@@ -11,7 +11,6 @@ from baselines.her.normalizer import Normalizer
 from baselines.her.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
-from baselines.her_pddl.pddl.pddl_util import obs_to_preds, gen_pddl_domain_problem, gen_plans
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
@@ -74,10 +73,6 @@ class DDPG_PDDL(Policy):
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
-        env_name = self.info['env_name']
-        n_o_pos = env_name.find('-o')
-        self.n_objects = int(env_name[n_o_pos+2:].split('-')[0])
-        self.gripper_has_target = env_name.find('gripper_none') == -1
 
         if self.clip_return is None:
             self.clip_return = np.inf
@@ -120,10 +115,6 @@ class DDPG_PDDL(Policy):
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True):
-        preds, n_hots = obs_to_preds(o, g, n_objects=self.n_objects)
-        print(preds)
-        tower_height = self.n_objects
-        plans = gen_plans(preds, self.gripper_has_target, tower_height)
 
         noise_eps = noise_eps if not exploit else 0.
         random_eps = random_eps if not exploit else 0.
@@ -157,6 +148,9 @@ class DDPG_PDDL(Policy):
             return ret[0]
         else:
             return ret
+
+
+
 
     def store_episode(self, episode_batch, update_stats=True):
         """

@@ -22,7 +22,6 @@ def obs_to_preds_single(obs, goal, n_objects,
                  grip_open_threshold=[0.038, 1.0], grip_closed_threshold=[0.0, 0.025],
                  on_z_threshold=[0.047, 0.053], xyz_tgt_threshold=[0.0,0.05]):
 
-
     preds = {}
     gripper_pos = obs[0:3]
     gripper_state = np.sum(obs[3 + 6 * n_objects: 3 + 6 * n_objects + 1])
@@ -245,7 +244,7 @@ def gen_plan_single(preds, gripper_has_target, tower_height):
     if plan:
         # print('plan:')
         for i, act in enumerate(plan):
-            print('Act {}: {}'.format(i, act))
+            # print('Act {}: {}'.format(i, act))
             plan_acts.append(act.name)
     else:
         print('No plan was found')
