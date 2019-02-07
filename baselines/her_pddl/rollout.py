@@ -63,7 +63,7 @@ class HierarchicalRollout(Rollout):
             preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
-            self.subg = self.plans2subgoal(plans, o, self.g)
+            self.subg = self.plans2subgoal(plans, o, self.g.copy())
             for i, env in enumerate(self.envs):
                 # print(env)
                 env.env.goal = self.subg[i]
@@ -95,7 +95,7 @@ class HierarchicalRollout(Rollout):
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     if 'is_success' in info:
                         subgoal_success[i] = info['is_success']
-                        overall_success[i] = subgoal_success[i] and self.subg[i] == self.g[i]
+                        overall_success[i] = subgoal_success[i] and np.array_equal(self.subg[i], self.g[i])
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
                     for idx, key in enumerate(self.info_keys):
