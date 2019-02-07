@@ -180,7 +180,9 @@ class HierarchicalRollout(Rollout):
                 subgoal[:3] = o0_pos # Gripper should be above (at) object
                 subgoal[3:] = o0_pos # Object should stay where it is
             elif action == 'move__o0_to_target':
-                subgoal = subgoal
+                subgoal = subgoal[:3] = subgoal[3:] # Gripper should be at object goal
+            elif action == 'move_gripper_to_target':
+                subgoal = subgoal # Gripper should be at gripper goal
             # print("Current subgoal action: {}".format(action))
             break # Stop after first useful action has been found.
         return subgoal
