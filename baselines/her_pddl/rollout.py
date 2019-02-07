@@ -65,7 +65,7 @@ class HierarchicalRollout(Rollout):
             plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
             self.subg = self.plans2subgoal(plans, o, self.g)
             for i, env in enumerate(self.envs):
-                print(env)
+                # print(env)
                 env.env.goal = self.subg[i]
             if self.policy_action_params:
                 policy_output = self.policy.get_actions(o, ag, self.subg, **self.policy_action_params)
