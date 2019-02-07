@@ -18,7 +18,7 @@ def obs_to_preds(obs, goal, n_objects,
 
 
 def obs_to_preds_single(obs, goal, n_objects,
-                 grasp_xy_threshold=[0.0, 0.025], grasp_z_threshold=[-0.015, 0.02],
+                 grasp_xy_threshold=[0.0, 0.02], grasp_z_threshold=[-0.015, 0.02],
                  grip_open_threshold=[0.038, 1.0], grip_closed_threshold=[0.0, 0.025],
                  on_z_threshold=[0.047, 0.053], xyz_tgt_threshold=[0.0,0.05]):
 
