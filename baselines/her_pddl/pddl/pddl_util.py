@@ -245,9 +245,10 @@ def gen_plan_single(preds, gripper_has_target, tower_height):
     goal_achieved = False
     if plan is None:
         print('No plan was found')
+        goal_achieved = False
     elif plan == []:
         goal_achieved = True
-        print("Goal already achieved")
+        # print("Goal already achieved")
     else:
         # print('plan:')
         for i, act in enumerate(plan):
