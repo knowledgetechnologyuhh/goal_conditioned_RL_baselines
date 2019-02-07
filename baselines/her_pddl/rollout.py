@@ -176,7 +176,7 @@ class HierarchicalRollout(Rollout):
                 subgoal[3:] = o0_pos # Object should stay where it is
             elif action == 'move__o0_to_target':
                 subgoal = subgoal
-            print("Current subgoal action: {}".format(action))
+            # print("Current subgoal action: {}".format(action))
             break # Stop after first useful action has been found.
         return subgoal
 
