@@ -240,15 +240,19 @@ def gen_plan_single(preds, gripper_has_target, tower_height):
     plan_start = time.time()
     plan = planner.solve(domain, problem)
     # logger.info("plan generation took {:.2f} sec.".format(time.time() - plan_start))
+
     plan_acts = []
-    if plan:
+    goal_achieved = False
+    if plan is None:
+        print('No plan was found')
+    elif plan == []:
+        goal_achieved = True
+        print("Goal already achieved")
+    else:
         # print('plan:')
         for i, act in enumerate(plan):
             # print('Act {}: {}'.format(i, act))
             plan_acts.append(act.name)
-    else:
-        print('No plan was found')
-
 
     # Generate vector encodings of plan
     act_names = []
@@ -297,7 +301,7 @@ def gen_plan_single(preds, gripper_has_target, tower_height):
         n_hot_arr_plan.append(n_hot_arr)
     n_hot_arr_plan.append(np.zeros(len(act_templates) + len(arg1_names)))
 
-    return plan_acts, one_hot_arr_plan, n_hot_arr_plan
+    return plan_acts, one_hot_arr_plan, n_hot_arr_plan, goal_achieved
 
 
 # Returns the name of an action and its first argument.
