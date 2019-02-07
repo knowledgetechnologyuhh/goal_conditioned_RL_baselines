@@ -1,5 +1,5 @@
 import numpy as np
-import time
+import time, datetime
 
 from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
@@ -149,6 +149,8 @@ class HierarchicalRollout(Rollout):
     def plans2subgoal(self, plans, obs, goals):
         subgoals = np.zeros(goals.shape)
         for i, (p,o,g) in enumerate(zip(plans, obs, goals)):
+            if len(p) == 0:
+                print("Empty plan now: {}".format(datetime.datetime.now()))
             subgoal = self.plan2subgoal(p,o,g)
             subgoals[i] = subgoal
         return subgoals
