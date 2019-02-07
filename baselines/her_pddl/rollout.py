@@ -56,14 +56,17 @@ class HierarchicalRollout(Rollout):
         obs, achieved_goals, acts, goals, subgoals, successes, subgoal_successes = [], [], [], [], [], [], []
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
                        in self.info_keys]
+
+        preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
+        # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
+        plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
+        self.subg = self.plans2subgoal(plans, o, self.g.copy())
+
         for t in range(self.T):
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
-            preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
-            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
-            self.subg = self.plans2subgoal(plans, o, self.g.copy())
+
             for i, env in enumerate(self.envs):
                 # print(env)
                 env.env.goal = self.subg[i]
@@ -89,23 +92,50 @@ class HierarchicalRollout(Rollout):
             overall_success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
-                try:
+                # try:
                     # We fully ignore the reward here because it will have to be re-computed
                     # for HER.
-                    curr_o_new, _, _, info = self.envs[i].step(u[i])
-                    if 'is_success' in info:
-                        subgoal_success[i] = info['is_success']
-                        overall_success[i] = subgoal_success[i] and np.array_equal(self.subg[i], self.g[i])
-                    o_new[i] = curr_o_new['observation']
-                    ag_new[i] = curr_o_new['achieved_goal']
-                    for idx, key in enumerate(self.info_keys):
-                        info_values[idx][t, i] = info[key]
-                    if self.render:
-                        self.envs[i].render()
+                curr_o_new, _, _, info = self.envs[i].step(u[i])
+                o_new[i] = curr_o_new['observation']
+                ag_new[i] = curr_o_new['achieved_goal']
+                for idx, key in enumerate(self.info_keys):
+                    info_values[idx][t, i] = info[key]
+                if self.render:
+                    self.envs[i].render()
+
+            preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
+            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
+            # ignore opening of gripper and closing of gripper, because these actions are irrelevant for subgoal generation.
+            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=['open_gripper', 'grasp__o0'])
+            # Comput subgoal success by checking whether plan has lost first action.
+            for i in range(self.rollout_batch_size):
+                if new_plans[i][0] == []:
+                    subgoal_success[i] = 1.0
+                elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
+                    subgoal_success[i] = 1.0
+                else:
+                    subgoal_success[i] = 0.0
+
+                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
+
+            plans = new_plans
+
+            self.subg = self.plans2subgoal(plans, o, self.g.copy())
+
+            # for i in range(self.rollout_batch_size):
+            #     if 'is_success' in info:
+            #         subgoal_success[i] = info['is_success']
+            #         overall_success[i] = subgoal_success[i] and np.array_equal(self.subg[i], self.g[i])
+            #
+            #     for idx, key in enumerate(self.info_keys):
+            #         info_values[idx][t, i] = info[key]
+            #     if self.render:
+            #         self.envs[i].render()
 
 
-                except MujocoException as e:
-                    return self.generate_rollouts()
+                # except MujocoException as e:
+                #     return self.generate_rollouts()
+
 
             if np.isnan(o_new).any():
                 self.logger.warn('NaN caught during rollout generation. Trying again...')

@@ -216,14 +216,14 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
 
     return domain, problem
 
-def gen_plans(preds, gripper_has_target, tower_height):
+def gen_plans(preds, gripper_has_target, tower_height, ignore_actions=[]):
     plans = []
     for p in preds:
-        plan = gen_plan_single(p, gripper_has_target, tower_height)
+        plan = gen_plan_single(p, gripper_has_target, tower_height, ignore_actions=ignore_actions)
         plans.append(plan)
     return plans
 
-def gen_plan_single(preds, gripper_has_target, tower_height):
+def gen_plan_single(preds, gripper_has_target, tower_height, ignore_actions=[]):
 
     # dom_file = None
     # prob_file = None
@@ -253,7 +253,8 @@ def gen_plan_single(preds, gripper_has_target, tower_height):
         # print('plan:')
         for i, act in enumerate(plan):
             # print('Act {}: {}'.format(i, act))
-            plan_acts.append(act.name)
+            if act.name not in ignore_actions:
+                plan_acts.append(act.name)
 
     # Generate vector encodings of plan
     act_names = []
@@ -261,7 +262,8 @@ def gen_plan_single(preds, gripper_has_target, tower_height):
     for dl in dom_lines:
         if dl.find("(:action ") != -1:
             act = dl.split("(:action ")[1].strip()
-            act_names.append(act)
+            if act not in ignore_actions:
+                act_names.append(act)
     act_names = sorted(act_names)
 
     # Generate one-hot encoding of plan
