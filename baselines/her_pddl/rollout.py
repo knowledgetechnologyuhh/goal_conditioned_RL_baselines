@@ -24,6 +24,7 @@ class HierarchicalRollout(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
         self.subg = self.g
+        self.action_success_history = {}
 
 
     def generate_rollouts(self, return_states=False):
@@ -70,9 +71,8 @@ class HierarchicalRollout(Rollout):
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
-
+            acts = []
             for i, env in enumerate(self.envs):
-                # print(env)
                 env.env.goal = self.subg[i]
                 env.env.final_goal = self.g[i]
             if self.policy_action_params:
@@ -123,10 +123,29 @@ class HierarchicalRollout(Rollout):
 
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
-            self.subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects)
+                last_act = plans[i][0]
+                if last_act not in self.action_success_history.keys():
+                    self.action_success_history[last_act] = deque(maxlen=20)
+                if subgoal_success[i] > 0:
+                    self.action_success_history[last_act].append(subgoal_success[i])
+                elif t == (self.T-1):
+                    self.action_success_history[last_act].append(subgoal_success[i])
+
+                for next_act in new_plans[i][0]:
+                    act_success_mean = np.mean(self.action_success_history[next_act])
+                    rnd = np.random.random.gauss(0.4, 0.2)
+                    if act_success_mean < rnd:
+                        env.env.goal = self.g[i]
+                    else:
+                        env.env.goal = self.subg[i]
+
+            self.subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
+
             for i in range(self.rollout_batch_size):
+                self.envs[i].env.goal = self.subg[i]
                 if self.render:
                     self.envs[i].render()
+
 
             # if subgoal_success[0] > 0 and plans[0][0] != []:
             #     print("Action {} was successful. Remaining actions: {}".format(plans[0][0][0], new_plans[0][0]))
@@ -179,48 +198,6 @@ class HierarchicalRollout(Rollout):
         else:
             ret = convert_episode_to_batch_major(episode)
         return ret
-
-    # def plans2subgoal(self, plans, obs, goals):
-    #     subgoals = np.zeros(goals.shape)
-    #     for i, (p,o,g) in enumerate(zip(plans, obs, goals)):
-    #         # if len(p[0]) == 0:
-    #         #     print("Empty plan now: {}".format(datetime.datetime.now()))
-    #         subgoal = self.plan2subgoal(p,o,g)
-    #         subgoals[i] = subgoal
-    #     return subgoals
-    #
-    # def plan2subgoal(self, plan, obs, goal):
-    #     # This currently only works for the environment TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1. TODO: Make more general.
-    #     if self.env_name != 'TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1':
-    #         print("Subgoals currently only work for env TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1")
-    #         return goal
-    #
-    #     def get_o_pos(obs, o_idx):
-    #         start_idx = (o_idx + 1) * 3
-    #         end_idx = start_idx + 3
-    #         o_pos = obs[start_idx:end_idx]
-    #         return o_pos
-    #     subgoal = copy.deepcopy(goal)
-    #     actions_to_skip = ['open_gripper'] # If we want to make use from these actions as well, the gripper opening value must be involved in the goal.
-    #     for action in plan[0]:
-    #         if action in actions_to_skip:
-    #             continue
-    #         o0_pos = get_o_pos(obs, 0)
-    #         if action == 'move_gripper_to__o0':
-    #             # First three elements of goal represent target gripper pos.
-    #             subgoal[:3] = o0_pos # Gripper should be above (at) object
-    #             subgoal[2] += 0.05
-    #             subgoal[3:] = o0_pos # Object should stay where it is
-    #         elif action == 'grasp__o0':
-    #             subgoal[:3] = o0_pos  # Gripper should be above (at) object
-    #             subgoal[3:] = o0_pos  # Object should stay where it is
-    #         elif action == 'move__o0_to_target':
-    #             subgoal[:3] = subgoal[3:] # Gripper should be at object goal
-    #         elif action == 'move_gripper_to_target':
-    #             subgoal = subgoal # Gripper should be at gripper goal
-    #         # print("Current subgoal action: {}".format(action))
-    #         break # Stop after first useful action has been found.
-    #     return subgoal
 
 
 class RolloutWorker(HierarchicalRollout):
