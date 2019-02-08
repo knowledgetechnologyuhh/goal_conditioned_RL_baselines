@@ -114,8 +114,8 @@ class HierarchicalRollout(Rollout):
             for i in range(self.rollout_batch_size):
                 if new_plans[i][0] == []:
                     subgoal_success[i] = 1.0
-                # elif len(plans[i][0]) > len(new_plans[i][0]):
-                #     subgoal_success[i] = 1.0
+                elif len(plans[i][0]) > len(new_plans[i][0]):
+                    subgoal_success[i] = 1.0
                 elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
                     subgoal_success[i] = 1.0
                 else:
