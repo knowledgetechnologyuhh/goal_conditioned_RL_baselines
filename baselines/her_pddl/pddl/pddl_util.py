@@ -7,7 +7,7 @@ import copy
 class BuildTowerThresholds:
     grasp_xy_threshold = [0.0, 0.02]
     # grasp_z_threshold = [-0.015, 0.02]
-    grasp_z_threshold = [0.0, 0.07]
+    grasp_z_threshold = [0.0, 0.1]
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
     on_z_threshold = [0.047, 0.06]
@@ -230,17 +230,17 @@ def gen_plans(preds, gripper_has_target, tower_height, ignore_actions=[]):
         plans.append(plan)
     return plans
 
-def plans2subgoals(plans, obs, goals, actions_to_skip=[]):
+def plans2subgoals(plans, obs, goals, n_objects, actions_to_skip=[]):
     subgoals = np.zeros(goals.shape)
     for i, (p, o, g) in enumerate(zip(plans, obs, goals)):
         # if len(p[0]) == 0:
         #     print("Empty plan now: {}".format(datetime.datetime.now()))
-        subgoal = plan2subgoal(p, o, g, actions_to_skip=actions_to_skip)
+        subgoal = plan2subgoal(p, o, g, n_objects, actions_to_skip=actions_to_skip)
         subgoals[i] = subgoal
     return subgoals
 
 
-def plan2subgoal(plan, obs, goal, actions_to_skip = []):
+def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
     # This currently only works for the environment TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1. TODO: Make more general.
     # if self.env_name != 'TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1':
     #     print("Subgoals currently only work for env TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1")
@@ -251,26 +251,45 @@ def plan2subgoal(plan, obs, goal, actions_to_skip = []):
         end_idx = start_idx + 3
         o_pos = obs[start_idx:end_idx]
         return o_pos
-
+    print(plan[0])
+    final_goal = copy.deepcopy(goal)
     subgoal = copy.deepcopy(goal)
-    actions_to_skip = ['open_gripper', 'grasp__o0']  # If we want to make use from these actions as well, the gripper opening value must be involved in the goal.
+
+    # By default, all objects stays where they are:
+    for o_idx in range(n_objects):
+        o_pos = get_o_pos(obs, o_idx)
+        start_idx = (o_idx + 1) * 3
+        end_idx = start_idx + 3
+        subgoal[start_idx:end_idx] = o_pos
     for action in plan[0]:
         if action in actions_to_skip:
             continue
-        o0_pos = get_o_pos(obs, 0)
-        if action == 'move_gripper_to__o0':
-            # First three elements of goal represent target gripper pos.
-            subgoal[:3] = o0_pos  # Gripper should be above (at) object
-            subgoal[2] += np.mean(BTT.grasp_z_threshold)
-            subgoal[3:] = o0_pos  # Object should stay where it is
-        # elif action == 'grasp__o0':
-        #     subgoal[:3] = o0_pos  # Gripper should be above (at) object
-        #     subgoal[3:] = o0_pos  # Object should stay where it is
-        elif action == 'move__o0_to_target':
-            subgoal[:3] = subgoal[3:]  # Gripper should be at object goal
-        elif action == 'move_gripper_to_target':
-            subgoal = subgoal  # Gripper should be at gripper goal
-        # print("Current subgoal action: {}".format(action))
+        for o_idx in range(n_objects):
+            o_pos = get_o_pos(obs, o_idx)
+            if action == 'move_gripper_to__o{}'.format(o_idx):
+                # First three elements of goal represent target gripper pos.
+                subgoal[:3] = o_pos  # Gripper should be above (at) object
+                subgoal[2] += np.mean(BTT.grasp_z_threshold)
+            if action == 'move__o{}_to_target'.format(o_idx):
+                # Gripper should be at object goal
+                subgoal[:3] = subgoal[3:]
+                # Object should be at object goal
+                start_idx = (o_idx + 1) * 3
+                end_idx = start_idx + 3
+                subgoal[start_idx:end_idx] = goal[start_idx:end_idx]
+
+            for o2_idx in range(n_objects):
+                o2_pos = get_o_pos(obs, o2_idx)
+                if action == 'move__o{}_on__o{}'.format(o_idx, o2_idx):
+                    # First three elements of goal represent target gripper pos.
+                    subgoal[:3] = o2_pos  # Gripper should be above (at) object
+                    subgoal[2] += np.mean(BTT.grasp_z_threshold)
+                    # Object should be at object goal
+                    start_idx = (o_idx + 1) * 3
+                    end_idx = start_idx + 3
+                    subgoal[start_idx:end_idx] = o2_pos
+        if action == 'move_gripper_to_target':
+            subgoal[3:] = final_goal[3:]  # Gripper should be at gripper goal
         break  # Stop after first useful action has been found.
     return subgoal
 
