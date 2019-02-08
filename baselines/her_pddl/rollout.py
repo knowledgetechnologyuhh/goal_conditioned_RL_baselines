@@ -8,7 +8,7 @@ import numpy as np
 import pickle
 import copy
 from mujoco_py import MujocoException
-from baselines.her_pddl.pddl.pddl_util import obs_to_preds, gen_pddl_domain_problem, gen_plans
+from baselines.her_pddl.pddl.pddl_util import obs_to_preds, gen_pddl_domain_problem, gen_plans, plans2subgoals
 from baselines.template.util import convert_episode_to_batch_major, store_args
 
 class HierarchicalRollout(Rollout):
@@ -38,6 +38,10 @@ class HierarchicalRollout(Rollout):
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
         policy acting on it accordingly.
         """
+        plan_ignore_actions = ['open_gripper']
+        for o_idx in range(self.n_objects):
+            plan_ignore_actions.append('grasp__o{}'.format(o_idx))
+
         self.reset_all_rollouts()
 
         if return_states:
@@ -60,7 +64,7 @@ class HierarchicalRollout(Rollout):
         preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
-        self.subg = self.plans2subgoal(plans, o, self.g.copy())
+        self.subg = plans2subgoals(plans, o, self.g.copy(), actions_to_skip=plan_ignore_actions)
 
         for t in range(self.T):
             if return_states:
@@ -70,6 +74,7 @@ class HierarchicalRollout(Rollout):
             for i, env in enumerate(self.envs):
                 # print(env)
                 env.env.goal = self.subg[i]
+                env.env.final_goal = self.g[i]
             if self.policy_action_params:
                 policy_output = self.policy.get_actions(o, ag, self.subg, **self.policy_action_params)
             else:
@@ -103,7 +108,7 @@ class HierarchicalRollout(Rollout):
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             # ignore opening of gripper and closing of gripper, because these actions are irrelevant for subgoal generation.
-            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=['open_gripper'])
+            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
             # new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=[])
             # Comput subgoal success by checking whether plan has lost first action.
             for i in range(self.rollout_batch_size):
@@ -120,7 +125,7 @@ class HierarchicalRollout(Rollout):
 
             plans = new_plans
 
-            self.subg = self.plans2subgoal(plans, o, self.g.copy())
+            self.subg = plans2subgoals(plans, o, self.g.copy())
 
             if np.isnan(o_new).any():
                 self.logger.warn('NaN caught during rollout generation. Trying again...')
@@ -168,47 +173,47 @@ class HierarchicalRollout(Rollout):
             ret = convert_episode_to_batch_major(episode)
         return ret
 
-    def plans2subgoal(self, plans, obs, goals):
-        subgoals = np.zeros(goals.shape)
-        for i, (p,o,g) in enumerate(zip(plans, obs, goals)):
-            # if len(p[0]) == 0:
-            #     print("Empty plan now: {}".format(datetime.datetime.now()))
-            subgoal = self.plan2subgoal(p,o,g)
-            subgoals[i] = subgoal
-        return subgoals
-
-    def plan2subgoal(self, plan, obs, goal):
-        # This currently only works for the environment TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1. TODO: Make more general.
-        if self.env_name != 'TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1':
-            print("Subgoals currently only work for env TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1")
-            return goal
-
-        def get_o_pos(obs, o_idx):
-            start_idx = (o_idx + 1) * 3
-            end_idx = start_idx + 3
-            o_pos = obs[start_idx:end_idx]
-            return o_pos
-        subgoal = copy.deepcopy(goal)
-        actions_to_skip = ['open_gripper'] # If we want to make use from these actions as well, the gripper opening value must be involved in the goal.
-        for action in plan[0]:
-            if action in actions_to_skip:
-                continue
-            o0_pos = get_o_pos(obs, 0)
-            if action == 'move_gripper_to__o0':
-                # First three elements of goal represent target gripper pos.
-                subgoal[:3] = o0_pos # Gripper should be above (at) object
-                subgoal[2] += 0.05
-                subgoal[3:] = o0_pos # Object should stay where it is
-            elif action == 'grasp__o0':
-                subgoal[:3] = o0_pos  # Gripper should be above (at) object
-                subgoal[3:] = o0_pos  # Object should stay where it is
-            elif action == 'move__o0_to_target':
-                subgoal[:3] = subgoal[3:] # Gripper should be at object goal
-            elif action == 'move_gripper_to_target':
-                subgoal = subgoal # Gripper should be at gripper goal
-            # print("Current subgoal action: {}".format(action))
-            break # Stop after first useful action has been found.
-        return subgoal
+    # def plans2subgoal(self, plans, obs, goals):
+    #     subgoals = np.zeros(goals.shape)
+    #     for i, (p,o,g) in enumerate(zip(plans, obs, goals)):
+    #         # if len(p[0]) == 0:
+    #         #     print("Empty plan now: {}".format(datetime.datetime.now()))
+    #         subgoal = self.plan2subgoal(p,o,g)
+    #         subgoals[i] = subgoal
+    #     return subgoals
+    #
+    # def plan2subgoal(self, plan, obs, goal):
+    #     # This currently only works for the environment TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1. TODO: Make more general.
+    #     if self.env_name != 'TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1':
+    #         print("Subgoals currently only work for env TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1")
+    #         return goal
+    #
+    #     def get_o_pos(obs, o_idx):
+    #         start_idx = (o_idx + 1) * 3
+    #         end_idx = start_idx + 3
+    #         o_pos = obs[start_idx:end_idx]
+    #         return o_pos
+    #     subgoal = copy.deepcopy(goal)
+    #     actions_to_skip = ['open_gripper'] # If we want to make use from these actions as well, the gripper opening value must be involved in the goal.
+    #     for action in plan[0]:
+    #         if action in actions_to_skip:
+    #             continue
+    #         o0_pos = get_o_pos(obs, 0)
+    #         if action == 'move_gripper_to__o0':
+    #             # First three elements of goal represent target gripper pos.
+    #             subgoal[:3] = o0_pos # Gripper should be above (at) object
+    #             subgoal[2] += 0.05
+    #             subgoal[3:] = o0_pos # Object should stay where it is
+    #         elif action == 'grasp__o0':
+    #             subgoal[:3] = o0_pos  # Gripper should be above (at) object
+    #             subgoal[3:] = o0_pos  # Object should stay where it is
+    #         elif action == 'move__o0_to_target':
+    #             subgoal[:3] = subgoal[3:] # Gripper should be at object goal
+    #         elif action == 'move_gripper_to_target':
+    #             subgoal = subgoal # Gripper should be at gripper goal
+    #         # print("Current subgoal action: {}".format(action))
+    #         break # Stop after first useful action has been found.
+    #     return subgoal
 
 
 class RolloutWorker(HierarchicalRollout):
