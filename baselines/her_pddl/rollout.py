@@ -63,8 +63,8 @@ class HierarchicalRollout(Rollout):
 
         preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-        plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
-        self.subg = plans2subgoals(plans, o, self.g.copy(), actions_to_skip=plan_ignore_actions)
+        plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
+        self.subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
 
         for t in range(self.T):
             if return_states:
@@ -102,8 +102,8 @@ class HierarchicalRollout(Rollout):
                 ag_new[i] = curr_o_new['achieved_goal']
                 for idx, key in enumerate(self.info_keys):
                     info_values[idx][t, i] = info[key]
-                if self.render:
-                    self.envs[i].render()
+                # if self.render:
+                #     self.envs[i].render()
 
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
@@ -123,9 +123,16 @@ class HierarchicalRollout(Rollout):
 
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
-            plans = new_plans
+            self.subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects)
+            for i in range(self.rollout_batch_size):
+                if self.render:
+                    self.envs[i].render()
 
-            self.subg = plans2subgoals(plans, o, self.g.copy())
+            if subgoal_success[0] > 0 and plans[0][0] != []:
+                print("Action {} was successful. Remaining actions: {}".format(plans[0][0][0], new_plans[0][0]))
+                print()
+
+            plans = new_plans
 
             if np.isnan(o_new).any():
                 self.logger.warn('NaN caught during rollout generation. Trying again...')
