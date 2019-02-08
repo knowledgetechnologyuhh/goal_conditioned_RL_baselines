@@ -128,9 +128,9 @@ class HierarchicalRollout(Rollout):
                 if self.render:
                     self.envs[i].render()
 
-            if subgoal_success[0] > 0 and plans[0][0] != []:
-                print("Action {} was successful. Remaining actions: {}".format(plans[0][0][0], new_plans[0][0]))
-                print()
+            # if subgoal_success[0] > 0 and plans[0][0] != []:
+            #     print("Action {} was successful. Remaining actions: {}".format(plans[0][0][0], new_plans[0][0]))
+            #     print()
 
             plans = new_plans
 
