@@ -106,14 +106,14 @@ class HierarchicalRollout(Rollout):
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             # ignore opening of gripper and closing of gripper, because these actions are irrelevant for subgoal generation.
-            # new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=['open_gripper', 'grasp__o0'])
-            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=[])
+            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=['open_gripper'])
+            # new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=[])
             # Comput subgoal success by checking whether plan has lost first action.
             for i in range(self.rollout_batch_size):
                 if new_plans[i][0] == []:
                     subgoal_success[i] = 1.0
-                elif len(plans[i][0]) > len(new_plans[i][0]):
-                    subgoal_success[i] = 1.0
+                # elif len(plans[i][0]) > len(new_plans[i][0]):
+                #     subgoal_success[i] = 1.0
                 elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
                     subgoal_success[i] = 1.0
                 else:
@@ -207,7 +207,7 @@ class HierarchicalRollout(Rollout):
             o_pos = obs[start_idx:end_idx]
             return o_pos
         subgoal = copy.deepcopy(goal)
-        actions_to_skip = ['open_gripper', 'grasp__o0'] # If we want to make use from these actions as well, the gripper opening value must be involved in the goal.
+        actions_to_skip = ['open_gripper'] # If we want to make use from these actions as well, the gripper opening value must be involved in the goal.
         for action in plan[0]:
             if action in actions_to_skip:
                 continue
@@ -215,8 +215,11 @@ class HierarchicalRollout(Rollout):
             if action == 'move_gripper_to__o0':
                 # First three elements of goal represent target gripper pos.
                 subgoal[:3] = o0_pos # Gripper should be above (at) object
-                subgoal[2] += 0.05
+                subgoal[2] += 0.08
                 subgoal[3:] = o0_pos # Object should stay where it is
+            elif action == 'grasp__o0':
+                subgoal[:3] = o0_pos  # Gripper should be above (at) object
+                subgoal[3:] = o0_pos  # Object should stay where it is
             elif action == 'move__o0_to_target':
                 subgoal[:3] = subgoal[3:] # Gripper should be at object goal
             elif action == 'move_gripper_to_target':

@@ -222,9 +222,10 @@ def main(ctx, **kwargs):
     max_ctr = kwargs['max_try_idx']
     while subdir_exists:
         alg_str = "alg:{}".format(kwargs['algorithm'].split(".")[1])
+        info_str = 'info:{}'.format(kwargs['info'])
         param_subdir = "_".join(
             ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
-             sorted(kwargs['override_params'].items())]) + "_" + alg_str + '_' + str(ctr)
+             sorted(kwargs['override_params'].items())]) + "_" + alg_str + '_' + info_str + "_" + str(ctr)
         if git_label != '':
             logdir = os.path.join(kwargs['base_logdir'], git_label, kwargs['env'], param_subdir)
         else:
