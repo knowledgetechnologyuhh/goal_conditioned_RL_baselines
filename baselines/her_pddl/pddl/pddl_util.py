@@ -272,7 +272,8 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
                 subgoal[2] += np.mean(BTT.grasp_z_threshold)
             if action == 'move__o{}_to_target'.format(o_idx):
                 # Gripper should be at object goal
-                subgoal[:3] = subgoal[3:]
+                subgoal[:3] = o_pos
+                subgoal[2] += np.mean(BTT.grasp_z_threshold)
                 # Object should be at object goal
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
