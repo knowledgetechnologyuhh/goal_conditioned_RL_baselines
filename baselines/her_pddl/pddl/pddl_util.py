@@ -251,7 +251,7 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
         end_idx = start_idx + 3
         o_pos = obs[start_idx:end_idx]
         return o_pos
-    print(plan[0])
+    # print(plan[0])
     final_goal = copy.deepcopy(goal)
     subgoal = copy.deepcopy(goal)
 
