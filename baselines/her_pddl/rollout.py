@@ -215,6 +215,7 @@ class HierarchicalRollout(Rollout):
             if action == 'move_gripper_to__o0':
                 # First three elements of goal represent target gripper pos.
                 subgoal[:3] = o0_pos # Gripper should be above (at) object
+                subgoal[2] += 0.05
                 subgoal[3:] = o0_pos # Object should stay where it is
             elif action == 'move__o0_to_target':
                 subgoal[:3] = subgoal[3:] # Gripper should be at object goal
