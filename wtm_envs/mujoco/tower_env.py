@@ -60,6 +60,7 @@ class TowerEnv(robot_env.RobotEnv):
 
         self.goal = []
         self.goal_size = (n_objects * 3)
+        self.final_goal = []
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
         # self.gripper_has_target = (gripper_goal != 'gripper_none')
@@ -214,19 +215,31 @@ class TowerEnv(robot_env.RobotEnv):
         obj_goal_start_idx = 0
         if self.gripper_goal != 'gripper_none':
             gripper_target_site_id = self.sim.model.site_name2id('final_arm_target')
+            gripper_goal_site_id = self.sim.model.site_name2id('final_arm_goal')
             gripper_tgt_size = (np.ones(3) * 0.02)
+            gripper_tgt_size[0] = 0.05
             self.sim.model.site_size[gripper_target_site_id] = gripper_tgt_size
+            self.sim.model.site_size[gripper_goal_site_id] = gripper_tgt_size
             gripper_tgt_goal = self.goal[0:3] - sites_offset[0]
-            # gripper_tgt_goal = self.initial_gripper_xpos[:3] * (np.ones(3) - self.goal_mask[0:3]) + gripper_tgt_goal
             self.sim.model.site_pos[gripper_target_site_id] = gripper_tgt_goal
+            if self.final_goal != []:
+                gripper_tgt_final_goal = self.final_goal[0:3] - sites_offset[0]
+                self.sim.model.site_pos[gripper_goal_site_id] = gripper_tgt_final_goal
             obj_goal_start_idx += 3
 
         for n in range(self.n_objects):
             o_target_site_id = self.sim.model.site_name2id('target{}'.format(n))
+            o_goal_site_id = self.sim.model.site_name2id('goal{}'.format(n))
             o_tgt_size = (np.ones(3) * 0.02)
+            o_tgt_size[0] = 0.05
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
+            self.sim.model.site_size[o_goal_site_id] = o_tgt_size
             o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
             self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
+            if self.final_goal != []:
+                o_tgt_final_goal = self.final_goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
+                self.sim.model.site_pos[o_goal_site_id] = o_tgt_final_goal
+
             obj_goal_start_idx += 3
 
         self.sim.forward()
