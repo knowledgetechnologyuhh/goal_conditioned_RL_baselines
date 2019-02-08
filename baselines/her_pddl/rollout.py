@@ -24,8 +24,6 @@ class HierarchicalRollout(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
         self.subg = self.g
-        self.action_success_history = {}
-
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -65,12 +63,13 @@ class HierarchicalRollout(Rollout):
         preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
-        self.subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
+        next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
 
         for t in range(self.T):
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
+            self.subg = next_subg
             acts = []
             for i, env in enumerate(self.envs):
                 env.env.goal = self.subg[i]
@@ -123,30 +122,12 @@ class HierarchicalRollout(Rollout):
 
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
-
-                last_act = plans[i][0]
-                if last_act not in self.action_success_history.keys():
-                    self.action_success_history[last_act] = deque(maxlen=20)
-                if subgoal_success[i] > 0:
-                    self.action_success_history[last_act].append(subgoal_success[i])
-                elif t == (self.T-1):
-                    self.action_success_history[last_act].append(subgoal_success[i])
-
-                for next_act in new_plans[i][0]:
-                    act_success_mean = np.mean(self.action_success_history[next_act])
-                    rnd = np.random.random.gauss(0.4, 0.2)
-                    if act_success_mean < rnd:
-                        env.env.goal = self.g[i]
-                    else:
-                        env.env.goal = self.subg[i]
-
-            self.subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
+            next_subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
 
             for i in range(self.rollout_batch_size):
-                self.envs[i].env.goal = self.subg[i]
+                self.envs[i].env.goal = next_subg[i]
                 if self.render:
                     self.envs[i].render()
-
 
             # if subgoal_success[0] > 0 and plans[0][0] != []:
             #     print("Action {} was successful. Remaining actions: {}".format(plans[0][0][0], new_plans[0][0]))
