@@ -123,6 +123,7 @@ class HierarchicalRollout(Rollout):
 
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
+
                 last_act = plans[i][0]
                 if last_act not in self.action_success_history.keys():
                     self.action_success_history[last_act] = deque(maxlen=20)
