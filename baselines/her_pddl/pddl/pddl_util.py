@@ -5,7 +5,7 @@ import time
 import copy
 
 class BuildTowerThresholds:
-    grasp_xy_threshold = [0.0, 0.02]
+    grasp_xy_threshold = [0.0, 0.03]
     # grasp_z_threshold = [-0.015, 0.02]
     grasp_z_threshold = [0.0, 0.1]
     grip_open_threshold = [0.038, 1.0]
