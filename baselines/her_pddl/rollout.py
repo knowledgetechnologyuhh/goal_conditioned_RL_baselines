@@ -92,9 +92,6 @@ class HierarchicalRollout(Rollout):
             overall_success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
-                # try:
-                    # We fully ignore the reward here because it will have to be re-computed
-                    # for HER.
                 curr_o_new, _, _, info = self.envs[i].step(u[i])
                 o_new[i] = curr_o_new['observation']
                 ag_new[i] = curr_o_new['achieved_goal']
@@ -124,21 +121,6 @@ class HierarchicalRollout(Rollout):
             plans = new_plans
 
             self.subg = self.plans2subgoal(plans, o, self.g.copy())
-
-            # for i in range(self.rollout_batch_size):
-            #     if 'is_success' in info:
-            #         subgoal_success[i] = info['is_success']
-            #         overall_success[i] = subgoal_success[i] and np.array_equal(self.subg[i], self.g[i])
-            #
-            #     for idx, key in enumerate(self.info_keys):
-            #         info_values[idx][t, i] = info[key]
-            #     if self.render:
-            #         self.envs[i].render()
-
-
-                # except MujocoException as e:
-                #     return self.generate_rollouts()
-
 
             if np.isnan(o_new).any():
                 self.logger.warn('NaN caught during rollout generation. Trying again...')
@@ -211,11 +193,11 @@ class HierarchicalRollout(Rollout):
         for action in plan[0]:
             if action in actions_to_skip:
                 continue
-            o0_pos = get_o_pos(obs,0)
+            o0_pos = get_o_pos(obs, 0)
             if action == 'move_gripper_to__o0':
                 # First three elements of goal represent target gripper pos.
                 subgoal[:3] = o0_pos # Gripper should be above (at) object
-                subgoal[2] += 0.08
+                subgoal[2] += 0.05
                 subgoal[3:] = o0_pos # Object should stay where it is
             elif action == 'grasp__o0':
                 subgoal[:3] = o0_pos  # Gripper should be above (at) object

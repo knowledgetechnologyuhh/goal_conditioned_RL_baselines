@@ -3,9 +3,14 @@ from baselines.her_pddl.pddl.propositional_planner import Propositional_Planner
 import time
 
 def obs_to_preds(obs, goal, n_objects,
-                 grasp_xy_threshold=[0.0, 0.025], grasp_z_threshold=[-0.015, 0.02],
-                 grip_open_threshold=[0.038, 1.0], grip_closed_threshold=[0.0, 0.025],
-                 on_z_threshold=[0.047, 0.053], xyz_tgt_threshold=[0.0,0.05]):
+                 grasp_xy_threshold=[0.0, 0.025],
+                 # grasp_z_threshold=[-0.015, 0.27],
+                 grasp_z_threshold=[0.0, 0.27],
+                 # grasp_z_threshold=[-0.015, 0.02],
+                 grip_open_threshold=[0.038, 1.0],
+                 grip_closed_threshold=[0.0, 0.025],
+                 on_z_threshold=[0.047, 0.053],
+                 xyz_tgt_threshold=[0.0,0.05]):
     preds, n_hots = [], []
     for o,g in zip(obs,goal):
         p,nh = obs_to_preds_single(o,g,n_objects, grasp_xy_threshold, grasp_z_threshold,
@@ -20,7 +25,7 @@ def obs_to_preds(obs, goal, n_objects,
 def obs_to_preds_single(obs, goal, n_objects,
                  grasp_xy_threshold=[0.0, 0.02], grasp_z_threshold=[-0.015, 0.02],
                  grip_open_threshold=[0.038, 1.0], grip_closed_threshold=[0.0, 0.025],
-                 on_z_threshold=[0.047, 0.053], xyz_tgt_threshold=[0.0,0.05]):
+                 on_z_threshold=[0.047, 0.06], xyz_tgt_threshold=[0.0,0.05]):
 
     preds = {}
     gripper_pos = obs[0:3]
@@ -51,6 +56,10 @@ def obs_to_preds_single(obs, goal, n_objects,
         zd_ok = int(zd > grasp_z_threshold[0] and zd < grasp_z_threshold[1])
         reached = int(xyd_ok and zd_ok)
         preds[pred_name] = reached
+        # pred_name = 'gripper_above_o{}'.format(o)
+        # zd_ok = int(zd > on_z_threshold[0] and zd < on_z_threshold[1])
+        # reached = int(xyd_ok and zd_ok)
+        # preds[pred_name] = reached
 
     # Determine whether an object is on top of another object
     for o1 in range(n_objects):
