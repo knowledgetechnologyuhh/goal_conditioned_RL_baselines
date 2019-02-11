@@ -5,9 +5,17 @@ import time
 import copy
 
 class BuildTowerThresholds:
-    grasp_xy_threshold = [0.0, 0.03]
+    # grasp_xy_threshold = [0.0, 0.03]
+    # # grasp_z_threshold = [-0.015, 0.02]
+    # grasp_z_threshold = [0.0, 0.1]
+    # grip_open_threshold = [0.038, 1.0]
+    # grip_closed_threshold = [0.0, 0.025]
+    # on_z_threshold = [0.047, 0.06]
+    # xyz_tgt_threshold = [0.0, 0.05]
+
+    grasp_xy_threshold = [0.0, 0.05]
     # grasp_z_threshold = [-0.015, 0.02]
-    grasp_z_threshold = [0.0, 0.1]
+    grasp_z_threshold = [0.0, 0.05]
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
     on_z_threshold = [0.047, 0.06]
@@ -151,8 +159,8 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
 
         # Move o1 on o2 action. This is to stack objects on other objects.
         for o2 in range(n_objects):
-            if o+1 != o2:
-                continue # To restrict the action space, only allow to put an object with number o onto o+1 (e.g. object 0 on object 1, but not object 0 on object 2.)
+            if o-1 != o2:
+                continue # To restrict the action space, only allow to put an object with number o onto o-1 (e.g. object 1 on object 0, but not object 0 on object 2.)
             not_o3_on_o2_str = ''
             for o3 in range(n_objects):
                 if o3 == o2:
@@ -203,19 +211,22 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     # tower_height = int(tower_height)
     goal_str = "(:goal (and \n"
     if gripper_has_target:
-        pred_val = "o{}_at_target".format(tower_height - 1)
+        # pred_val = "o{}_at_target".format(tower_height - 1)
+        pred_val = "o{}_at_target".format(0)
         goal_str += "\t ({})\n".format(pred_val)
         for o in range(tower_height - 1):
-            pred_val = "o{}_on_o{}".format(o, o + 1)
+            pred_val = "o{}_on_o{}".format(o + 1, o)
             goal_str += "\t ({})\n".format(pred_val)
 
         pred_val = "gripper_at_target"
         goal_str += "\t ({})\n".format(pred_val)
     else:
-        pred_val = "o{}_at_target".format(tower_height - 1)
+        # pred_val = "o{}_at_target".format(tower_height - 1)
+        pred_val = "o{}_at_target".format(0)
         goal_str += "\t ({})\n".format(pred_val)
         for o in range(tower_height - 1):
-            pred_val = "o{}_on_o{}".format(o, o + 1)
+            # pred_val = "o{}_on_o{}".format(o, o + 1)
+            pred_val = "o{}_on_o{}".format(o + 1, o)
             goal_str += "\t ({})\n".format(pred_val)
     goal_str += '))\n\n'
 
@@ -271,13 +282,14 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
                 subgoal[:3] = o_pos  # Gripper should be above (at) object
                 subgoal[2] += np.mean(BTT.grasp_z_threshold)
             if action == 'move__o{}_to_target'.format(o_idx):
-                # Gripper should be at object goal
-                subgoal[:3] = o_pos
-                subgoal[2] += np.mean(BTT.grasp_z_threshold)
-                # Object should be at object goal
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
-                subgoal[start_idx:end_idx] = goal[start_idx:end_idx]
+                o_goal = goal[start_idx:end_idx]
+                # Gripper should be at object goal
+                subgoal[:3] = o_goal
+                subgoal[2] += np.mean(BTT.grasp_z_threshold)
+                # Object should be at object goal
+                subgoal[start_idx:end_idx] = o_goal
 
             for o2_idx in range(n_objects):
                 o2_pos = get_o_pos(obs, o2_idx)
