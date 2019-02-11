@@ -24,7 +24,8 @@ class HierarchicalRollout(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
         self.subg = self.g
-        self.rep_correct_history = []
+        self.rep_correct_history = deque(maxlen=history_len)
+        self.subgoal_succ_history = deque(maxlen=history_len)
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -114,7 +115,7 @@ class HierarchicalRollout(Rollout):
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
-            # Compute subgoal success by checking whether plan has lost first action.
+            # Compute subgoal success
             for i in range(self.rollout_batch_size):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 # if new_plans[i][0] == []:
@@ -134,7 +135,7 @@ class HierarchicalRollout(Rollout):
                 self.envs[i].env.goal = next_subg[i]
                 if subgoal_success[i] > 0 and str(plans) != str(new_plans):
                     plan_lens[i] = len(new_plans[i][0])
-                    print("Achieved subgoal {} of {}".format(plan_lens[i], init_plan_lens[i]))
+                    print("Achieved subgoal {} of {}".format(init_plan_lens[i] - plan_lens[i], init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
                 if subgoal_success[i] > 0 and str(plans) != str(new_plans):
@@ -160,6 +161,8 @@ class HierarchicalRollout(Rollout):
             o[...] = o_new
             ag[...] = ag_new
 
+        avg_subgoal_succ = np.mean([ip -p for ip,p in zip(init_plan_lens, plan_lens)])
+        self.subgoal_succ_history.append(avg_subgoal_succ)
         avg_pred_correct /= self.T
         self.rep_correct_history.append(avg_pred_correct)
         obs.append(o.copy())
@@ -261,9 +264,11 @@ class RolloutWorker(HierarchicalRollout):
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
         logs += [('episode', self.n_episodes)]
         if len(self.rep_loss_history) > 0:
-            logs += [('rep_ce_loss', self.rep_loss_history[-1])]
+            logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
         if len(self.rep_correct_history) > 0:
-            logs += [('rep_correct', self.rep_correct_history[-1])]
+            logs += [('rep_correct', np.mean(self.rep_correct_history))]
+        if len(self.subgoal_succ_history) > 0:
+            logs += [('subgoal successes', np.mean(self.subgoal_succ_history))]
 
         return logger(logs, prefix)
 

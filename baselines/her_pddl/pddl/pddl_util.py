@@ -92,12 +92,12 @@ def obs_to_preds_single(obs, goal, n_objects):
             preds[pred_name] = distance < BTT.distance_threshold
 
     # Determine open and closed state of the gripper
-    preds['gripper_open'] = int(gripper_state > BTT.grip_open_threshold[0] and gripper_state < BTT.grip_open_threshold[1])
-    preds['gripper_closed'] = int(gripper_state > BTT.grip_closed_threshold[0] and gripper_state < BTT.grip_closed_threshold[1])
+    # preds['gripper_open'] = int(gripper_state > BTT.grip_open_threshold[0] and gripper_state < BTT.grip_open_threshold[1])
+    # preds['gripper_closed'] = int(gripper_state > BTT.grip_closed_threshold[0] and gripper_state < BTT.grip_closed_threshold[1])
 
     for o in range(n_objects):
         pred_name = 'grasped_o{}'.format(o)
-        preds[pred_name] = int(preds['gripper_at_o{}'.format(o)] == 1 and preds['gripper_closed'] == 1)
+        preds[pred_name] = int(preds['gripper_at_o{}'.format(o)] == 1 and True)
         pred_name = 'o{}_at_target'.format(o)
         o_pos = get_o_pos(obs, o)
         g_pos = get_o_goal_pos(goal, o)
