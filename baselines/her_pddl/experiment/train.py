@@ -9,8 +9,8 @@ from mpi4py import MPI
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
-import baselines.her.experiment.config as config
-from baselines.her.rollout import RolloutWorker
+import baselines.her_pddl.experiment.config as config
+from baselines.her_pddl.rollout import RolloutWorker
 from baselines.util import mpi_fork
 
 from subprocess import CalledProcessError

@@ -6,11 +6,14 @@ from tensorflow.contrib.staging import StagingArea
 
 from baselines import logger
 from baselines.util import (
-    import_function, store_args, flatten_grads, transitions_in_episode_batch)
-from baselines.her.normalizer import Normalizer
-from baselines.her.replay_buffer import ReplayBuffer
+    import_function, store_args, flatten_grads, transitions_in_episode_batch, prob_dist2discrete)
+from baselines.her_pddl.normalizer import Normalizer
+from baselines.her_pddl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
+from baselines.her_pddl.abstraction import Obs2PredsMem
+
+
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
@@ -98,6 +101,7 @@ class DDPG_PDDL(Policy):
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
+        self.obs_to_preds_memory = Obs2PredsMem()
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -148,9 +152,6 @@ class DDPG_PDDL(Policy):
             return ret[0]
         else:
             return ret
-
-
-
 
     def store_episode(self, episode_batch, update_stats=True):
         """
@@ -220,6 +221,31 @@ class DDPG_PDDL(Policy):
         critic_loss, actor_loss, Q_grad, pi_grad = self._grads()
         self._update(Q_grad, pi_grad)
         return critic_loss, actor_loss
+
+    def train_representation(self):
+        rep_batch_size = 128
+        batch = self.obs_to_preds_memory.sample_batch(rep_batch_size)
+        feed_dict = {self.obs_to_preds_memory.obs2preds_model.inputs_o: batch['obs'],
+                                 self.obs_to_preds_memory.obs2preds_model.inputs_g: batch['goals'],
+                                 self.obs_to_preds_memory.obs2preds_model.preds: batch['preds']}
+        opti_res, celoss = self.sess.run([self.obs_to_preds_memory.obs2preds_model.optimizer,
+                                          self.obs_to_preds_memory.obs2preds_model.celoss],
+                      feed_dict=feed_dict)
+
+        # Sample batch from obs2preds memory
+        # train that batch
+        return celoss
+
+    def predict_representation(self, batch):
+        feed_dict = {self.obs_to_preds_memory.obs2preds_model.inputs_o: batch['obs'],
+                     self.obs_to_preds_memory.obs2preds_model.inputs_g: batch['goals']}
+        pred_dist = self.sess.run([self.obs_to_preds_memory.obs2preds_model.prob_out],
+                                         feed_dict=feed_dict)
+        preds = prob_dist2discrete(pred_dist[0])
+        return preds
+
+
+
 
     def _init_target_net(self):
         self.sess.run(self.init_target_net_op)
@@ -331,7 +357,8 @@ class DDPG_PDDL(Policy):
         # [print(key, ": ", item) for key,item in self.__dict__.items()]
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
-                             'stage_shapes', 'create_actor_critic']
+                             'stage_shapes', 'create_actor_critic',
+                             '']
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
