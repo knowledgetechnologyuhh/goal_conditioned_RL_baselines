@@ -118,22 +118,13 @@ class HierarchicalRollout(Rollout):
             # Compute subgoal success
             for i in range(self.rollout_batch_size):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
-                # if new_plans[i][0] == []:
-                #     subgoal_success[i] = 1.0
-                # elif len(plans[i][0]) > len(new_plans[i][0]):
-                #     subgoal_success[i] = 1.0
-                # elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
-                #     subgoal_success[i] = 1.0
-                # else:
-                #     subgoal_success[i] = 0.0
-
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
             next_subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
 
             for i in range(self.rollout_batch_size):
                 self.envs[i].env.goal = next_subg[i]
-                if subgoal_success[i] > 0 and str(plans) != str(new_plans):
+                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
                     plan_lens[i] = len(new_plans[i][0])
                     print("Achieved subgoal {} of {}".format(init_plan_lens[i] - plan_lens[i], init_plan_lens[i]))
                 if self.render:

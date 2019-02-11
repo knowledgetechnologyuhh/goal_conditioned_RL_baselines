@@ -92,8 +92,8 @@ def obs_to_preds_single(obs, goal, n_objects):
             preds[pred_name] = distance < BTT.distance_threshold
 
     # Determine open and closed state of the gripper
-    # preds['gripper_open'] = int(gripper_state > BTT.grip_open_threshold[0] and gripper_state < BTT.grip_open_threshold[1])
-    # preds['gripper_closed'] = int(gripper_state > BTT.grip_closed_threshold[0] and gripper_state < BTT.grip_closed_threshold[1])
+    preds['gripper_open'] = int(gripper_state > BTT.grip_open_threshold[0] and gripper_state < BTT.grip_open_threshold[1])
+    preds['gripper_closed'] = int(gripper_state > BTT.grip_closed_threshold[0] and gripper_state < BTT.grip_closed_threshold[1])
 
     for o in range(n_objects):
         pred_name = 'grasped_o{}'.format(o)
@@ -140,9 +140,9 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     #     not_grasped_str)
     # actions.append(open_gripper_act)
     # grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
-    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_at_o{}) (grasped_o{}) (not (gripper_at_target)) )\n)\n\n"
-    move_o1_on_o2_act_template = "(:action move__o{}_on__o{} \n\t:parameters () \n\t:precondition (and (grasped_o{}) (gripper_at_o{}) {}) \n\t:effect (and (not (grasped_o{})) (o{}_on_o{}))\n)\n\n"
-    move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) (grasped_o{}) {}) \n\t:effect (and {} {} (o{}_at_target))\n)\n\n"
+    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_closed) (gripper_at_o{}) (grasped_o{}) (not (gripper_at_target)) )\n)\n\n"
+    move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (grasped_o{}) (gripper_at_o{}) (gripper_closed) {}) \n\t:effect (and (not (grasped_o{})) (o{}_on_o{}) (gripper_open))\n)\n\n"
+    move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (grasped_o{}) (gripper_at_o{}) (gripper_closed) {}) \n\t:effect (and {} {} (o{}_at_target) (gripper_open))\n)\n\n"
     # move_o_on_table_template = "(:action move__o{}_on_table \n\t:parameters () \n\t:precondition (and (grasped_o{})) \n\t:effect (and (not (o{}_at_target)) {} )\n)\n\n"
 
     for o in range(n_objects):
