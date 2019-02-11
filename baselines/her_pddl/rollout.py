@@ -24,6 +24,7 @@ class HierarchicalRollout(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
         self.subg = self.g
+        self.rep_correct_history = []
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -60,9 +61,11 @@ class HierarchicalRollout(Rollout):
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
                        in self.info_keys]
 
-        preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
+        preds, one_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
         next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
+
+        avg_pred_correct = 0
 
         for t in range(self.T):
             if return_states:
@@ -104,6 +107,9 @@ class HierarchicalRollout(Rollout):
                 #     self.envs[i].render()
 
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
+            self.policy.obs_to_preds_memory.store_sample_batch(n_hots, o_new, self.g)
+            n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
+            avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
             # Compute subgoal success by checking whether plan has lost first action.
@@ -124,8 +130,12 @@ class HierarchicalRollout(Rollout):
 
             for i in range(self.rollout_batch_size):
                 self.envs[i].env.goal = next_subg[i]
+                if subgoal_success[i] > 0 and str(plans) != str(new_plans):
+                    print("subg_succ")
                 if self.render:
                     self.envs[i].render()
+                if subgoal_success[i] > 0 and str(plans) != str(new_plans):
+                    print("subg_succ")
 
             plans = new_plans
 
@@ -143,6 +153,9 @@ class HierarchicalRollout(Rollout):
             subgoals.append(self.subg.copy())
             o[...] = o_new
             ag[...] = ag_new
+
+        avg_pred_correct /= self.T
+        self.rep_correct_history.append(avg_pred_correct)
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
         if return_states:
@@ -152,7 +165,6 @@ class HierarchicalRollout(Rollout):
         self.initial_o[:] = o
         episode = dict(o=obs,
                        u=acts,
-                       # g=goals,
                        g=subgoals,
                        ag=achieved_goals)
         for key, value in zip(self.info_keys, info_values):
@@ -200,11 +212,19 @@ class RolloutWorker(HierarchicalRollout):
             render (boolean): whether or not to render the rollouts
         """
         HierarchicalRollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
+        self.rep_loss_history = []
+
+    def save_policy(self, path):
+        """Pickles the current policy for later inspection.
+        """
+        with open(path, 'wb') as f:
+            pickle.dump(self.policy, f)
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
+        rep_ce_loss = 0
         for cyc in range(n_episodes):
             ro_start = time.time()
             episode = self.generate_rollouts()
@@ -213,11 +233,14 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()
+                rep_ce_loss += self.policy.train_representation()
             self.policy.update_target_net()
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
+        rep_ce_loss /= (n_train_batches * n_episodes)
+        self.rep_loss_history.append(rep_ce_loss)
         return updated_policy, time_durations
 
     def current_mean_Q(self):
@@ -231,6 +254,10 @@ class RolloutWorker(HierarchicalRollout):
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
         logs += [('episode', self.n_episodes)]
+        if len(self.rep_loss_history) > 0:
+            logs += [('rep_ce_loss', self.rep_loss_history[-1])]
+        if len(self.rep_correct_history) > 0:
+            logs += [('rep_correct', self.rep_correct_history[-1])]
 
         return logger(logs, prefix)
 
