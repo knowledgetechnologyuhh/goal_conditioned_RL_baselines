@@ -63,7 +63,7 @@ class HierarchicalRollout(Rollout):
 
         preds, one_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
-        init_plan_lens = [len(p) for p in plans[0]]
+        init_plan_lens = [len(p[0]) for p in plans]
         plan_lens = init_plan_lens
         next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
 
