@@ -269,7 +269,7 @@ class TowerEnv(robot_env.RobotEnv):
             object_qpos = self.sim.data.get_joint_qpos('{}:joint'.format(oname))
             assert object_qpos.shape == (7,)
             object_qpos[:2] = object_xpos
-            object_qpos[2] = self.table_height + (self.obj_height / 2) * self.obj_height * 1.05
+            object_qpos[2] = self.table_height + (self.obj_height / 2)
             self.sim.data.set_joint_qpos('{}:joint'.format(oname), object_qpos)
 
         self.sim.forward()
