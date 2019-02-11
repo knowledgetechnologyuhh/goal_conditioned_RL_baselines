@@ -63,6 +63,8 @@ class HierarchicalRollout(Rollout):
 
         preds, one_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
+        init_plan_lens = [len(p) for p in plans[0]]
+        plan_lens = init_plan_lens
         next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
 
         avg_pred_correct = 0
@@ -131,11 +133,15 @@ class HierarchicalRollout(Rollout):
             for i in range(self.rollout_batch_size):
                 self.envs[i].env.goal = next_subg[i]
                 if subgoal_success[i] > 0 and str(plans) != str(new_plans):
-                    print("subg_succ")
+                    plan_lens[i] = len(new_plans[i][0])
+                    print("Achieved subgoal {} of {}".format(plan_lens[i], init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
                 if subgoal_success[i] > 0 and str(plans) != str(new_plans):
-                    print("subg_succ")
+                    if plan_lens[i] > 0:
+                        print("Next action: {}".format(new_plans[i][0][0]))
+                    else:
+                        print("Final goal achieved.")
 
             plans = new_plans
 
