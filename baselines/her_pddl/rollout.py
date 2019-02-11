@@ -61,7 +61,6 @@ class HierarchicalRollout(Rollout):
                        in self.info_keys]
 
         preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
-        # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
         next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
 
@@ -106,19 +105,18 @@ class HierarchicalRollout(Rollout):
 
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            # ignore opening of gripper and closing of gripper, because these actions are irrelevant for subgoal generation.
             new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
-            # new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=[])
-            # Comput subgoal success by checking whether plan has lost first action.
+            # Compute subgoal success by checking whether plan has lost first action.
             for i in range(self.rollout_batch_size):
-                if new_plans[i][0] == []:
-                    subgoal_success[i] = 1.0
-                elif len(plans[i][0]) > len(new_plans[i][0]):
-                    subgoal_success[i] = 1.0
-                elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
-                    subgoal_success[i] = 1.0
-                else:
-                    subgoal_success[i] = 0.0
+                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                # if new_plans[i][0] == []:
+                #     subgoal_success[i] = 1.0
+                # elif len(plans[i][0]) > len(new_plans[i][0]):
+                #     subgoal_success[i] = 1.0
+                # elif len(plans[i][0][1:]) > 0 and (new_plans[i][0] == plans[i][0][1:]):
+                #     subgoal_success[i] = 1.0
+                # else:
+                #     subgoal_success[i] = 0.0
 
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
@@ -128,10 +126,6 @@ class HierarchicalRollout(Rollout):
                 self.envs[i].env.goal = next_subg[i]
                 if self.render:
                     self.envs[i].render()
-
-            # if subgoal_success[0] > 0 and plans[0][0] != []:
-            #     print("Action {} was successful. Remaining actions: {}".format(plans[0][0][0], new_plans[0][0]))
-            #     print()
 
             plans = new_plans
 
