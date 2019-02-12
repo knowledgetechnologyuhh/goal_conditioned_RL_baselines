@@ -354,7 +354,7 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()
-                rep_ce_loss += self.policy.train_representation()
+                # rep_ce_loss += self.policy.train_representation()
             self.policy.update_target_net()
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
