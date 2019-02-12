@@ -72,10 +72,6 @@ class HierarchicalRollout(Rollout):
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
-            # preds, n_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
-            # # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            # plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
-            # self.subg = plans2subgoals(plans, o, self.g)
             for i, env in enumerate(self.envs):
                 # print(env)
                 env.env.goal = self.subg[i]
@@ -107,22 +103,20 @@ class HierarchicalRollout(Rollout):
                 # We fully ignore the reward here because it will have to be re-computed
                 # for HER.
                 curr_o_new, _, _, info = self.envs[i].step(u[i])
-                if 'is_success' in info:
-                    subgoal_success[i] = info['is_success']
                 o_new[i] = curr_o_new['observation']
                 ag_new[i] = curr_o_new['achieved_goal']
                 for idx, key in enumerate(self.info_keys):
                     info_values[idx][t, i] = info[key]
                 if self.render:
                     self.envs[i].render()
-                # subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
-
+            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             self.policy.obs_to_preds_memory.store_sample_batch(n_hots, o_new, self.g)
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
-            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
+
             # Compute subgoal success
             for i in range(self.rollout_batch_size):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
@@ -150,7 +144,8 @@ class HierarchicalRollout(Rollout):
             ag[...] = ag_new
             self.subg = next_subg
         avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
-        self.subgoal_succ_history.append(avg_subgoal_succ)
+        avg_subgoals = np.mean(init_plan_lens)
+        self.subgoal_succ_history.append(avg_subgoal_succ / avg_subgoals)
         avg_pred_correct /= self.T
         self.rep_correct_history.append(avg_pred_correct)
         obs.append(o.copy())
@@ -231,7 +226,7 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()
-                # rep_ce_loss += self.policy.train_representation()
+                rep_ce_loss += self.policy.train_representation()
             self.policy.update_target_net()
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
