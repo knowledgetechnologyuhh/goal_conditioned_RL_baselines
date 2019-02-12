@@ -121,7 +121,8 @@ class HierarchicalRollout(Rollout):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
-            next_subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
+            # next_subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
+            next_subg = plans2subgoals(new_plans, o, self.g.copy())
 
             for i in range(self.rollout_batch_size):
                 self.envs[i].env.goal = next_subg[i]
