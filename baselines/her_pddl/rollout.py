@@ -67,7 +67,7 @@ class HierarchicalRollout(Rollout):
         init_plan_lens = [len(p[0]) for p in plans]
         plan_lens = init_plan_lens
         next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
-
+        #
         avg_pred_correct = 0
 
         for t in range(self.T):
@@ -112,7 +112,7 @@ class HierarchicalRollout(Rollout):
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             self.policy.obs_to_preds_memory.store_sample_batch(n_hots, o_new, self.g)
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
-            avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
+            # avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
             # Compute subgoal success
