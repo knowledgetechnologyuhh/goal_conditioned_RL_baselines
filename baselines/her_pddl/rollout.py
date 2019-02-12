@@ -123,11 +123,24 @@ class HierarchicalRollout(Rollout):
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
             # avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
             # Compute subgoal success
             for i in range(self.rollout_batch_size):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
+            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
+            next_subg = plans2subgoals(new_plans, o, self.g.copy())
+            for i in range(self.rollout_batch_size):
+                self.envs[i].env.goal = next_subg[i]
+                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
+                    plan_lens[i] = len(new_plans[i][0])
+                    print("Achieved subgoal {} of {}".format(init_plan_lens[i] - plan_lens[i], init_plan_lens[i]))
+                if self.render:
+                    self.envs[i].render()
+                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
+                    if plan_lens[i] > 0:
+                        print("Next action: {}".format(new_plans[i][0][0]))
+                    else:
+                        print("Final goal achieved.")
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
@@ -137,7 +150,7 @@ class HierarchicalRollout(Rollout):
             subgoals.append(self.subg.copy())
             o[...] = o_new
             ag[...] = ag_new
-            self.subg = plans2subgoals(new_plans, o, self.g.copy())
+            self.subg = next_subg
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
         if return_states:
