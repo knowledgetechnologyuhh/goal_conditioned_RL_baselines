@@ -220,21 +220,17 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     return domain, problem
 
 
-def plans2subgoal(self, plans, obs, goals):
+def plans2subgoal(plans, obs, goals):
     subgoals = np.zeros(goals.shape)
     for i, (p, o, g) in enumerate(zip(plans, obs, goals)):
         # if len(p[0]) == 0:
         #     print("Empty plan now: {}".format(datetime.datetime.now()))
-        subgoal = self.plan2subgoal(p, o, g)
+        subgoal = plan2subgoal(p, o, g)
         subgoals[i] = subgoal
     return subgoals
 
 
-def plan2subgoal(self, plan, obs, goal):
-    # This currently only works for the environment TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1. TODO: Make more general.
-    if self.env_name != 'TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1':
-        print("Subgoals currently only work for env TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1")
-        return goal
+def plan2subgoal(plan, obs, goal):
 
     def get_o_pos(obs, o_idx):
         start_idx = (o_idx + 1) * 3
