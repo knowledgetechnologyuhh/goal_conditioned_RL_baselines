@@ -5,22 +5,33 @@ import time
 import copy
 
 class BuildTowerThresholds:
-    grasp_xy_threshold = [0.0, 0.02]
-    # grasp_z_threshold = [-0.015, 0.02]
-    grasp_z_threshold = [0.0, 0.1]
+    # grasp_xy_threshold = [0.0, 0.03]
+    # # grasp_z_threshold = [-0.015, 0.02]
+    # grasp_z_threshold = [0.0, 0.1]
+    # grip_open_threshold = [0.038, 1.0]
+    # grip_closed_threshold = [0.0, 0.025]
+    # on_z_threshold = [0.047, 0.06]
+    # xyz_tgt_threshold = [0.0, 0.05]
+
+    # grasp_xy_threshold = [0.0, 0.05]
+    # # grasp_z_threshold = [-0.015, 0.02]
+    # grasp_z_threshold = [0.0, 0.05]
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
-    on_z_threshold = [0.047, 0.06]
-    xyz_tgt_threshold = [0.0, 0.05]
+    # on_z_threshold = [0.047, 0.06]
+    # xyz_tgt_threshold = [0.0, 0.05]
+    distance_threshold = 0.05
+    grasp_z_offset = 0.02
+    on_z_offset = 0.05
 
 def obs_to_preds(obs, goal, n_objects):
     preds, n_hots = [], []
     for o,g in zip(obs,goal):
-        p,nh = obs_to_preds_single(o,g,n_objects)
+        p,oh = obs_to_preds_single(o,g,n_objects)
         preds.append(p)
-        n_hots.append(nh)
+        n_hots.append(oh)
 
-    return preds, n_hots
+    return preds, np.array(n_hots)
 
 
 def obs_to_preds_single(obs, goal, n_objects):
@@ -48,12 +59,15 @@ def obs_to_preds_single(obs, goal, n_objects):
     for o in range(n_objects):
         pred_name = 'gripper_at_o{}'.format(o)
         o_pos = get_o_pos(obs, o)
-        xyd = np.linalg.norm(gripper_pos[:2] - o_pos[:2], axis=-1)
-        xyd_ok = int(xyd > BTT.grasp_xy_threshold[0] and xyd < BTT.grasp_xy_threshold[1])
-        zd = gripper_pos[2] - o_pos[2]
-        zd_ok = int(zd > BTT.grasp_z_threshold[0] and zd < BTT.grasp_z_threshold[1])
-        reached = int(xyd_ok and zd_ok)
-        preds[pred_name] = reached
+        gripper_tgt_pos = o_pos
+        gripper_tgt_pos[2] = o_pos[2] + BTT.grasp_z_offset
+        # xyd = np.linalg.norm(gripper_pos[:2] - o_pos[:2], axis=-1)
+        # xyd_ok = int(xyd > BTT.grasp_xy_threshold[0] and xyd < BTT.grasp_xy_threshold[1])
+        # zd = gripper_pos[2] - o_pos[2]
+        # zd_ok = int(zd > BTT.grasp_z_threshold[0] and zd < BTT.grasp_z_threshold[1])
+        # reached = int(xyd_ok and zd_ok)
+        distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
+        preds[pred_name] = distance < BTT.distance_threshold
         # pred_name = 'gripper_above_o{}'.format(o)
         # zd_ok = int(zd > on_z_threshold[0] and zd < on_z_threshold[1])
         # reached = int(xyd_ok and zd_ok)
@@ -62,17 +76,20 @@ def obs_to_preds_single(obs, goal, n_objects):
     # Determine whether an object is on top of another object
     for o1 in range(n_objects):
         o1_pos = get_o_pos(obs, o1)
+        o1_tgt_pos = o1_pos + [0,0,BTT.on_z_offset]
         for o2 in range(n_objects):
             if o1 == o2:
                 continue
             pred_name = 'o{}_on_o{}'.format(o1,o2)
             o2_pos = get_o_pos(obs, o2)
-            xyd = np.linalg.norm(o1_pos[:2] - o2_pos[:2], axis=-1)
-            xyd_ok = int(xyd > BTT.grasp_xy_threshold[0] and xyd < BTT.grasp_xy_threshold[1])
-            zd = o2_pos[2] - o1_pos[2]
-            zd_ok = int(zd > BTT.on_z_threshold[0] and zd < BTT.on_z_threshold[1])
-            on = int(xyd_ok and zd_ok)
-            preds[pred_name] = on
+
+            # xyd = np.linalg.norm(o1_pos[:2] - o2_pos[:2], axis=-1)
+            # xyd_ok = int(xyd > BTT.grasp_xy_threshold[0] and xyd < BTT.grasp_xy_threshold[1])
+            # zd = o2_pos[2] - o1_pos[2]
+            # zd_ok = int(zd > BTT.on_z_threshold[0] and zd < BTT.on_z_threshold[1])
+            # on = int(xyd_ok and zd_ok)
+            distance = np.linalg.norm(o1_tgt_pos - o2_pos)
+            preds[pred_name] = distance < BTT.distance_threshold
 
     # Determine open and closed state of the gripper
     preds['gripper_open'] = int(gripper_state > BTT.grip_open_threshold[0] and gripper_state < BTT.grip_open_threshold[1])
@@ -80,20 +97,20 @@ def obs_to_preds_single(obs, goal, n_objects):
 
     for o in range(n_objects):
         pred_name = 'grasped_o{}'.format(o)
-        preds[pred_name] = int(preds['gripper_at_o{}'.format(o)] == 1 and preds['gripper_closed'] == 1)
+        preds[pred_name] = int(preds['gripper_at_o{}'.format(o)] == 1 and True)
         pred_name = 'o{}_at_target'.format(o)
         o_pos = get_o_pos(obs, o)
         g_pos = get_o_goal_pos(goal, o)
-        xyzd = np.linalg.norm(g_pos - o_pos, axis=-1)
-        preds[pred_name] = int(xyzd >= BTT.xyz_tgt_threshold[0] and xyzd <= BTT.xyz_tgt_threshold[1])
+        distance = np.linalg.norm(g_pos - o_pos, axis=-1)
+        preds[pred_name] = distance < BTT.distance_threshold
 
     if gripper_in_goal:
-        xyzd = np.linalg.norm(gripper_pos - goal[:3], axis=-1)
-        preds['gripper_at_target'] = int(xyzd >= BTT.xyz_tgt_threshold[0] and xyzd <= BTT.xyz_tgt_threshold[1])
+        distance = np.linalg.norm(gripper_pos - goal[:3], axis=-1)
+        preds['gripper_at_target'] = distance < BTT.distance_threshold
     else:
         preds['gripper_at_target'] = 1
 
-    one_hot = [preds[k] for k in sorted(preds.keys())]
+    one_hot = np.array([preds[k] for k in sorted(preds.keys())])
     return preds, one_hot
 
 
@@ -112,13 +129,21 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     not_grasped_str = ''
     for o in range(n_objects):
         not_grasped_str += '(not (grasped_o{}))'.format(o)
-    open_gripper_act = "(:action open_gripper \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_open) {} )\n)\n\n".format(not_grasped_str)
-    actions.append(open_gripper_act)
-    grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
-    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (gripper_open) \n\t:effect (and (gripper_at_o{}) (not (gripper_at_target)) {})\n)\n\n"
-    move_o1_on_o2_act_template = "(:action move__o{}_on__o{} \n\t:parameters () \n\t:precondition (and (grasped_o{}) {}) \n\t:effect (o{}_on_o{})\n)\n\n"
-    move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (grasped_o{}) {}) \n\t:effect (o{}_at_target)\n)\n\n"
-    move_o_on_table_template = "(:action move__o{}_on_table \n\t:parameters () \n\t:precondition (and (grasped_o{})) \n\t:effect (and (not (o{}_at_target)) {} )\n)\n\n"
+    # open_gripper_act = "(:action open_gripper \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_open) {} )\n)\n\n".format(not_grasped_str)
+    # actions.append(open_gripper_act)
+    # grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
+    # move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (gripper_open) \n\t:effect (and (gripper_at_o{}) (not (gripper_at_target)) {})\n)\n\n"
+    # move_o1_on_o2_act_template = "(:action move__o{}_on__o{} \n\t:parameters () \n\t:precondition (and (grasped_o{}) {}) \n\t:effect (o{}_on_o{})\n)\n\n"
+    # move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (grasped_o{}) {}) \n\t:effect (o{}_at_target)\n)\n\n"
+    # move_o_on_table_template = "(:action move__o{}_on_table \n\t:parameters () \n\t:precondition (and (grasped_o{})) \n\t:effect (and (not (o{}_at_target)) {} )\n)\n\n"
+    # open_gripper_act = "(:action open_gripper \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_open) {} )\n)\n\n".format(
+    #     not_grasped_str)
+    # actions.append(open_gripper_act)
+    # grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
+    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_closed) (gripper_at_o{}) (grasped_o{}) (not (gripper_at_target)) )\n)\n\n"
+    move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (grasped_o{}) (gripper_at_o{}) (gripper_closed) {}) \n\t:effect (and (not (grasped_o{})) (o{}_on_o{}) (gripper_open))\n)\n\n"
+    move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (grasped_o{}) (gripper_at_o{}) (gripper_closed) {}) \n\t:effect (and {} {} (o{}_at_target) (gripper_open))\n)\n\n"
+    # move_o_on_table_template = "(:action move__o{}_on_table \n\t:parameters () \n\t:precondition (and (grasped_o{})) \n\t:effect (and (not (o{}_at_target)) {} )\n)\n\n"
 
     for o in range(n_objects):
         # Grasp object action
@@ -127,8 +152,8 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
             if o == o2:
                 continue
             not_o2_on_o_str += ' (not (o{}_on_o{}))'.format(o2, o)
-        grasp_act = grasp_act_template.format(o, o, not_o2_on_o_str, o)
-        actions.append(grasp_act)
+        # grasp_act = grasp_act_template.format(o, o, not_o2_on_o_str, o)
+        # actions.append(grasp_act)
 
         # Move gripper to object action
         not_elsewhere_str = ''
@@ -137,38 +162,33 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
                 continue
             not_elsewhere_str += '(not (gripper_at_o{}))'.format(o_other)
 
-        move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, o, not_elsewhere_str)
+        move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, not_o2_on_o_str, o, o)
         actions.append(move_gripper_to_o_act)
 
         # Move o to target action. This is to place the first object on the ground on which other objects will be stacked.
-        not_o2_on_o_str = ''
-        for o2 in range(n_objects):
-            if o == o2:
-                continue
-            not_o2_on_o_str += ' (not (o{}_on_o{}))'.format(o2, o)
-        move_o_to_target_act = move_o_to_target_template.format(o, o, not_o2_on_o_str, o)
+        move_o_to_target_act = move_o_to_target_template.format(o, o, o, not_o2_on_o_str, not_grasped_str, not_elsewhere_str, o)
         actions.append(move_o_to_target_act)
 
         # Move o1 on o2 action. This is to stack objects on other objects.
         for o2 in range(n_objects):
-            if o+1 != o2:
-                continue # To restrict the action space, only allow to put an object with number o onto o+1 (e.g. object 0 on object 1, but not object 0 on object 2.)
+            if o-1 != o2:
+                continue # To restrict the action space, only allow to put an object with number o onto o-1 (e.g. object 1 on object 0, but not object 0 on object 2.)
             not_o3_on_o2_str = ''
             for o3 in range(n_objects):
                 if o3 == o2:
                     continue
                 not_o3_on_o2_str += ' (not (o{}_on_o{}))'.format(o3, o2)
-            move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, not_o3_on_o2_str, o, o2)
+            move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, o, not_o3_on_o2_str, o, o, o2)
             actions.append(move_o1_on_o2_act)
 
         # Move_o_on_table_action
-        not_o_on_o2_str = ''
-        for o2 in range(n_objects):
-            if o == o2:
-                continue
-            not_o_on_o2_str += ' (not (o{}_on_o{}))'.format(o, o2)
-        move_on_table_act = move_o_on_table_template.format(o, o, o, not_o_on_o2_str)
-        actions.append(move_on_table_act)
+        # not_o_on_o2_str = ''
+        # for o2 in range(n_objects):
+        #     if o == o2:
+        #         continue
+        #     not_o_on_o2_str += ' (not (o{}_on_o{}))'.format(o, o2)
+        # move_on_table_act = move_o_on_table_template.format(o, o, o, not_o_on_o2_str)
+        # actions.append(move_on_table_act)
 
 
         # Move o to target action
@@ -178,7 +198,7 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     not_elsewhere_str = ''
     for o in range(n_objects):
         not_elsewhere_str += '(not (gripper_at_o{}))'.format(o)
-    move_gripper_to_target = "(:action move_gripper_to_target \n\t:parameters () \n\t:precondition (gripper_open) \n\t:effect (and (gripper_at_target) {})\n)\n\n".format(not_elsewhere_str)
+    move_gripper_to_target = "(:action move_gripper_to_target \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_at_target) {})\n)\n\n".format(not_grasped_str, not_elsewhere_str)
 
     actions.append(move_gripper_to_target)
     body = predicates + "".join(actions)
@@ -203,19 +223,22 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     # tower_height = int(tower_height)
     goal_str = "(:goal (and \n"
     if gripper_has_target:
-        pred_val = "o{}_at_target".format(tower_height - 1)
+        # pred_val = "o{}_at_target".format(tower_height - 1)
+        pred_val = "o{}_at_target".format(0)
         goal_str += "\t ({})\n".format(pred_val)
         for o in range(tower_height - 1):
-            pred_val = "o{}_on_o{}".format(o, o + 1)
+            pred_val = "o{}_on_o{}".format(o + 1, o)
             goal_str += "\t ({})\n".format(pred_val)
 
         pred_val = "gripper_at_target"
         goal_str += "\t ({})\n".format(pred_val)
     else:
-        pred_val = "o{}_at_target".format(tower_height - 1)
+        # pred_val = "o{}_at_target".format(tower_height - 1)
+        pred_val = "o{}_at_target".format(0)
         goal_str += "\t ({})\n".format(pred_val)
         for o in range(tower_height - 1):
-            pred_val = "o{}_on_o{}".format(o, o + 1)
+            # pred_val = "o{}_on_o{}".format(o, o + 1)
+            pred_val = "o{}_on_o{}".format(o + 1, o)
             goal_str += "\t ({})\n".format(pred_val)
     goal_str += '))\n\n'
 
@@ -269,22 +292,23 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
             if action == 'move_gripper_to__o{}'.format(o_idx):
                 # First three elements of goal represent target gripper pos.
                 subgoal[:3] = o_pos  # Gripper should be above (at) object
-                subgoal[2] += np.mean(BTT.grasp_z_threshold)
+                subgoal[2] += np.mean(BTT.grasp_z_offset)
             if action == 'move__o{}_to_target'.format(o_idx):
-                # Gripper should be at object goal
-                subgoal[:3] = o_pos
-                subgoal[2] += np.mean(BTT.grasp_z_threshold)
-                # Object should be at object goal
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
-                subgoal[start_idx:end_idx] = goal[start_idx:end_idx]
+                o_goal = goal[start_idx:end_idx]
+                # Gripper should be at object goal
+                subgoal[:3] = o_goal
+                subgoal[2] += np.mean(BTT.grasp_z_offset)
+                # Object should be at object goal
+                subgoal[start_idx:end_idx] = o_goal
 
             for o2_idx in range(n_objects):
                 o2_pos = get_o_pos(obs, o2_idx)
                 if action == 'move__o{}_on__o{}'.format(o_idx, o2_idx):
                     # First three elements of goal represent target gripper pos.
                     subgoal[:3] = o2_pos  # Gripper should be above (at) object
-                    subgoal[2] += np.mean(BTT.grasp_z_threshold)
+                    subgoal[2] += np.mean(BTT.grasp_z_offset)
                     # Object should be at object goal
                     start_idx = (o_idx + 1) * 3
                     end_idx = start_idx + 3
