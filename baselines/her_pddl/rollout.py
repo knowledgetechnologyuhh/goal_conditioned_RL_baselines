@@ -121,7 +121,7 @@ class HierarchicalRollout(Rollout):
             preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
             self.policy.obs_to_preds_memory.store_sample_batch(n_hots, o_new, self.g)
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
-            # avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
+            avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             # Compute subgoal success
             for i in range(self.rollout_batch_size):
@@ -138,11 +138,7 @@ class HierarchicalRollout(Rollout):
                         print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
-                # if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
-                #     if plan_lens[i] > 0:
-                #         print("Next action: {}".format(new_plans[i][0][0]))
-                #     else:
-                #         print("Final goal achieved.")
+
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
@@ -153,158 +149,7 @@ class HierarchicalRollout(Rollout):
             o[...] = o_new
             ag[...] = ag_new
             self.subg = next_subg
-        obs.append(o.copy())
-        achieved_goals.append(ag.copy())
-        if return_states:
-            for i in range(self.rollout_batch_size):
-                mj_states[i].append(self.envs[i].env.sim.get_state())
-
-        self.initial_o[:] = o
-        episode = dict(o=obs,
-                       u=acts,
-                       # g=goals,
-                       g=subgoals,
-                       ag=achieved_goals)
-        for key, value in zip(self.info_keys, info_values):
-            episode['info_{}'.format(key)] = value
-
-        # stats
-        successful = np.array(successes)[-1, :]
-        assert successful.shape == (self.rollout_batch_size,)
-        success_rate = np.mean(successful)
-        self.success_history.append(success_rate)
-        if other_histories:
-            for history_index in range(len(other_histories[0])):
-                self.custom_histories.append(deque(maxlen=self.history_len))
-                self.custom_histories[history_index].append([x[history_index] for x in other_histories])
-        self.n_episodes += self.rollout_batch_size
-
-        if return_states:
-            ret = convert_episode_to_batch_major(episode), mj_states
-        else:
-            ret = convert_episode_to_batch_major(episode)
-        return ret
-
-    def generate_rollouts_hierarchical_new(self, return_states=False):
-        """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
-        policy acting on it accordingly.
-        """
-        plan_ignore_actions = ['open_gripper']
-        for o_idx in range(self.n_objects):
-            plan_ignore_actions.append('grasp__o{}'.format(o_idx))
-
-        self.reset_all_rollouts()
-
-        if return_states:
-            mj_states = [[] for _ in range(self.rollout_batch_size)]
-
-        # compute observations
-        o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
-        ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
-        o[:] = self.initial_o
-        ag[:] = self.initial_ag
-
-        # hold custom histories through out the iterations
-        other_histories = []
-
-        # generate episodes
-        obs, achieved_goals, acts, goals, subgoals, successes, subgoal_successes = [], [], [], [], [], [], []
-        info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
-                       in self.info_keys]
-
-        preds, one_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
-        plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
-        init_plan_lens = [len(p[0]) for p in plans]
-        plan_lens = init_plan_lens
-        # next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
-        next_subg = plans2subgoals(plans, o, self.g.copy())
-        #
-        avg_pred_correct = 0
-
-        for t in range(self.T):
-            if return_states:
-                for i in range(self.rollout_batch_size):
-                    mj_states[i].append(self.envs[i].env.sim.get_state())
-            self.subg = next_subg
-            acts = []
-            for i, env in enumerate(self.envs):
-                env.env.goal = self.subg[i]
-                env.env.final_goal = self.g[i]
-            if self.policy_action_params:
-                policy_output = self.policy.get_actions(o, ag, self.subg, **self.policy_action_params)
-            else:
-                policy_output = self.policy.get_actions(o, ag, self.subg)
-
-            if isinstance(policy_output, np.ndarray):
-                u = policy_output  # get the actions from the policy output since actions should be the first element
-            else:
-                u = policy_output[0]
-                other_histories.append(policy_output[1:])
-            try:
-                if u.ndim == 1:
-                    # The non-batched case should still have a reasonable shape.
-                    u = u.reshape(1, -1)
-            except:
-                self.logger.warn('Action "u" is not a Numpy array.')
-            o_new = np.empty((self.rollout_batch_size, self.dims['o']))
-            ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
-            subgoal_success = np.zeros(self.rollout_batch_size)
-            overall_success = np.zeros(self.rollout_batch_size)
-            # compute new states and observations
-            for i in range(self.rollout_batch_size):
-                curr_o_new, _, _, info = self.envs[i].step(u[i])
-                o_new[i] = curr_o_new['observation']
-                ag_new[i] = curr_o_new['achieved_goal']
-                for idx, key in enumerate(self.info_keys):
-                    info_values[idx][t, i] = info[key]
-                # if self.render:
-                #     self.envs[i].render()
-
-            preds, n_hots = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
-            self.policy.obs_to_preds_memory.store_sample_batch(n_hots, o_new, self.g)
-            n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
-            # avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
-            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
-            # Compute subgoal success
-            for i in range(self.rollout_batch_size):
-                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
-                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
-
-            # next_subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
-            next_subg = plans2subgoals(new_plans, o, self.g.copy())
-
-            for i in range(self.rollout_batch_size):
-                self.envs[i].env.goal = next_subg[i]
-                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
-                    plan_lens[i] = len(new_plans[i][0])
-                    print("Achieved subgoal {} of {}".format(init_plan_lens[i] - plan_lens[i], init_plan_lens[i]))
-                if self.render:
-                    self.envs[i].render()
-                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
-                    if plan_lens[i] > 0:
-                        print("Next action: {}".format(new_plans[i][0][0]))
-                    else:
-                        print("Final goal achieved.")
-
-            plans = new_plans
-
-            if np.isnan(o_new).any():
-                self.logger.warn('NaN caught during rollout generation. Trying again...')
-                self.reset_all_rollouts()
-                return self.generate_rollouts()
-
-            obs.append(o.copy())
-            achieved_goals.append(ag.copy())
-
-            successes.append(overall_success.copy())
-            acts.append(u.copy())
-            goals.append(self.g.copy())
-            subgoals.append(self.subg.copy())
-            o[...] = o_new
-            ag[...] = ag_new
-
-        avg_subgoal_succ = np.mean([ip -p for ip,p in zip(init_plan_lens, plan_lens)])
+        avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
         self.subgoal_succ_history.append(avg_subgoal_succ)
         avg_pred_correct /= self.T
         self.rep_correct_history.append(avg_pred_correct)
@@ -317,6 +162,7 @@ class HierarchicalRollout(Rollout):
         self.initial_o[:] = o
         episode = dict(o=obs,
                        u=acts,
+                       # g=goals,
                        g=subgoals,
                        ag=achieved_goals)
         for key, value in zip(self.info_keys, info_values):
