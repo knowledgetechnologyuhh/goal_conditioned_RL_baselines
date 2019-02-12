@@ -220,7 +220,7 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     return domain, problem
 
 
-def plans2subgoal(plans, obs, goals):
+def plans2subgoals(plans, obs, goals):
     subgoals = np.zeros(goals.shape)
     for i, (p, o, g) in enumerate(zip(plans, obs, goals)):
         # if len(p[0]) == 0:
