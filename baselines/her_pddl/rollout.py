@@ -61,8 +61,8 @@ class HierarchicalRollout(Rollout):
 
         preds, one_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
         plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
-        init_plan_lens = [len(p[0]) for p in plans]
-        plan_lens = init_plan_lens
+        init_plan_lens = [len(plans[i][0]) for i in range(len(plans))]
+        plan_lens = init_plan_lens.copy()
         # next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
         self.subg = plans2subgoals(plans, o, self.g.copy())
         #
@@ -133,14 +133,16 @@ class HierarchicalRollout(Rollout):
                 self.envs[i].env.goal = next_subg[i]
                 if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
                     plan_lens[i] = len(new_plans[i][0])
-                    print("Achieved subgoal {} of {}".format(init_plan_lens[i] - plan_lens[i], init_plan_lens[i]))
+                    n_goals_achieved = init_plan_lens[i] - plan_lens[i]
+                    if n_goals_achieved > 0:
+                        print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
-                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
-                    if plan_lens[i] > 0:
-                        print("Next action: {}".format(new_plans[i][0][0]))
-                    else:
-                        print("Final goal achieved.")
+                # if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
+                #     if plan_lens[i] > 0:
+                #         print("Next action: {}".format(new_plans[i][0][0]))
+                #     else:
+                #         print("Final goal achieved.")
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
