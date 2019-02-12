@@ -129,7 +129,7 @@ class HierarchicalRollout(Rollout):
                     print("Achieved subgoal {} of {}".format(init_plan_lens[i] - plan_lens[i], init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
-                if subgoal_success[i] > 0 and str(plans) != str(new_plans):
+                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
                     if plan_lens[i] > 0:
                         print("Next action: {}".format(new_plans[i][0][0]))
                     else:
@@ -239,7 +239,10 @@ class RolloutWorker(HierarchicalRollout):
         dur_total = time.time() - dur_start
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
-        rep_ce_loss /= (n_train_batches * n_episodes)
+        if n_episodes > 0:
+            rep_ce_loss /= (n_train_batches * n_episodes)
+        else:
+            rep_ce_loss = np.nan
         self.rep_loss_history.append(rep_ce_loss)
         return updated_policy, time_durations
 
