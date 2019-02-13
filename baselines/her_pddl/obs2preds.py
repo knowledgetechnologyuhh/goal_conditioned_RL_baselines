@@ -1,6 +1,7 @@
 import numpy as np
 from queue import deque
 import tensorflow as tf
+import threading
 
 class Obs2PredsModel():
     def __init__(self, n_preds, dim_o, dim_g):
@@ -36,41 +37,38 @@ class Obs2PredsModel():
         return input
 
 
-class Obs2PredsMem():
+class Obs2PredsBuffer():
     def __init__(self):
         self.buffer_len = 10000
         self.obs2preds_sample_buffer = None
         self.current_buf_size = 0
-        self.obs2preds_model = None
-
+        self.lock = threading.Lock()
 
     def init_buffer(self, n_preds, dim_o, dim_g):
-        p = np.zeros(shape=[self.buffer_len, n_preds])
-        self.obs2preds_sample_buffer = {"preds": np.zeros(shape=[self.buffer_len, n_preds]),
-                                    "preds_probdist": np.zeros(shape=[self.buffer_len, n_preds, 2]),
-                                    "obs": np.zeros(shape=[self.buffer_len, dim_o]),
-                                    "goal": np.zeros(shape=[self.buffer_len, dim_g])}
-        self.obs2preds_model = Obs2PredsModel(n_preds, dim_o, dim_g)
+        with self.lock:
+            self.obs2preds_sample_buffer = {"preds": np.zeros(shape=[self.buffer_len, n_preds]),
+                                            "preds_probdist": np.zeros(shape=[self.buffer_len, n_preds, 2]),
+                                            "obs": np.zeros(shape=[self.buffer_len, dim_o]),
+                                            "goal": np.zeros(shape=[self.buffer_len, dim_g])}
 
 
     def store_sample(self, preds, obs, goal):
         if self.obs2preds_sample_buffer is None:
             self.init_buffer(len(preds), len(obs), len(goal))
-
-        preds_probdist = np.zeros(shape=[len(preds), 2])
-        for i,v in enumerate(preds):
-            preds_probdist[i][int(v)] = 1
-
-        if self.current_buf_size < self.buffer_len:
-            idx = self.current_buf_size
-        else:
-            idx = np.random.randint(self.current_buf_size)
-        self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
-        self.obs2preds_sample_buffer['preds'][idx] = preds
-        self.obs2preds_sample_buffer['obs'][idx] = obs
-        self.obs2preds_sample_buffer['goal'][idx] = goal
-        self.current_buf_size += 1
-        self.current_buf_size = min(self.current_buf_size, self.buffer_len)
+            preds_probdist = np.zeros(shape=[len(preds), 2])
+            for i,v in enumerate(preds):
+                preds_probdist[i][int(v)] = 1
+            with self.lock:
+                if self.current_buf_size < self.buffer_len:
+                    idx = self.current_buf_size
+                else:
+                    idx = np.random.randint(self.current_buf_size)
+                self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
+                self.obs2preds_sample_buffer['preds'][idx] = preds
+                self.obs2preds_sample_buffer['obs'][idx] = obs
+                self.obs2preds_sample_buffer['goal'][idx] = goal
+                self.current_buf_size += 1
+                self.current_buf_size = min(self.current_buf_size, self.buffer_len)
 
 
     def store_sample_batch(self, preds, obs, goal):
@@ -78,10 +76,11 @@ class Obs2PredsMem():
             self.store_sample(p,o,g)
 
     def sample_batch(self, batch_size):
-        sample_idxs = np.random.randint(0, self.current_buf_size, size=batch_size)
-        probdists = self.obs2preds_sample_buffer['preds_probdist'][sample_idxs, :]
-        obs = self.obs2preds_sample_buffer['obs'][sample_idxs, :]
-        goals = self.obs2preds_sample_buffer['goal'][sample_idxs, :]
+        with self.lock:
+            sample_idxs = np.random.randint(0, self.current_buf_size, size=batch_size)
+            probdists = self.obs2preds_sample_buffer['preds_probdist'][sample_idxs, :]
+            obs = self.obs2preds_sample_buffer['obs'][sample_idxs, :]
+            goals = self.obs2preds_sample_buffer['goal'][sample_idxs, :]
         return {'preds': probdists, 'obs': obs, 'goals': goals}
 
 
