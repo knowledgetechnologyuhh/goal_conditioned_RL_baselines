@@ -10,7 +10,7 @@ class Obs2PredsModel():
             self.inputs_g = tf.placeholder(shape=[None, dim_g], dtype=tf.float32)
             self.preds = tf.placeholder(shape=[None, n_preds, 2], dtype=tf.uint8)
             in_layer = tf.concat([self.inputs_o, self.inputs_g], axis=1)
-            outputs = self.dense_layers(in_layer, [64, 128, n_preds * 2], name='obs2preds_nn')
+            outputs = self.dense_layers(in_layer, [64, 256, 128, n_preds * 2], name='obs2preds_nn')
             outputs = tf.reshape(outputs, [-1, n_preds, 2])
             self.prob_out = tf.nn.softmax(outputs)
             self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)

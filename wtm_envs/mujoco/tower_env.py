@@ -4,6 +4,7 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
+from wtm_envs.mujoco.tower_env_pddl import *
 import mujoco_py
 
 
@@ -63,7 +64,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.final_goal = []
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
-        # self.gripper_has_target = (gripper_goal != 'gripper_none')
+        self.gripper_has_target = (gripper_goal != 'gripper_none')
 
         self._viewers = {}
 
@@ -378,3 +379,21 @@ class TowerEnv(robot_env.RobotEnv):
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
         if self.n_objects > 0:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
+
+    def get_preds(self):
+        obs = self._get_obs()
+        preds, one_hots = obs_to_preds_single(obs['observation'], self.final_goal, self.n_objects)
+        return preds, one_hots
+
+    def get_plan(self):
+        obs = self._get_obs()
+        preds, one_hots = obs_to_preds_single(obs['observation'], self.final_goal, self.n_objects)
+        tower_height = self.n_objects # TODO: Make this better, we may want situation where several objects are to be placed on the table without tower building.
+        plan = gen_plan_single(preds, self.gripper_has_target, tower_height)
+        return plan
+
+    def action2subgoal(self, action):
+        obs = self._get_obs()['observation']
+        subg = action2subgoal(action, obs, self.final_goal, self.n_objects)
+        return subg
+
