@@ -39,8 +39,8 @@ class Obs2PredsModel():
 
 
 class Obs2PredsBuffer():
-    def __init__(self):
-        self.buffer_len = 10000
+    def __init__(self, buffer_len=6):
+        self.buffer_len = buffer_len
         self.obs2preds_sample_buffer = None
         self.current_buf_size = 0
         self.lock = threading.Lock()
@@ -56,20 +56,20 @@ class Obs2PredsBuffer():
     def store_sample(self, preds, obs, goal):
         if self.obs2preds_sample_buffer is None:
             self.init_buffer(len(preds), len(obs), len(goal))
-            preds_probdist = np.zeros(shape=[len(preds), 2])
-            for i,v in enumerate(preds):
-                preds_probdist[i][int(v)] = 1
-            with self.lock:
-                if self.current_buf_size < self.buffer_len:
-                    idx = self.current_buf_size
-                else:
-                    idx = np.random.randint(self.current_buf_size)
-                self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
-                self.obs2preds_sample_buffer['preds'][idx] = preds
-                self.obs2preds_sample_buffer['obs'][idx] = obs
-                self.obs2preds_sample_buffer['goal'][idx] = goal
-                self.current_buf_size += 1
-                self.current_buf_size = min(self.current_buf_size, self.buffer_len)
+        preds_probdist = np.zeros(shape=[len(preds), 2])
+        for i,v in enumerate(preds):
+            preds_probdist[i][int(v)] = 1
+        with self.lock:
+            if self.current_buf_size < self.buffer_len:
+                idx = self.current_buf_size
+            else:
+                idx = np.random.randint(self.current_buf_size)
+            self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
+            self.obs2preds_sample_buffer['preds'][idx] = preds
+            self.obs2preds_sample_buffer['obs'][idx] = obs
+            self.obs2preds_sample_buffer['goal'][idx] = goal
+            self.current_buf_size += 1
+            self.current_buf_size = min(self.current_buf_size, self.buffer_len)
 
 
     def store_sample_batch(self, preds, obs, goal):

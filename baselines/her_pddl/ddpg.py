@@ -107,7 +107,7 @@ class DDPG_PDDL(Policy):
         # self.n_preds = 6
         # n_preds = len(obs_to_preds_single(np.zeros(self.dimo), np.zeros(self.dimg), n_objects)[0])
         self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
-        self.obs2preds_buffer = Obs2PredsBuffer()
+        self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
