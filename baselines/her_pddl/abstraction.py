@@ -39,14 +39,14 @@ class Obs2PredsModel():
 class Obs2PredsMem():
     def __init__(self):
         self.buffer_len = 10000
-        self.sample_buffer = None
+        self.obs2preds_sample_buffer = None
         self.current_buf_size = 0
         self.obs2preds_model = None
 
 
     def init_buffer(self, n_preds, dim_o, dim_g):
         p = np.zeros(shape=[self.buffer_len, n_preds])
-        self.sample_buffer = {"preds": np.zeros(shape=[self.buffer_len, n_preds]),
+        self.obs2preds_sample_buffer = {"preds": np.zeros(shape=[self.buffer_len, n_preds]),
                                     "preds_probdist": np.zeros(shape=[self.buffer_len, n_preds, 2]),
                                     "obs": np.zeros(shape=[self.buffer_len, dim_o]),
                                     "goal": np.zeros(shape=[self.buffer_len, dim_g])}
@@ -54,7 +54,7 @@ class Obs2PredsMem():
 
 
     def store_sample(self, preds, obs, goal):
-        if self.sample_buffer is None:
+        if self.obs2preds_sample_buffer is None:
             self.init_buffer(len(preds), len(obs), len(goal))
 
         preds_probdist = np.zeros(shape=[len(preds), 2])
@@ -65,10 +65,10 @@ class Obs2PredsMem():
             idx = self.current_buf_size
         else:
             idx = np.random.randint(self.current_buf_size)
-        self.sample_buffer['preds_probdist'][idx] = preds_probdist
-        self.sample_buffer['preds'][idx] = preds
-        self.sample_buffer['obs'][idx] = obs
-        self.sample_buffer['goal'][idx] = goal
+        self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
+        self.obs2preds_sample_buffer['preds'][idx] = preds
+        self.obs2preds_sample_buffer['obs'][idx] = obs
+        self.obs2preds_sample_buffer['goal'][idx] = goal
         self.current_buf_size += 1
         self.current_buf_size = min(self.current_buf_size, self.buffer_len)
 
@@ -79,9 +79,9 @@ class Obs2PredsMem():
 
     def sample_batch(self, batch_size):
         sample_idxs = np.random.randint(0, self.current_buf_size, size=batch_size)
-        probdists = self.sample_buffer['preds_probdist'][sample_idxs, :]
-        obs = self.sample_buffer['obs'][sample_idxs, :]
-        goals = self.sample_buffer['goal'][sample_idxs, :]
+        probdists = self.obs2preds_sample_buffer['preds_probdist'][sample_idxs, :]
+        obs = self.obs2preds_sample_buffer['obs'][sample_idxs, :]
+        goals = self.obs2preds_sample_buffer['goal'][sample_idxs, :]
         return {'preds': probdists, 'obs': obs, 'goals': goals}
 
 

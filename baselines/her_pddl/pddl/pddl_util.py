@@ -179,10 +179,10 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
 
     return domain, problem
 
-def gen_plans(preds, gripper_has_target, tower_height, ignore_actions=[]):
+def gen_plans(preds, gripper_has_target, tower_height):
     plans = []
     for p in preds:
-        plan = gen_plan_single(p, gripper_has_target, tower_height, ignore_actions=ignore_actions)
+        plan = gen_plan_single(p, gripper_has_target, tower_height)
         plans.append(plan)
     return plans
 
