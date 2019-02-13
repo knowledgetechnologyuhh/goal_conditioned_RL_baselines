@@ -14,8 +14,8 @@ class Obs2PredsModel():
             outputs = tf.reshape(outputs, [-1, n_preds, 2])
             self.prob_out = tf.nn.softmax(outputs)
             self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
-            # self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
-            self.optimizer = tf.train.RMSPropOptimizer(learning_rate=0.001).minimize(self.celoss)
+            self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
+            # self.optimizer = tf.train.RMSPropOptimizer(learning_rate=0.001).minimize(self.celoss)
         obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='obs2preds')
         tf.variables_initializer(obs2preds_vars).run()
 
