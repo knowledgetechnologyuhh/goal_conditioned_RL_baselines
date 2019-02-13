@@ -25,3 +25,4 @@ class NicobotTowerBuildMujocoEnv(nicobot_env.NicobotEnv, utils.EzPickle):
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.04,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height)
         utils.EzPickle.__init__(self)
+
