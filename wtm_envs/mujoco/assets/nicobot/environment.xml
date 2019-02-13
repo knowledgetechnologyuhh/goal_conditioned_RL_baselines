@@ -33,27 +33,27 @@
 
 		<body name="object0" pos="0.025 0.025 0.025">
 			<joint name="object0:joint" type="free" damping="0.01"></joint>
-			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object0" material="block_mat" rgba="1 0 1 1" mass="2"></geom>
+			<geom size="0.02 0.02 0.02" type="box" condim="3" name="object0" material="block_mat" rgba="1 0 1 1" mass="2"></geom>
 			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 		<body name="object1" pos="0.025 0.025 0.05">
 			<joint name="object1:joint" type="free" damping="0.01"></joint>
-			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object1" material="block_mat" rgba="0 1 0 1" mass="2"></geom>
+			<geom size="0.02 0.02 0.02" type="box" condim="3" name="object1" material="block_mat" rgba="0 1 0 1" mass="2"></geom>
 			<site name="object1" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 		<body name="object2" pos="0.025 0.025 0.075">
 			<joint name="object2:joint" type="free" damping="0.01"></joint>
-			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object2" material="block_mat" rgba="0 0 1 1" mass="2"></geom>
+			<geom size="0.02 0.02 0.02" type="box" condim="3" name="object2" material="block_mat" rgba="0 0 1 1" mass="2"></geom>
 			<site name="object2" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 		<body name="object3" pos="0.025 0.025 0.075">
 			<joint name="object3:joint" type="free" damping="0.01"></joint>
-			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object3" material="block_mat" rgba="1 1 0 1" mass="2"></geom>
+			<geom size="0.02 0.02 0.02" type="box" condim="3" name="object3" material="block_mat" rgba="1 1 0 1" mass="2"></geom>
 			<site name="object3" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 		<body name="object4" pos="0.025 0.025 0.075">
 			<joint name="object4:joint" type="free" damping="0.01"></joint>
-			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object4" material="block_mat" rgba="0 1 1 1" mass="2"></geom>
+			<geom size="0.02 0.02 0.02" type="box" condim="3" name="object4" material="block_mat" rgba="0 1 1 1" mass="2"></geom>
 			<site name="object4" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 

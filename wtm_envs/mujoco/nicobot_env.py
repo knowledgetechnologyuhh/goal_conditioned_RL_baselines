@@ -38,8 +38,8 @@ class NicobotEnv(tower_env.TowerEnv):
         # pos_ctrl[0] += 0.20  # add constant to x-axis to avoid generating actions behind the robot
 
         rot_ctrl = [0., 0., 0., 0.]  # fixed rotation of the end effector, expressed as a quaternion
-        gripper_ctrl = np.array([gripper_ctrl, gripper_ctrl])
-        assert gripper_ctrl.shape == (2,)
+        gripper_ctrl = np.array([gripper_ctrl, gripper_ctrl, gripper_ctrl])
+        assert gripper_ctrl.shape == (3,)
         if self.block_gripper:
             gripper_ctrl = np.zeros_like(gripper_ctrl)
         action = np.concatenate([pos_ctrl, rot_ctrl, gripper_ctrl])
@@ -55,13 +55,34 @@ class NicobotEnv(tower_env.TowerEnv):
         self.sim.forward()
 
         # Move end effector into position.
+
+        gripper_rotation = np.array([1., 0.3, -0.5, 0.])
+        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
+
         gripper_target = np.array([0.64, 0.1, 0.0 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
             'robot0:grip')
-        gripper_rotation = np.array([1., 0.3, -0.5, 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
+        # self.goal = self._sample_goal()
         for _ in range(10):
             self.sim.step()
+            self.render()
+
+        gripper_target = np.array([0.64, 0.1, 0.07 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
+            'robot0:grip')
+        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
+        x_start = gripper_target[0]
+        x_end = gripper_target[0] - 0.2
+        steps = 200
+        step = (x_start - x_end) / steps
+        current_x = x_start
+        while current_x > x_end:
+            gripper_target[0] = current_x
+            self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
+            current_x -= step
+            self.sim.step()
+            self.render()
+            print(current_x)
+
 
         # Offset the random goal if gripper random is used
         if self.gripper_relative_target:
