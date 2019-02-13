@@ -5,21 +5,8 @@ import time
 import copy
 
 class BuildTowerThresholds:
-    # grasp_xy_threshold = [0.0, 0.03]
-    # # grasp_z_threshold = [-0.015, 0.02]
-    # grasp_z_threshold = [0.0, 0.1]
-    # grip_open_threshold = [0.038, 1.0]
-    # grip_closed_threshold = [0.0, 0.025]
-    # on_z_threshold = [0.047, 0.06]
-    # xyz_tgt_threshold = [0.0, 0.05]
-
-    # grasp_xy_threshold = [0.0, 0.05]
-    # # grasp_z_threshold = [-0.015, 0.02]
-    # grasp_z_threshold = [0.0, 0.05]
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
-    # on_z_threshold = [0.047, 0.06]
-    # xyz_tgt_threshold = [0.0, 0.05]
     distance_threshold = 0.05
     grasp_z_offset = 0.02
     on_z_offset = 0.05
@@ -61,17 +48,8 @@ def obs_to_preds_single(obs, goal, n_objects):
         o_pos = get_o_pos(obs, o)
         gripper_tgt_pos = o_pos
         gripper_tgt_pos[2] = o_pos[2] + BTT.grasp_z_offset
-        # xyd = np.linalg.norm(gripper_pos[:2] - o_pos[:2], axis=-1)
-        # xyd_ok = int(xyd > BTT.grasp_xy_threshold[0] and xyd < BTT.grasp_xy_threshold[1])
-        # zd = gripper_pos[2] - o_pos[2]
-        # zd_ok = int(zd > BTT.grasp_z_threshold[0] and zd < BTT.grasp_z_threshold[1])
-        # reached = int(xyd_ok and zd_ok)
         distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
         preds[pred_name] = distance < BTT.distance_threshold
-        # pred_name = 'gripper_above_o{}'.format(o)
-        # zd_ok = int(zd > on_z_threshold[0] and zd < on_z_threshold[1])
-        # reached = int(xyd_ok and zd_ok)
-        # preds[pred_name] = reached
 
     # Determine whether an object is on top of another object
     for o1 in range(n_objects):
@@ -82,22 +60,10 @@ def obs_to_preds_single(obs, goal, n_objects):
                 continue
             pred_name = 'o{}_on_o{}'.format(o1,o2)
             o2_pos = get_o_pos(obs, o2)
-
-            # xyd = np.linalg.norm(o1_pos[:2] - o2_pos[:2], axis=-1)
-            # xyd_ok = int(xyd > BTT.grasp_xy_threshold[0] and xyd < BTT.grasp_xy_threshold[1])
-            # zd = o2_pos[2] - o1_pos[2]
-            # zd_ok = int(zd > BTT.on_z_threshold[0] and zd < BTT.on_z_threshold[1])
-            # on = int(xyd_ok and zd_ok)
             distance = np.linalg.norm(o1_tgt_pos - o2_pos)
             preds[pred_name] = distance < BTT.distance_threshold
 
-    # Determine open and closed state of the gripper
-    # preds['gripper_open'] = int(gripper_state > BTT.grip_open_threshold[0] and gripper_state < BTT.grip_open_threshold[1])
-    # preds['gripper_closed'] = int(gripper_state > BTT.grip_closed_threshold[0] and gripper_state < BTT.grip_closed_threshold[1])
-
     for o in range(n_objects):
-        # pred_name = 'grasped_o{}'.format(o)
-        # preds[pred_name] = int(preds['gripper_at_o{}'.format(o)] == 1 and True)
         pred_name = 'o{}_at_target'.format(o)
         o_pos = get_o_pos(obs, o)
         g_pos = get_o_goal_pos(goal, o)
@@ -129,22 +95,9 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     not_grasped_str = ''
     for o in range(n_objects):
         not_grasped_str += '(not (grasped_o{}))'.format(o)
-    # open_gripper_act = "(:action open_gripper \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_open) {} )\n)\n\n".format(not_grasped_str)
-    # actions.append(open_gripper_act)
-    # grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
-    # move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (gripper_open) \n\t:effect (and (gripper_at_o{}) (not (gripper_at_target)) {})\n)\n\n"
-    # move_o1_on_o2_act_template = "(:action move__o{}_on__o{} \n\t:parameters () \n\t:precondition (and (grasped_o{}) {}) \n\t:effect (o{}_on_o{})\n)\n\n"
-    # move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (grasped_o{}) {}) \n\t:effect (o{}_at_target)\n)\n\n"
-    # move_o_on_table_template = "(:action move__o{}_on_table \n\t:parameters () \n\t:precondition (and (grasped_o{})) \n\t:effect (and (not (o{}_at_target)) {} )\n)\n\n"
-    # open_gripper_act = "(:action open_gripper \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_open) {} )\n)\n\n".format(
-    #     not_grasped_str)
-    # actions.append(open_gripper_act)
-    # grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
     move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_at_o{}) {} (not (gripper_at_target)) )\n)\n\n"
     move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) ) \n\t:effect (and (o{}_at_target) )\n)\n\n"
     move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (gripper_at_o{})  {}) \n\t:effect (and (o{}_on_o{}) )\n)\n\n"
-
-    # move_o_on_table_template = "(:action move__o{}_on_table \n\t:parameters () \n\t:precondition (and (grasped_o{})) \n\t:effect (and (not (o{}_at_target)) {} )\n)\n\n"
 
     for o in range(n_objects):
         # Grasp object action
@@ -179,19 +132,6 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
             move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, not_o3_on_o2_str, o, o2)
             actions.append(move_o1_on_o2_act)
 
-        # Move_o_on_table_action
-        # not_o_on_o2_str = ''
-        # for o2 in range(n_objects):
-        #     if o == o2:
-        #         continue
-        #     not_o_on_o2_str += ' (not (o{}_on_o{}))'.format(o, o2)
-        # move_on_table_act = move_o_on_table_template.format(o, o, o, not_o_on_o2_str)
-        # actions.append(move_on_table_act)
-
-
-        # Move o to target action
-        # move_o_to_tgt_act = move_o_to_target_template.format(o, o, o)
-        # actions.append(move_o_to_tgt_act)
 
     not_elsewhere_str = ''
     for o in range(n_objects):
@@ -217,11 +157,8 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     tgt_goal_z_idx = 5
     if gripper_has_target == False:
         tgt_goal_z_idx -= 3
-    # tower_height = round((goal[tgt_goal_z_idx] - table_height + (block_height / 2)) / block_height)
-    # tower_height = int(tower_height)
     goal_str = "(:goal (and \n"
     if gripper_has_target:
-        # pred_val = "o{}_at_target".format(tower_height - 1)
         pred_val = "o{}_at_target".format(0)
         goal_str += "\t ({})\n".format(pred_val)
         for o in range(tower_height - 1):
@@ -231,11 +168,9 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
         pred_val = "gripper_at_target"
         goal_str += "\t ({})\n".format(pred_val)
     else:
-        # pred_val = "o{}_at_target".format(tower_height - 1)
         pred_val = "o{}_at_target".format(0)
         goal_str += "\t ({})\n".format(pred_val)
         for o in range(tower_height - 1):
-            # pred_val = "o{}_on_o{}".format(o, o + 1)
             pred_val = "o{}_on_o{}".format(o + 1, o)
             goal_str += "\t ({})\n".format(pred_val)
     goal_str += '))\n\n'
@@ -254,25 +189,18 @@ def gen_plans(preds, gripper_has_target, tower_height, ignore_actions=[]):
 def plans2subgoals(plans, obs, goals, n_objects, actions_to_skip=[]):
     subgoals = np.zeros(goals.shape)
     for i, (p, o, g) in enumerate(zip(plans, obs, goals)):
-        # if len(p[0]) == 0:
-        #     print("Empty plan now: {}".format(datetime.datetime.now()))
         subgoal = plan2subgoal(p, o, g, n_objects, actions_to_skip=actions_to_skip)
         subgoals[i] = subgoal
     return subgoals
 
 
 def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
-    # This currently only works for the environment TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1. TODO: Make more general.
-    # if self.env_name != 'TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1':
-    #     print("Subgoals currently only work for env TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1")
-    #     return goal
     BTT = BuildTowerThresholds
     def get_o_pos(obs, o_idx):
         start_idx = (o_idx + 1) * 3
         end_idx = start_idx + 3
         o_pos = obs[start_idx:end_idx]
         return o_pos
-    # print(plan[0])
     final_goal = copy.deepcopy(goal)
     subgoal = copy.deepcopy(goal)
 
@@ -318,14 +246,8 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
 
 def gen_plan_single(preds, gripper_has_target, tower_height, ignore_actions=[]):
 
-    # dom_file = None
-    # prob_file = None
-
     hl_obs = [preds[k] for k in sorted(preds.keys())]
     prob_key = str(hl_obs) + "_" + str(tower_height)
-
-    # dom_file = 'pddl/build_tower/{}_domain.pddl'.format(prob_key)
-    # prob_file = 'pddl/build_tower/{}_problem.pddl'.format(prob_key)
 
     domain, problem = gen_pddl_domain_problem(preds, tower_height, gripper_has_target=gripper_has_target)
 
