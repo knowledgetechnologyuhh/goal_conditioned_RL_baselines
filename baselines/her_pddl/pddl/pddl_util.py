@@ -11,13 +11,13 @@ class BuildTowerThresholds:
     grasp_z_offset = 0.02
     on_z_offset = 0.05
 
+
 def obs_to_preds(obs, goal, n_objects):
     preds, n_hots = [], []
     for o,g in zip(obs,goal):
         p,oh = obs_to_preds_single(o,g,n_objects)
         preds.append(p)
         n_hots.append(oh)
-
     return preds, np.array(n_hots)
 
 
