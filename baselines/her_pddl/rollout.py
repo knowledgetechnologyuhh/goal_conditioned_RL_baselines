@@ -64,7 +64,10 @@ class HierarchicalRollout(Rollout):
             self.envs[i].env.final_goal = self.g[i]
             preds.append(self.envs[i].env.get_preds()[0])
             plans.append(self.envs[i].env.get_plan())
-            self.subg[i] = self.envs[i].env.action2subgoal(plans[i][0][0])
+            if len(plans[i][0]) > 0:
+                self.subg[i] = self.envs[i].env.action2subgoal(plans[i][0][0])
+            else:
+                self.subg[i] = self.g[i]
         init_plan_lens = [len(plans[i][0]) for i in range(len(plans))]
         plan_lens = init_plan_lens.copy()
         #
