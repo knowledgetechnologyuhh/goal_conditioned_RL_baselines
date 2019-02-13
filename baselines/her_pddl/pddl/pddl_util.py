@@ -140,7 +140,7 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     #     not_grasped_str)
     # actions.append(open_gripper_act)
     # grasp_act_template = "(:action grasp__o{} \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) {}) \n\t:effect (and (grasped_o{}) (not (gripper_open)))\n)\n\n"
-    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_at_o{}) {} (not (gripper_at_target)) )\n)\n\n"
+    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_at_o{}) {} (not (gripper_at_target)) )\n)\n\n"
     move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) ) \n\t:effect (and (o{}_at_target) )\n)\n\n"
     move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (gripper_at_o{})  {}) \n\t:effect (and (o{}_on_o{}) )\n)\n\n"
 
