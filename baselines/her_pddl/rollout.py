@@ -119,6 +119,7 @@ class HierarchicalRollout(Rollout):
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
             self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
+            n_hots = np.array(n_hots)
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
 
 
