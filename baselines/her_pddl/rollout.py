@@ -117,6 +117,7 @@ class HierarchicalRollout(Rollout):
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
 
+
             # Compute subgoal success
             for i in range(self.rollout_batch_size):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
