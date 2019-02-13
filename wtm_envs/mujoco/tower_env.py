@@ -221,8 +221,9 @@ class TowerEnv(robot_env.RobotEnv):
             gripper_tgt_size[0] = 0.05
             self.sim.model.site_size[gripper_target_site_id] = gripper_tgt_size
             self.sim.model.site_size[gripper_goal_site_id] = gripper_tgt_size
-            gripper_tgt_goal = self.goal[0:3] - sites_offset[0]
-            self.sim.model.site_pos[gripper_target_site_id] = gripper_tgt_goal
+            if self.goal != []:
+                gripper_tgt_goal = self.goal[0:3] - sites_offset[0]
+                self.sim.model.site_pos[gripper_target_site_id] = gripper_tgt_goal
             if self.final_goal != []:
                 gripper_tgt_final_goal = self.final_goal[0:3] - sites_offset[0]
                 self.sim.model.site_pos[gripper_goal_site_id] = gripper_tgt_final_goal
@@ -235,8 +236,9 @@ class TowerEnv(robot_env.RobotEnv):
             o_tgt_size[0] = 0.05
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
             self.sim.model.site_size[o_goal_site_id] = o_tgt_size
-            o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
-            self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
+            if self.goal != []:
+                o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
+                self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
             if self.final_goal != []:
                 o_tgt_final_goal = self.final_goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
                 self.sim.model.site_pos[o_goal_site_id] = o_tgt_final_goal
@@ -382,7 +384,11 @@ class TowerEnv(robot_env.RobotEnv):
 
     def get_preds(self):
         obs = self._get_obs()
-        preds, one_hots = obs_to_preds_single(obs['observation'], self.final_goal, self.n_objects)
+        if self.final_goal == []:
+            g = self.goal
+        else:
+            g = self.final_goal
+        preds, one_hots = obs_to_preds_single(obs['observation'], g, self.n_objects)
         return preds, one_hots
 
     def get_plan(self):

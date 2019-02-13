@@ -35,7 +35,7 @@ def ctrl_set_action(sim, action):
                 sim.data.ctrl[i] = sim.data.qpos[idx] + action[i]
 
 
-def mocap_set_action(sim, action, absolute_ref=None):
+def mocap_set_action(sim, flat_action, absolute_ref=None):
     """The action controls the robot using mocaps. Specifically, bodies
     on the robot (for example the gripper wrist) is controlled with
     mocap bodies. In this case the action is the desired difference
@@ -45,7 +45,7 @@ def mocap_set_action(sim, action, absolute_ref=None):
     constraint optimizer tries to center the welded body on the mocap.
     """
     if sim.model.nmocap > 0:
-        action, _ = np.split(action, (sim.model.nmocap * 7, ))
+        action, _ = np.split(flat_action, (sim.model.nmocap * 7, ))
         action = action.reshape(sim.model.nmocap, 7)
 
         pos_delta = action[:, :3]
