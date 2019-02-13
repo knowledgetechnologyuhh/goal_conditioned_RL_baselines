@@ -62,6 +62,7 @@ class HierarchicalRollout(Rollout):
         preds, plans = [], []
 
         for i in range(self.rollout_batch_size):
+            self.envs[i].env.final_goal = self.g[i]
             preds.append(self.envs[i].env.get_preds()[0])
             plans.append(self.envs[i].env.get_plan())
             self.subg[i] = self.envs[i].env.action2subgoal(plans[i][0][0])
