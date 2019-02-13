@@ -59,7 +59,7 @@ class HierarchicalRollout(Rollout):
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
                        in self.info_keys]
 
-        preds, plans = [] = []
+        preds, plans = [], []
 
         for i in range(self.rollout_batch_size):
             preds.append(self.envs[i].env.get_preds()[0])
