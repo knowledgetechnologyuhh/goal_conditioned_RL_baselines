@@ -4,8 +4,8 @@ import pickle
 
 from baselines import logger
 from baselines.her_pddl.ddpg import DDPG_PDDL as DDPG
-from baselines.her.her import make_sample_her_transitions
-
+from baselines.her_pddl.her import make_sample_her_transitions
+from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
@@ -175,10 +175,10 @@ def configure_policy(dims, params):
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
-
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
+    n_preds = len(obs_to_preds_single(np.ones(dims['o']), np.ones(dims['g']), env.env.n_objects)[0])
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns
@@ -188,7 +188,8 @@ def configure_policy(dims, params):
                         'sample_transitions': sample_her_transitions,
                         'gamma': gamma,
                         'reuse': reuse,
-                        'use_mpi': use_mpi
+                        'use_mpi': use_mpi,
+                        'n_preds': n_preds
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
