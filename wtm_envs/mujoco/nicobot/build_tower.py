@@ -20,7 +20,7 @@ class NicobotTowerBuildMujocoEnv(nicobot_env.NicobotEnv, utils.EzPickle):
         nicobot_env.NicobotEnv.__init__(
             self, 'nicobot/environment.xml', block_gripper=False, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
-            obj_range=0.20, target_range=0.05, distance_threshold=0.05, gripper_relative_target=False,
+            obj_range=0.10, target_range=0.05, distance_threshold=0.05, gripper_relative_target=False,
             initial_qpos=initial_qpos, reward_type=reward_type,
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.04,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height)
