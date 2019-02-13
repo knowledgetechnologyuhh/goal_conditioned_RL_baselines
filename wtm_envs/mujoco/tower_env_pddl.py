@@ -76,6 +76,7 @@ def obs_to_preds_single(obs, goal, n_objects):
     else:
         preds['gripper_at_target'] = 1
 
+    preds = {p: int(v) for p,v in preds.items()}
     one_hot = np.array([preds[k] for k in sorted(preds.keys())])
     return preds, one_hot
 

@@ -174,9 +174,9 @@ class TowerEnv(robot_env.RobotEnv):
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
 
-        obs = np.concatenate([
-            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
-        ])
+        # obs = np.concatenate([
+        #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
+        # ])
 
         achieved_goal = self._obs2goal(obs)
 
@@ -250,7 +250,6 @@ class TowerEnv(robot_env.RobotEnv):
     def _reset_sim(self):
         self.step_ctr = 0
         self.sim.set_state(self.initial_state)
-
         # Randomize start position of objects.
         for o in range(self.n_objects):
             oname = 'object{}'.format(o)
@@ -274,7 +273,6 @@ class TowerEnv(robot_env.RobotEnv):
             object_qpos[:2] = object_xpos
             object_qpos[2] = self.table_height + (self.obj_height / 2)
             self.sim.data.set_joint_qpos('{}:joint'.format(oname), object_qpos)
-
         self.sim.forward()
         return True
 
