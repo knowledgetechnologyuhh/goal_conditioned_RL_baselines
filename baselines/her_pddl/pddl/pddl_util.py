@@ -278,7 +278,7 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
 
     # By default, all objects stays where they are:
     for o_idx in range(n_objects):
-        o_pos = get_o_pos(obs, o_idx)
+        o_pos = get_o_pos(obs, o_idx).copy()
         start_idx = (o_idx + 1) * 3
         end_idx = start_idx + 3
         subgoal[start_idx:end_idx] = o_pos
