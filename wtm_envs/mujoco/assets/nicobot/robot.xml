@@ -1,6 +1,6 @@
 <mujoco model="robot0">
     <body mocap="true" name="robot0:mocap" pos="0 0 0">
-        <geom conaffinity="0" contype="0" pos="0.023416 0.006052 0.070837" rgba="0 0.5 0 0.7" size="0.005 0.005 0.005" type="box"></geom>
+        <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.7" size="0.005 0.005 0.005" type="box"></geom>
         <!--<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="1 0.005 0.005" type="box"></geom>-->
         <!--<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="0.005 1 0.001" type="box"></geom>-->
         <!--<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.1" size="0.005 0.005 1" type="box"></geom>-->
@@ -12,6 +12,7 @@
         <inertial diaginertia="1.2869 1.2236 0.9868" mass="70.1294" pos="-0.0036 0 0.0014" quat="0.7605 -0.0133 -0.0061 0.6491"></inertial>
         <geom pos="-0.026368 -0.075212 0.525308" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.270588 0.270588 0.270588 1" mesh="torso_iam_fb80b350" />
         <geom pos="-0.026368 -0.075212 0.525308" type="mesh" rgba="0.270588 0.270588 0.270588 1" mesh="torso_iam_fb80b350" />
+
         <body name="right_shoulder:11" pos="0.026783 -0.049912 0.748809" quat="0.99478 0 0 -0.102042">
             <inertial pos="0.005637 0.000876 0.033153" quat="0.421242 0.476871 0.383076 0.669628" mass="0.084038" diaginertia="3.42047e-05 3.34346e-05 2.53606e-05" />
             <joint type="hinge" name="r_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-1.745 2.182" />
@@ -102,6 +103,7 @@
                 </body>
             </body>
         </body>
+
         <body name="right_hip_up:11" pos="0.010783 -0.055212 0.519208">
             <inertial pos="0.005067 2e-05 -0.012737" quat="0.466387 0.531491 0.531491 0.466387" mass="0.026572" diaginertia="4.3e-05 4.05242e-05 9.47583e-06" />
             <joint type="hinge" name="r_hip_z" pos="0 0 0" axis="0 0 1" limited="true" range="-0.698132 0.698132" />
@@ -138,6 +140,7 @@
                 </body>
             </body>
         </body>
+
         <body name="left_hip_up:11" pos="0.010783 0.054788 0.519208">
             <inertial pos="0.005067 -1e-06 -0.012736" quat="0.468459 0.529666 0.529666 0.468459" mass="0.072012" diaginertia="0.000117 0.000109231 2.67689e-05" />
             <joint type="hinge" name="l_hip_z" pos="0 0 0" axis="0 0 1" limited="true" range="-0.698132 0.698132" />
@@ -174,6 +177,7 @@
                 </body>
             </body>
         </body>
+
         <body name="neck:11" pos="0.001283 -0.000212 0.756309">
             <inertial pos="0 0.000266 0.050352" quat="0.999909 -0.0135 0 0" mass="0.090439" diaginertia="6e-05 5.6027e-05 1.8973e-05" />
             <joint type="hinge" name="head_z" pos="0 0 0" axis="0 0 1" limited="true" range="-3.124 3.142" />
@@ -190,7 +194,8 @@
                 <geom pos="0.08458 -0.057762 0.08078" type="sphere" size="0.014" rgba="0 0 0 1"/>
             </body>
         </body>
-        <body name="left_shoulder:11" pos="0.026783 0.049488 0.748809" quat="0.999952 0 0 0.00980834">
+
+        <body childclass="robot0:fetchArm" name="left_shoulder:11" pos="0.026783 0.049488 0.748809" quat="0.999952 0 0 0.00980834">
             <inertial pos="0.005702 0.000175 0.033153" quat="0.421242 0.476871 0.383076 0.669628" mass="0.084038" diaginertia="3.42047e-05 3.34346e-05 2.53606e-05" />
             <joint type="hinge" name="l_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-2.182 1.745" />
             <geom pos="0.014919 0.097299 -0.01461" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="left_shoulder_up_iam_1ca4d925" />
@@ -215,12 +220,16 @@
                             <joint type="hinge" name="l_wrist_z" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.571 1.571" />
                             <geom pos="-0.000319 0.006617 0.070682" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="left_wrist_iam_c75e4b6f" />
                             <geom pos="-0.000319 0.006617 0.070682" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="left_wrist_iam_c75e4b6f" />
-                            <body name="robot0:gripper_link" pos="0.023416 0.006052 0.070837" quat="0.973559 0.228436 0 0">
+                            <body name="left_fist:11" pos="0.023416 0.006052 0.070837" quat="0.973559 0.228436 0 0">
                                 <inertial pos="-0.027199 0.000117 0.017191" quat="0.5 0.5 0.5 0.5" mass="0.005222" diaginertia="2e-06 2e-06 1e-06" />
                                 <joint type="hinge" name="l_wrist_x" pos="0 0 0" axis="1 0 0" limited="true" range="-0.872665 0" />
                                 <geom pos="-0.023233 0.001906 0.017234" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.74902 0.74902 0.74902 1" mesh="left_palm_iam_b92c61b5" />
                                 <geom pos="-0.023233 0.001906 0.017234" type="mesh" rgba="0.74902 0.74902 0.74902 1" mesh="left_palm_iam_b92c61b5" />
-
+                                <body name="robot0:gripper_link" pos="-0.028 0.0199 0.02842" quat="0 0 0 0">
+                                    <geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0.7" size="0.005 0.005 0.005" type="box" />
+                                    <inertial pos="-0.027199 -0.000117 0.017191" quat="0.5 0.5 0.5 0.5" mass="0.005222" diaginertia="2e-06 2e-06 2e-06" />
+                                    <joint type="ball" name="connector_l" pos="0 0 0" axis="0 0 0"/>
+                                </body>
                                 <body childclass="robot0:fetchGripper" name="robot0:l_gripper_finger_link" pos="-0.028 0.0199 0.00842" quat="-1.46262e-07 9.27758e-08 0.535641 -0.844446">
                                     <inertial pos="-0.004101 0.000556 -0.005752" quat="0.6183 0.224212 -0.00570587 0.753261" mass="9e-06" diaginertia="1.83397e-05 1.64025e-05 3.25779e-06" />
                                     <joint type="hinge" name="robot0:l_gripper_finger_joint"  pos="0 0 0" axis="1 0 0" limited="true" range="-1.309 0" />
