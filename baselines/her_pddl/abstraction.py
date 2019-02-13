@@ -15,7 +15,6 @@ class Obs2PredsModel():
             self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
             self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
         obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='obs2preds')
-
         tf.variables_initializer(obs2preds_vars).run()
 
 
@@ -60,7 +59,7 @@ class Obs2PredsMem():
 
         preds_probdist = np.zeros(shape=[len(preds), 2])
         for i,v in enumerate(preds):
-            preds_probdist[i][v] = 1
+            preds_probdist[i][int(v)] = 1
 
         if self.current_buf_size < self.buffer_len:
             idx = self.current_buf_size

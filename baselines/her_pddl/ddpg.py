@@ -232,8 +232,6 @@ class DDPG_PDDL(Policy):
                                           self.obs_to_preds_memory.obs2preds_model.celoss],
                       feed_dict=feed_dict)
 
-        # Sample batch from obs2preds memory
-        # train that batch
         return celoss
 
     def predict_representation(self, batch):
