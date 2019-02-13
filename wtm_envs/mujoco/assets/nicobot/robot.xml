@@ -197,7 +197,7 @@
 
         <body childclass="robot0:fetchArm" name="left_shoulder:11" pos="0.026783 0.049488 0.748809" quat="0.999952 0 0 0.00980834">
             <inertial pos="0.005702 0.000175 0.033153" quat="0.421242 0.476871 0.383076 0.669628" mass="0.084038" diaginertia="3.42047e-05 3.34346e-05 2.53606e-05" />
-            <joint type="hinge" name="l_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-2.182 1.745" />
+            <joint type="hinge" name="l_shoulder_z" pos="0 0 0" axis="0 0 1" limited="true" range="-1.182 0.745" /> <!-- range="-2.182 1.745"-->
             <geom pos="0.014919 0.097299 -0.01461" type="mesh" contype="0" conaffinity="0" group="1" rgba="0.176471 0.176471 0.176471 1" mesh="left_shoulder_up_iam_1ca4d925" />
             <geom pos="0.014919 0.097299 -0.01461" type="mesh" rgba="0.176471 0.176471 0.176471 1" mesh="left_shoulder_up_iam_1ca4d925" />
             <body name="left_collarbone:11" pos="0.022445 0.022567 0.037" quat="0.99995 -2.17357e-05 -0.00222489 -0.00976882">

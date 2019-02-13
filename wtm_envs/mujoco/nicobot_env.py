@@ -24,12 +24,12 @@ class NicobotEnv(tower_env.TowerEnv):
         pos_ctrl, gripper_ctrl = action[:3], action[3]
 
         if self.gripper_relative_target:
-            pos_ctrl *= 0.05  # limit maximum change in position. was 0.05\
+            pos_ctrl *= 0.02  # limit maximum change in position. was 0.05\
             ref_frame = None
         else:  # Absolute target relative to the robot frame
             pos_ctrl[0] *= 0.1  # limit maximum change in position. was 0.05
             pos_ctrl[1] *= 0.15  # limit maximum change in position. was 0.05
-            pos_ctrl[2] *= 0.15  # limit maximum change in position. was 0.05
+            pos_ctrl[2] *= 0.10  # limit maximum change in position. was 0.05
             pos_ctrl[0] += 0.30  # add constant to x-axis to avoid generating actions behind the robot
             pos_ctrl[1] += 0.05
             pos_ctrl[2] += 0.6
