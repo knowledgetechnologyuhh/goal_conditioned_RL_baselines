@@ -120,7 +120,7 @@ class HierarchicalRollout(Rollout):
                 preds.append(self.envs[i].env.get_preds()[0])
                 n_hots.append(self.envs[i].env.get_preds()[1])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            # n_hots[0] = np.array([0,0,1])
+            n_hots[0] = np.array([0,0,1])
             self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
             n_hots = np.array(n_hots)
