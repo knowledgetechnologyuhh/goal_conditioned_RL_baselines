@@ -36,7 +36,7 @@ class HierarchicalRollout(Rollout):
         return self.generate_rollouts_hierarchical(return_states=return_states)
 
     def generate_rollouts_hierarchical(self, return_states=False):
-        plan_ignore_actions = ['open_gripper']
+        # plan_ignore_actions = ['open_gripper']
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
         policy acting on it accordingly.
         """
@@ -122,7 +122,14 @@ class HierarchicalRollout(Rollout):
             for i in range(self.rollout_batch_size):
                 subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
-            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height, ignore_actions=plan_ignore_actions)
+            new_plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
+
+            # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
+            for i, (newp,p) in enumerate(zip(new_plans, plans)):
+                if len(newp[0]) > 0:
+                    if p[0] == newp[0][1:]:
+                        new_plans[i] = p
+            plans = new_plans
             next_subg = plans2subgoals(new_plans, o, self.g.copy(), self.n_objects)
             for i in range(self.rollout_batch_size):
                 self.envs[i].env.goal = next_subg[i]
