@@ -338,6 +338,10 @@ def gen_plan_single(preds, gripper_has_target, tower_height, ignore_actions=[]):
     goal_achieved = False
     if plan is None:
         print('No plan was found')
+        with open('no_plan_dom.pddl', 'w') as f:
+            f.write(domain)
+        with open('no_plan_prob.pddl', 'w') as f:
+            f.write(problem)
         goal_achieved = False
     elif plan == []:
         goal_achieved = True
