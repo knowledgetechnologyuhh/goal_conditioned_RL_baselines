@@ -8,7 +8,6 @@ import numpy as np
 import pickle
 import copy
 from mujoco_py import MujocoException
-from baselines.her_pddl.pddl.pddl_util import obs_to_preds, gen_pddl_domain_problem, gen_plans, plans2subgoals
 from baselines.template.util import convert_episode_to_batch_major, store_args
 
 class HierarchicalRollout(Rollout):
