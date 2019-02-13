@@ -160,7 +160,7 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
             not_elsewhere_str += '(not (gripper_at_o{}))'.format(o_other)
 
         # Move gripper to object action
-        move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, not_o2_on_o_str, o, not_elsewhere_str, o)
+        move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, o, not_elsewhere_str, o)
         actions.append(move_gripper_to_o_act)
 
         # Move o to target action. This is to place the first object on the ground on which other objects will be stacked.
