@@ -59,12 +59,14 @@ class HierarchicalRollout(Rollout):
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
                        in self.info_keys]
 
-        preds, one_hots = obs_to_preds(o, self.g, n_objects=self.n_objects)
-        plans = gen_plans(preds, self.gripper_has_target, self.tower_height)
+        preds, plans = [] = []
+
+        for i in range(self.rollout_batch_size):
+            preds.append(self.envs[i].env.get_preds()[0])
+            plans.append(self.envs[i].env.get_plan())
+            self.subg[i] = self.envs[i].env.action2subgoal(plans[i][0][0])
         init_plan_lens = [len(plans[i][0]) for i in range(len(plans))]
         plan_lens = init_plan_lens.copy()
-        # next_subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects, actions_to_skip=plan_ignore_actions)
-        self.subg = plans2subgoals(plans, o, self.g.copy(), self.n_objects)
         #
         avg_pred_correct = 0
 
@@ -95,7 +97,6 @@ class HierarchicalRollout(Rollout):
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
 
-            # success = np.zeros(self.rollout_batch_size)
             subgoal_success = np.zeros(self.rollout_batch_size)
             overall_success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
@@ -116,9 +117,6 @@ class HierarchicalRollout(Rollout):
                 preds.append(self.envs[i].env.get_preds()[0])
                 n_hots.append(self.envs[i].env.get_preds()[1])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            preds_old, n_hots_old = obs_to_preds(o_new, self.g, n_objects=self.n_objects)
-            if str(preds_old) != str(preds):
-                print("This went wrong!!!")
             self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)
             n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
@@ -133,9 +131,6 @@ class HierarchicalRollout(Rollout):
             for i in range(self.rollout_batch_size):
                 new_p = self.envs[i].env.get_plan()
                 new_plans.append(new_p)
-            new_plans_old = gen_plans(preds, self.gripper_has_target, self.tower_height)
-            if str(new_plans) != str(new_plans_old):
-                print("this went wrong!")
 
             # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
             for i, (newp,p) in enumerate(zip(new_plans, plans)):
@@ -143,7 +138,6 @@ class HierarchicalRollout(Rollout):
                     if p[0] == newp[0][1:]:
                         new_plans[i] = p
             plans = new_plans
-            next_subg_old = plans2subgoals(new_plans, o_new, self.g.copy(), self.n_objects)
             next_subg = []
             for i in range(self.rollout_batch_size):
                 subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
@@ -157,8 +151,6 @@ class HierarchicalRollout(Rollout):
                 if self.render:
                     self.envs[i].render()
             next_subg = np.array(next_subg)
-            # if str(next_subg) != str(next_subg_old):
-            #     print("Something went wrong!")
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
