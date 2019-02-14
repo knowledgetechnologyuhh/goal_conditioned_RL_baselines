@@ -71,8 +71,8 @@ class NicobotEnv(tower_env.TowerEnv):
             self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
             current_x -= step
             self.sim.step()
-            self.render()
-            print(current_x)
+            # self.render()
+            # print(current_x)
 
 
         # Offset the random goal if gripper random is used
