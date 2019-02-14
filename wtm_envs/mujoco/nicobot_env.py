@@ -58,7 +58,7 @@ class NicobotEnv(tower_env.TowerEnv):
         gripper_rotation = np.array([0.32600718, 0.86378862, -0.2913803, 0.25037185])
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
 
-        gripper_target = np.array([0.30, -0.1, 0.1 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
+        gripper_target = np.array([0.40, -0.1, 0.2 + self.gripper_extra_height]) + self.sim.data.get_site_xpos(
             'robot0:grip')
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
         x_start = gripper_target[0]
@@ -71,8 +71,8 @@ class NicobotEnv(tower_env.TowerEnv):
             self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
             current_x -= step
             self.sim.step()
-            # self.render()
-            # print(current_x)
+            self.render()
+            print(current_x)
 
 
         # Offset the random goal if gripper random is used
