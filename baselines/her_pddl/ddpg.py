@@ -12,8 +12,6 @@ from baselines.her_pddl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
 from baselines.her_pddl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
-# from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
-
 
 
 def dims_to_shapes(input_dims):
@@ -104,8 +102,6 @@ class DDPG_PDDL(Policy):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
-        # self.n_preds = 6
-        # n_preds = len(obs_to_preds_single(np.zeros(self.dimo), np.zeros(self.dimg), n_objects)[0])
         self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
         self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
 

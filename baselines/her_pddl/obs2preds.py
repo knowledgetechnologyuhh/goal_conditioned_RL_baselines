@@ -50,10 +50,21 @@ class Obs2PredsBuffer():
             self.obs2preds_sample_buffer = {"preds": np.zeros(shape=[self.buffer_len, n_preds]),
                                             "preds_probdist": np.zeros(shape=[self.buffer_len, n_preds, 2]),
                                             "obs": np.zeros(shape=[self.buffer_len, dim_o]),
-                                            "goal": np.zeros(shape=[self.buffer_len, dim_g])}
+                                            "goal": np.zeros(shape=[self.buffer_len, dim_g]),
+                                            'pred_loss': np.zeros(shape=self.buffer_len)}
+
+    def get_sample_idx_pred_loss(self, n_samples, inverse=True):
+        prob_dist = self.obs2preds_sample_buffer['pred_loss']
+        if inverse:
+            prob_dist *= -1
+        prob_dist += np.min(prob_dist)
+        prob_dist /= np.sum(prob_dist)
+        idx = np.random.choice(range(self.current_buf_size), size=n_samples, replace=False,
+                               p=prob_dist)
+        return idx
 
 
-    def store_sample(self, preds, obs, goal):
+    def store_sample(self, preds, obs, goal, prioritized=True):
         if self.obs2preds_sample_buffer is None:
             self.init_buffer(len(preds), len(obs), len(goal))
         preds_probdist = np.zeros(shape=[len(preds), 2])
@@ -63,11 +74,18 @@ class Obs2PredsBuffer():
             if self.current_buf_size < self.buffer_len:
                 idx = self.current_buf_size
             else:
-                idx = np.random.randint(self.current_buf_size)
+                if not prioritized:
+                    idx = np.random.randint(self.current_buf_size)
+                else:
+                    idx = self.get_sample_idx_pred_loss(1, inverse=True)
+
+
+
             self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
             self.obs2preds_sample_buffer['preds'][idx] = preds
             self.obs2preds_sample_buffer['obs'][idx] = obs
             self.obs2preds_sample_buffer['goal'][idx] = goal
+            self.obs2preds_sample_buffer['pred_loss'][idx] = min(100000, max(self.obs2preds_sample_buffer['pred_loss']))
             self.current_buf_size += 1
             self.current_buf_size = min(self.current_buf_size, self.buffer_len)
 
@@ -76,9 +94,15 @@ class Obs2PredsBuffer():
         for p,o,g in zip(preds, obs, goal):
             self.store_sample(p,o,g)
 
-    def sample_batch(self, batch_size):
+    def sample_batch(self, batch_size, prioritized=True):
         with self.lock:
-            sample_idxs = np.random.randint(0, self.current_buf_size, size=batch_size)
+            if not prioritized:
+                sample_idxs = np.random.randint(0, self.current_buf_size, size=batch_size)
+            else:
+                sample_idxs = self.get_sample_idx_pred_loss(batch_size, inverse=False)
+                if batch_size == 1:
+                    sample_idxs = np.array([sample_idxs])
+
             probdists = self.obs2preds_sample_buffer['preds_probdist'][sample_idxs, :]
             obs = self.obs2preds_sample_buffer['obs'][sample_idxs, :]
             goals = self.obs2preds_sample_buffer['goal'][sample_idxs, :]
