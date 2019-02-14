@@ -54,7 +54,7 @@ class Obs2PredsBuffer():
                                             'pred_loss': np.zeros(shape=self.buffer_len)}
 
     def get_sample_idx_pred_loss(self, n_samples, inverse=True):
-        prob_dist = self.obs2preds_sample_buffer['pred_loss']
+        prob_dist = self.obs2preds_sample_buffer['pred_loss'][:self.current_buf_size+1]
         if inverse:
             prob_dist *= -1
         prob_dist += np.min(prob_dist)
