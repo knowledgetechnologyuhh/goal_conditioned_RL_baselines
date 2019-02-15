@@ -14,6 +14,7 @@ class Obs2PredsModel():
             outputs = tf.reshape(outputs, [-1, n_preds, 2])
             self.prob_out = tf.nn.softmax(outputs)
             self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
+            self.celosses = tf.losses.softmax_cross_entropy(self.preds, self.prob_out, reduction=tf.losses.Reduction.NONE)
             self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
             # self.optimizer = tf.train.RMSPropOptimizer(learning_rate=0.001).minimize(self.celoss)
         obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='obs2preds')
@@ -44,6 +45,7 @@ class Obs2PredsBuffer():
         self.obs2preds_sample_buffer = None
         self.current_buf_size = 0
         self.lock = threading.Lock()
+        self.prioritized_sampling = True
 
     def init_buffer(self, n_preds, dim_o, dim_g):
         with self.lock:
@@ -54,17 +56,30 @@ class Obs2PredsBuffer():
                                             'pred_loss': np.zeros(shape=self.buffer_len)}
 
     def get_sample_idx_pred_loss(self, n_samples, inverse=True):
-        prob_dist = self.obs2preds_sample_buffer['pred_loss'][:self.current_buf_size+1]
+        prob_dist = self.obs2preds_sample_buffer['pred_loss'][:self.current_buf_size].copy()
         if inverse:
             prob_dist *= -1
-        prob_dist += np.min(prob_dist)
-        prob_dist /= np.sum(prob_dist)
-        idx = np.random.choice(range(self.current_buf_size), size=n_samples, replace=False,
+        # if min(prob_dist) < 0:
+        #     prob_dist += np.min(prob_dist)
+        # else:
+        prob_dist -= np.min(prob_dist)
+        if np.sum(prob_dist) != 0:
+            prob_dist /= np.sum(prob_dist)
+        else:
+            prob_dist = np.zeros(shape=prob_dist.shape) + 1/self.current_buf_size
+        replace = self.current_buf_size < n_samples
+        try:
+            idx = np.random.choice(range(self.current_buf_size), size=n_samples, replace=replace,
                                p=prob_dist)
+        except Exception as e:
+            print("ERROR!\n{}".format(e))
+            prob_dist = np.zeros(shape=prob_dist.shape) + 1/self.current_buf_size
+            idx = np.random.choice(range(self.current_buf_size), size=n_samples, replace=replace,
+                                   p=prob_dist)
         return idx
 
 
-    def store_sample(self, preds, obs, goal, prioritized=True):
+    def store_sample(self, preds, obs, goal, loss=None):
         if self.obs2preds_sample_buffer is None:
             self.init_buffer(len(preds), len(obs), len(goal))
         preds_probdist = np.zeros(shape=[len(preds), 2])
@@ -74,10 +89,10 @@ class Obs2PredsBuffer():
             if self.current_buf_size < self.buffer_len:
                 idx = self.current_buf_size
             else:
-                if not prioritized:
+                if not self.prioritized_sampling:
                     idx = np.random.randint(self.current_buf_size)
                 else:
-                    idx = self.get_sample_idx_pred_loss(1, inverse=True)
+                    idx = self.get_sample_idx_pred_loss(1, inverse=True)[0]
 
 
 
@@ -85,18 +100,24 @@ class Obs2PredsBuffer():
             self.obs2preds_sample_buffer['preds'][idx] = preds
             self.obs2preds_sample_buffer['obs'][idx] = obs
             self.obs2preds_sample_buffer['goal'][idx] = goal
-            self.obs2preds_sample_buffer['pred_loss'][idx] = min(100000, max(self.obs2preds_sample_buffer['pred_loss']))
+            if loss is None:
+                self.obs2preds_sample_buffer['pred_loss'][idx] = max(self.obs2preds_sample_buffer['pred_loss'])
+            else:
+                self.update_idx_losses([idx], [loss])
             self.current_buf_size += 1
             self.current_buf_size = min(self.current_buf_size, self.buffer_len)
 
 
-    def store_sample_batch(self, preds, obs, goal):
-        for p,o,g in zip(preds, obs, goal):
-            self.store_sample(p,o,g)
+    def store_sample_batch(self, preds, obs, goal, loss=None):
+        for i, (p,o,g) in enumerate(zip(preds, obs, goal)):
+            if loss is not None:
+                self.store_sample(p, o, g, loss=loss[i])
+            else:
+                self.store_sample(p, o, g)
 
-    def sample_batch(self, batch_size, prioritized=True):
+    def sample_batch(self, batch_size):
         with self.lock:
-            if not prioritized:
+            if not self.prioritized_sampling:
                 sample_idxs = np.random.randint(0, self.current_buf_size, size=batch_size)
             else:
                 sample_idxs = self.get_sample_idx_pred_loss(batch_size, inverse=False)
@@ -106,7 +127,10 @@ class Obs2PredsBuffer():
             probdists = self.obs2preds_sample_buffer['preds_probdist'][sample_idxs, :]
             obs = self.obs2preds_sample_buffer['obs'][sample_idxs, :]
             goals = self.obs2preds_sample_buffer['goal'][sample_idxs, :]
-        return {'preds': probdists, 'obs': obs, 'goals': goals}
+        return {'preds': probdists, 'obs': obs, 'goals': goals, 'indexes': sample_idxs}
 
+    def update_idx_losses(self, indexes, batch_losses):
+        for i, idx in enumerate(indexes):
+            self.obs2preds_sample_buffer['pred_loss'][idx] = batch_losses[i]
 
 
