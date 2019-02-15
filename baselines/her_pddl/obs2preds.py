@@ -4,15 +4,15 @@ import tensorflow as tf
 import threading
 
 class Obs2PredsModel():
-    def __init__(self, n_preds, dim_o, dim_g):
+    def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
         with tf.variable_scope('obs2preds'):
             self.inputs_o = tf.placeholder(shape=[None, dim_o], dtype=tf.float32)
             self.inputs_g = tf.placeholder(shape=[None, dim_g], dtype=tf.float32)
             self.preds = tf.placeholder(shape=[None, n_preds, 2], dtype=tf.uint8)
             in_layer = tf.concat([self.inputs_o, self.inputs_g], axis=1)
-            outputs = self.dense_layers(in_layer, [32, 128, 64, n_preds * 2], name='obs2preds_nn')
-            outputs = tf.reshape(outputs, [-1, n_preds, 2])
-            self.prob_out = tf.nn.softmax(outputs)
+            # outputs =
+            # self.prob_out = self.mixed_layers(in_layer, rep_model_layer_sizes, n_preds, name='obs2preds_nn')
+            self.prob_out = self.per_pred_attn_layers(in_layer, rep_model_layer_sizes, n_preds, name='obs2preds_nn')
             self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
             self.celosses = tf.losses.softmax_cross_entropy(self.preds, self.prob_out, reduction=tf.losses.Reduction.NONE)
             self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
@@ -37,6 +37,29 @@ class Obs2PredsModel():
             assert layers_sizes[-1] == 1
             input = tf.reshape(input, [-1])
         return input
+
+    def mixed_layers(self, input, layer_sizes, n_preds, reuse=None, flatten=False, name=""):
+        out = self.dense_layers(input, layer_sizes + [n_preds * 2], reuse=reuse, flatten=flatten, name=name)
+        outputs = tf.reshape(out, [-1, n_preds, 2])
+        prob_out = tf.nn.softmax(outputs)
+        return prob_out
+
+    def per_pred_attn_layers(self, input, layer_sizes, n_preds, reuse=None, flatten=False, name=""):
+        dim_in = input.shape[1]
+        attns = [tf.Variable(expected_shape=[dim_in], initial_value=(tf.zeros(dim_in) + 0.5))]
+        norm_attns = tf.nn.sigmoid(attns)
+
+        p_outs = []
+        for i in range(n_preds):
+            attn_in = input * norm_attns
+            out = self.dense_layers(attn_in, layer_sizes + [2], reuse=reuse, flatten=flatten, name=name+"p_{}".format(i))
+            outputs = tf.reshape(out, [-1, 1, 2])
+            pred_prob_out = tf.nn.softmax(outputs)
+            p_outs.append(pred_prob_out)
+
+        prob_out = tf.concat(p_outs, axis=1)
+
+        return prob_out
 
 
 class Obs2PredsBuffer():
@@ -93,8 +116,6 @@ class Obs2PredsBuffer():
                     idx = np.random.randint(self.current_buf_size)
                 else:
                     idx = self.get_sample_idx_pred_loss(1, inverse=True)[0]
-
-
 
             self.obs2preds_sample_buffer['preds_probdist'][idx] = preds_probdist
             self.obs2preds_sample_buffer['preds'][idx] = preds
