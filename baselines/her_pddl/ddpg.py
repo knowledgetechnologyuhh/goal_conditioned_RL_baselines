@@ -12,8 +12,6 @@ from baselines.her_pddl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
 from baselines.her_pddl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
-# from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
-
 
 
 def dims_to_shapes(input_dims):
@@ -104,10 +102,8 @@ class DDPG_PDDL(Policy):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
-        # self.n_preds = 6
-        # n_preds = len(obs_to_preds_single(np.zeros(self.dimo), np.zeros(self.dimg), n_objects)[0])
         self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
-        self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
+        self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=1000)
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -229,25 +225,44 @@ class DDPG_PDDL(Policy):
         return critic_loss, actor_loss
 
     def train_representation(self):
-        rep_batch_size = 128
+        rep_batch_size = 32
         batch = self.obs2preds_buffer.sample_batch(rep_batch_size)
+        indexes = batch['indexes']
         feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
                                  self.obs2preds_model.inputs_g: batch['goals'],
                                  self.obs2preds_model.preds: batch['preds']}
-        opti_res, celoss = self.sess.run([self.obs2preds_model.optimizer,
-                                          self.obs2preds_model.celoss],
+        opti_res, celoss, celosses = self.sess.run([self.obs2preds_model.optimizer,
+                                          self.obs2preds_model.celoss,
+                                          self.obs2preds_model.celosses],
                       feed_dict=feed_dict)
 
-        return celoss
+        celosses = np.mean(celosses, axis=-1)
+        _, celosses_after = self.predict_representation(batch)
+
+        return celoss, celosses_after, indexes
 
     def predict_representation(self, batch):
         feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
                      self.obs2preds_model.inputs_g: batch['goals']}
         pred_dist = self.sess.run([self.obs2preds_model.prob_out],
-                                         feed_dict=feed_dict)
-        preds = prob_dist2discrete(pred_dist[0])
-        return preds
+                                  feed_dict=feed_dict)
+        losses = None
+        if 'preds' in batch:
+            preds = batch['preds']
+            if len(preds.shape) != 3:
+                preds_probdist = np.zeros(shape=[preds.shape[0], preds.shape[1], 2])
+                for j,p in enumerate(preds):
+                    for i, v in enumerate(p):
+                        preds_probdist[j][i][int(v)] = 1
+                preds = preds_probdist
+            feed_dict.update({self.obs2preds_model.preds: preds})
+            pred_dist, loss = self.sess.run([self.obs2preds_model.prob_out, self.obs2preds_model.celosses],
+                                      feed_dict=feed_dict)
+            loss = np.mean(loss, axis=-1)
 
+            losses = np.reshape(loss,newshape=(preds.shape[0]))
+        preds = prob_dist2discrete(pred_dist)
+        return preds, losses
 
 
 

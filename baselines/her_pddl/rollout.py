@@ -119,23 +119,22 @@ class HierarchicalRollout(Rollout):
 
                 preds.append(self.envs[i].env.get_preds()[0])
                 n_hots.append(self.envs[i].env.get_preds()[1])
-            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach where plans for known preds are stored.
-            # n_hots[0] = np.array([0,0,1])
-            self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)
-            n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g})
+
             n_hots = np.array(n_hots)
+            n_hots_from_model, losses = self.policy.predict_representation({'obs': o_new, 'goals': self.g, 'preds': n_hots})
+            # losses = np.reshape(losses, newshape=(losses.shape[0],-1))
+            self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g, losses)
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
 
-
+            # Compute subgoal and goal success
+            for i in range(self.rollout_batch_size):
+                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
             # Compute new plans
             new_plans = []
             for i in range(self.rollout_batch_size):
                 new_p = self.envs[i].env.get_plan()
                 new_plans.append(new_p)
-                # Compute subgoal and goal success
-            for i in range(self.rollout_batch_size):
-                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
-                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
             # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
             for i, (newp,p) in enumerate(zip(new_plans, plans)):
@@ -252,7 +251,10 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()
-                rep_ce_loss += self.policy.train_representation()
+                total_loss, batch_losses, indexes = self.policy.train_representation()
+                self.policy.obs2preds_buffer.update_idx_losses(indexes, batch_losses)
+                mean_total = np.mean(batch_losses)
+                rep_ce_loss += mean_total
             self.policy.update_target_net()
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
