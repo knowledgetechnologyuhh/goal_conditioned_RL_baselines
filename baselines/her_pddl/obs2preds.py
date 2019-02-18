@@ -62,6 +62,7 @@ class Obs2PredsModel():
         return prob_out
 
 
+
 class Obs2PredsBuffer():
     def __init__(self, buffer_len=6):
         self.buffer_len = buffer_len
