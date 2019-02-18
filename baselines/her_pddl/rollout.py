@@ -114,8 +114,8 @@ class HierarchicalRollout(Rollout):
                     info_values[idx][t, i] = info[key]
                 if self.render:
                     self.envs[i].render()
-                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
-                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
+                # subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                # overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
                 preds.append(self.envs[i].env.get_preds()[0])
                 n_hots.append(self.envs[i].env.get_preds()[1])
@@ -127,15 +127,15 @@ class HierarchicalRollout(Rollout):
             avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i]) for i in range(self.rollout_batch_size)])
 
 
-            # Compute subgoal and goal success
-            for i in range(self.rollout_batch_size):
-                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
-                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
             # Compute new plans
             new_plans = []
             for i in range(self.rollout_batch_size):
                 new_p = self.envs[i].env.get_plan()
                 new_plans.append(new_p)
+                # Compute subgoal and goal success
+            for i in range(self.rollout_batch_size):
+                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
             # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
             for i, (newp,p) in enumerate(zip(new_plans, plans)):
