@@ -3,6 +3,7 @@ import time, datetime
 
 from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
+from baselines.her.rollout import RolloutWorker as HER_RolloutWorker
 from collections import deque
 import numpy as np
 import pickle
@@ -27,6 +28,12 @@ class HierarchicalRollout(Rollout):
         self.subgoal_succ_history = deque(maxlen=history_len)
 
         # TODO: add self.child_rollout
+        # self.child_rollout = Rollout(make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
+        #                              history_len=history_len, render=render, **kwargs)
+        # self.child_rollout = RolloutWorker(make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
+        #                                    history_len=history_len, render=render, **kwargs)
+        self.child_rollout = SubRollout(make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
+                                        history_len=history_len, render=render, **kwargs)
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -61,23 +68,24 @@ class HierarchicalRollout(Rollout):
                        in self.info_keys]
 
         # TODO: check! no need plan stuffs in HRL
-        preds, plans = [], []
-
-        for i in range(self.rollout_batch_size):
-            self.envs[i].env.final_goal = self.g[i]
-            preds.append(self.envs[i].env.get_preds()[0])
-            plans.append(self.envs[i].env.get_plan())
-            if len(plans[i][0]) > 0:
-                self.subg[i] = self.envs[i].env.action2subgoal(plans[i][0][0])
-            else:
-                self.subg[i] = self.g[i]
-        init_plan_lens = [len(plans[i][0]) for i in range(len(plans))]
-        plan_lens = init_plan_lens.copy()
+        # preds, plans = [], []
         #
-        avg_pred_correct = 0
+        # for i in range(self.rollout_batch_size):
+        #     self.envs[i].env.final_goal = self.g[i]
+        #     preds.append(self.envs[i].env.get_preds()[0])
+        #     plans.append(self.envs[i].env.get_plan())
+        #     if len(plans[i][0]) > 0:
+        #         self.subg[i] = self.envs[i].env.action2subgoal(plans[i][0][0])
+        #     else:
+        #         self.subg[i] = self.g[i]
+        # init_plan_lens = [len(plans[i][0]) for i in range(len(plans))]
+        # plan_lens = init_plan_lens.copy()
+        # #
+        # avg_pred_correct = 0
         # TODO ===
 
         for t in range(self.T):
+            print("t/T = {}/{}".format(t, self.T))
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
@@ -88,13 +96,16 @@ class HierarchicalRollout(Rollout):
                 env.env.goal = self.subg[i]
                 env.env.final_goal = self.g[i]
 
-            # TODO: action(i) --> subgoal(i-1)
             # TODO: if not testing: add_noise to get_action if random_sample()>0.2 otherwise get_random_action
             # TODO: if testing: get_action
+            # if self.policy_action_params:
+            #     policy_output = self.policy.get_actions(o, ag, self.subg, **self.policy_action_params)
+            # else:
+            #     policy_output = self.policy.get_actions(o, ag, self.subg)
             if self.policy_action_params:
-                policy_output = self.policy.get_actions(o, ag, self.subg, **self.policy_action_params)
+                policy_output = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             else:
-                policy_output = self.policy.get_actions(o, ag, self.subg)
+                policy_output = self.policy.get_actions(o, ag, self.g)
 
             if isinstance(policy_output, np.ndarray):
                 u = policy_output  # get the actions from the policy output since actions should be the first element
@@ -110,11 +121,18 @@ class HierarchicalRollout(Rollout):
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
 
+            # TODO: action(i) --> subgoal(i-1)
+            self.child_rollout.inherited_values(o, ag, u)
+            for cyc in range(10):   # TODO fix 10
+                # print("child_episode = {}/{}".format(cyc, 10))
+                episode = self.child_rollout.generate_rollouts()
+                self.child_rollout.policy.store_episode(episode)
+
             # TODO: check
-            subgoal_success = np.zeros(self.rollout_batch_size)
+            # subgoal_success = np.zeros(self.rollout_batch_size)
             overall_success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
-            preds, n_hots = [], []  # TODO: check
+            # preds, n_hots = [], []  # TODO: check
             for i in range(self.rollout_batch_size):
                 # We fully ignore the reward here because it will have to be re-computed
                 # for HER.
@@ -125,54 +143,57 @@ class HierarchicalRollout(Rollout):
                     info_values[idx][t, i] = info[key]
                 if self.render:
                     self.envs[i].render()
-                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                # subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
+                #
+                # if 'is_success' in info:
+                #     subgoal_success[i] = info['is_success']
 
-                preds.append(self.envs[i].env.get_preds()[0])   # TODO: check
-                n_hots.append(self.envs[i].env.get_preds()[1])
+                # preds.append(self.envs[i].env.get_preds()[0])   # TODO: check
+                # n_hots.append(self.envs[i].env.get_preds()[1])
             # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach
             #  where plans for known preds are stored.
             # n_hots[0] = np.array([0,0,1])
-            self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)  # TODO: check
-            n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g}) # TODO: check
-            n_hots = np.array(n_hots)
-            avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i])
-                                         for i in range(self.rollout_batch_size)])
+            # self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)  # TODO: check
+            # n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g}) # TODO: check
+            # n_hots = np.array(n_hots)
+            # avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i])
+            #                              for i in range(self.rollout_batch_size)])
 
             # Compute subgoal and goal success
             for i in range(self.rollout_batch_size):
-                subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
+                # subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
                 overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
             # TODO: check subg things
             # Compute new plans
-            new_plans = []
-            for i in range(self.rollout_batch_size):
-                new_p = self.envs[i].env.get_plan()
-                new_plans.append(new_p)
+            # new_plans = []
+            # for i in range(self.rollout_batch_size):
+            #     new_p = self.envs[i].env.get_plan()
+            #     new_plans.append(new_p)
 
-            # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
-            for i, (newp,p) in enumerate(zip(new_plans, plans)):
-                if len(newp[0]) > 0:
-                    if p[0] == newp[0][1:]:
-                        new_plans[i] = p
-            plans = new_plans
-            next_subg = []
-            for i in range(self.rollout_batch_size):
-                if len(new_plans[i][0]) > 0:
-                    subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
-                else:
-                    subg = self.g[i]
-                next_subg.append(subg)
-                self.envs[i].env.goal = next_subg[i]
-                if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
-                    plan_lens[i] = len(new_plans[i][0])
-                    n_goals_achieved = init_plan_lens[i] - plan_lens[i]
-                    # if n_goals_achieved > 0:
-                    #     print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
-                if self.render:
-                    self.envs[i].render()
-            next_subg = np.array(next_subg) # TODO: check subg things
+            # # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
+            # for i, (newp,p) in enumerate(zip(new_plans, plans)):
+            #     if len(newp[0]) > 0:
+            #         if p[0] == newp[0][1:]:
+            #             new_plans[i] = p
+            # plans = new_plans
+            # next_subg = []
+            # for i in range(self.rollout_batch_size):
+            #     if len(new_plans[i][0]) > 0:
+            #         subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
+            #     else:
+            #         subg = self.g[i]
+            #     next_subg.append(subg)
+            #     self.envs[i].env.goal = next_subg[i]
+            #     if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
+            #         plan_lens[i] = len(new_plans[i][0])
+            #         n_goals_achieved = init_plan_lens[i] - plan_lens[i]
+            #         # if n_goals_achieved > 0:
+            #         #     print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
+            #     if self.render:
+            #         self.envs[i].render()
+            # next_subg = np.array(next_subg) # TODO: check subg things
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
@@ -182,12 +203,13 @@ class HierarchicalRollout(Rollout):
             subgoals.append(self.subg.copy())
             o[...] = o_new
             ag[...] = ag_new
-            self.subg = next_subg   # TODO: check subg things
-        avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
-        avg_subgoals = np.mean(init_plan_lens)
-        self.subgoal_succ_history.append(avg_subgoal_succ / avg_subgoals)
-        avg_pred_correct /= self.T
-        self.rep_correct_history.append(avg_pred_correct)
+            # self.subg = next_subg   # TODO: check subg things
+        # avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
+        # avg_subgoals = np.mean(init_plan_lens)
+        # self.subgoal_succ_history.append(avg_subgoal_succ / avg_subgoals)
+        self.subgoal_succ_history.append(self.child_rollout.success_history)
+        # avg_pred_correct /= self.T
+        # self.rep_correct_history.append(avg_pred_correct)
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
         if return_states:
@@ -219,6 +241,36 @@ class HierarchicalRollout(Rollout):
         else:
             ret = convert_episode_to_batch_major(episode)
         return ret
+
+
+class SubRollout(Rollout):
+    @store_args
+    def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
+                 exploit=False, history_len=100, render=False, **kwargs):
+        Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
+                         history_len=history_len, render=render, **kwargs)
+        self.inherited_g = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # goals
+        self.o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
+        self.ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
+        # self.success = np.zeros(self.rollout_batch_size)
+
+    def inherited_values(self, o, ag, g):
+        self.o = o
+        self.ag = ag
+        self.inherited_g = g
+
+    def reset_all_rollout(self):
+
+        return self.set_all_values()
+
+    def set_all_values(self):
+        self.initial_o = self.o
+        self.initial_ag = self.ag
+        self.g  = self.inherited_g
+
+    # def get_result
+    #     super().generate_rollouts()
+    #     self.success = successes
 
 
 class RolloutWorker(HierarchicalRollout):
@@ -266,8 +318,10 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()     # train actor-critic
-                rep_ce_loss += self.policy.train_representation()   # TODO: check
+                self.child_rollout.policy.train()
+                # rep_ce_loss += self.policy.train_representation()   # TODO: check
             self.policy.update_target_net()
+            self.child_rollout.policy.update_target_net()
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
         updated_policy = self.policy
