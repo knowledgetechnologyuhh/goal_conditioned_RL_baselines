@@ -98,7 +98,7 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
         not_grasped_str += '(not (grasped_o{}))'.format(o)
     move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_at_o{}) {} (not (gripper_at_target)) )\n)\n\n"
     move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) ) \n\t:effect (and (o{}_at_target) )\n)\n\n"
-    move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (gripper_at_o{})  {}) \n\t:effect (and (o{}_on_o{}) )\n)\n\n"
+    move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) ) \n\t:effect (and (o{}_on_o{})  {} )\n)\n\n"
 
     for o in range(n_objects):
         # Grasp object action
@@ -129,8 +129,10 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
             for o3 in range(n_objects):
                 if o3 == o2:
                     continue
+                if o3 == o:
+                    continue
                 not_o3_on_o2_str += ' (not (o{}_on_o{}))'.format(o3, o2)
-            move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, not_o3_on_o2_str, o, o2)
+            move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, o, o2, not_o3_on_o2_str)
             actions.append(move_o1_on_o2_act)
 
 
