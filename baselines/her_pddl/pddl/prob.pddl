@@ -18,7 +18,7 @@
 	 (o0_at_target)
 	 (o1_on_o0)
 	 (o2_on_o1)
-
+	 (gripper_at_target)
 ))
 
 
