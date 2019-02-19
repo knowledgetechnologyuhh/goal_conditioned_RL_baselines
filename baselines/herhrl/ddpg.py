@@ -55,6 +55,9 @@ class DDPG_HRL(Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
+        dims = input_dims.copy()
+        dims['u'] = dims['g']
+        input_dims = dims
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
@@ -82,7 +85,7 @@ class DDPG_HRL(Policy):
         if self.clip_return is None:
             self.clip_return = np.inf
 
-        self.create_actor_critic = import_function(self.network_class)
+        self.create_actor_critic = import_function(self.network_class) # ActorCritic is called here
 
         # Create network.
         with tf.variable_scope(self.scope):
@@ -102,13 +105,15 @@ class DDPG_HRL(Policy):
         buffer_shapes['ag'] = (self.T+1, self.dimg)
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
+        # print("buffer_size = {}".format(buffer_size))
+        # print("buffer_shape = {}".format(buffer_shapes))
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
         # TODO: Check this
         # self.n_preds = 6
         # n_preds = len(obs_to_preds_single(np.zeros(self.dimo), np.zeros(self.dimg), n_objects)[0])
-        self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
-        self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
+        # self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
+        # self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -138,6 +143,7 @@ class DDPG_HRL(Policy):
         if compute_Q:
             vals += [policy.Q_pi_tf]
         # feed
+        # print('self dimu {}'.format(self.dimu))
         feed = {
             policy.o_tf: o.reshape(-1, self.dimo),
             policy.g_tf: g.reshape(-1, self.dimg),
@@ -230,28 +236,25 @@ class DDPG_HRL(Policy):
         self._update(Q_grad, pi_grad)
         return critic_loss, actor_loss
 
-    def train_representation(self):
-        rep_batch_size = 128
-        batch = self.obs2preds_buffer.sample_batch(rep_batch_size)
-        feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
-                                 self.obs2preds_model.inputs_g: batch['goals'],
-                                 self.obs2preds_model.preds: batch['preds']}
-        opti_res, celoss = self.sess.run([self.obs2preds_model.optimizer,
-                                          self.obs2preds_model.celoss],
-                      feed_dict=feed_dict)
+    # def train_representation(self):
+    #     rep_batch_size = 128
+    #     batch = self.obs2preds_buffer.sample_batch(rep_batch_size)
+    #     feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
+    #                              self.obs2preds_model.inputs_g: batch['goals'],
+    #                              self.obs2preds_model.preds: batch['preds']}
+    #     opti_res, celoss = self.sess.run([self.obs2preds_model.optimizer,
+    #                                       self.obs2preds_model.celoss],
+    #                   feed_dict=feed_dict)
+    #
+    #     return celoss
 
-        return celoss
-
-    def predict_representation(self, batch):
-        feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
-                     self.obs2preds_model.inputs_g: batch['goals']}
-        pred_dist = self.sess.run([self.obs2preds_model.prob_out],
-                                         feed_dict=feed_dict)
-        preds = prob_dist2discrete(pred_dist[0])
-        return preds
-
-
-
+    # def predict_representation(self, batch):
+    #     feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
+    #                  self.obs2preds_model.inputs_g: batch['goals']}
+    #     pred_dist = self.sess.run([self.obs2preds_model.prob_out],
+    #                                      feed_dict=feed_dict)
+    #     preds = prob_dist2discrete(pred_dist[0])
+    #     return preds
 
     def _init_target_net(self):
         self.sess.run(self.init_target_net_op)
