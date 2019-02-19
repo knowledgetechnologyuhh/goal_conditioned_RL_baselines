@@ -135,14 +135,7 @@ class HierarchicalRollout(Rollout):
             new_plans = []
             for i in range(self.rollout_batch_size):
                 if str(last_n_hots[i]) != str(n_hots[i]):
-                    cache_key = str(n_hots[i]) + str(goal_preds[i])
-                    if cache_key in self.plan_cache.keys():
-                        new_p = self.plan_cache[cache_key]
-                    else:
-                        new_p = self.envs[i].env.get_plan()
-                        self.plan_cache[cache_key] = new_p
-                        print("New plan generated. Number of cached plans: {}".format(len(self.plan_cache)))
-
+                    new_p = self.envs[i].env.get_plan()
                 else:
                     new_p = plans[i]
                 new_plans.append(new_p)
