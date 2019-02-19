@@ -4,6 +4,7 @@ import pickle
 
 from baselines import logger
 from baselines.herhrl.ddpg import DDPG_HRL as DDPG
+from baselines.her.ddpg import DDPG as DDPG_HER
 from baselines.herhrl.her import make_sample_her_transitions
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 
@@ -20,14 +21,14 @@ DEFAULT_PARAMS = {
     # ddpg
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden': 256,  # number of neurons in each hidden layers
-    'network_class': 'baselines.her.actor_critic:ActorCritic',
+    'network_class': 'baselines.herhrl.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
     'buffer_size': int(1E6),  # for experience replay
     'polyak': 0.95,  # polyak averaging coefficient
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     'clip_obs': 200.,
-    'scope': 'ddpg',  # can be tweaked for testing
+    'scope': 'ddpg_hrl',  # can be tweaked for testing
     'relative_goals': False,
     # ddpg get actions
     'reuse': False,
@@ -196,7 +197,10 @@ def configure_policy(dims, params):
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
-    policy = DDPG(**ddpg_params)
+    policy_parent = DDPG(**ddpg_params)
+    ddpg_params['scope'] += '_parent'
+    policy_child = DDPG_HER(**ddpg_params)
+    policy = [policy_parent, policy_child]
     return policy
 
 def load_policy(restore_policy_file, params):
