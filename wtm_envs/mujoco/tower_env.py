@@ -58,6 +58,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.min_tower_height = min_tower_height
         self.max_tower_height = max_tower_height
         self.step_ctr = 0
+        self.plan_cache = {}
 
         self.goal = []
         self.goal_size = (n_objects * 3)
@@ -398,8 +399,14 @@ class TowerEnv(robot_env.RobotEnv):
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
-        plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
+        preds, n_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        cache_key = str(n_hots) + str(goal_preds)
+        if cache_key in self.plan_cache.keys():
+            plan = self.plan_cache[cache_key]
+        else:
+            plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
+            self.plan_cache[cache_key] = plan
+            print("New plan generated. Number of cached plans: {}".format(len(self.plan_cache)))
         return plan
 
     def action2subgoal(self, action):
