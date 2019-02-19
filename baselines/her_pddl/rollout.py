@@ -152,9 +152,10 @@ class HierarchicalRollout(Rollout):
                 self.envs[i].env.goal = next_subg[i]
                 if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
                     plan_lens[i] = len(new_plans[i][0])
-                    n_goals_achieved = init_plan_lens[i] - plan_lens[i]
-                    # if n_goals_achieved > 0:
-                    #     print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
+                    if self.render:
+                        n_goals_achieved = init_plan_lens[i] - plan_lens[i]
+                        if n_goals_achieved > 0:
+                            print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
             next_subg = np.array(next_subg)
@@ -168,7 +169,8 @@ class HierarchicalRollout(Rollout):
             o[...] = o_new
             ag[...] = ag_new
             self.subg = next_subg
-        avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
+        n_subgoal_succ = [ip - p for ip, p in zip(init_plan_lens, plan_lens)]
+        avg_subgoal_succ = np.mean(n_subgoal_succ)
         avg_subgoals = np.mean(init_plan_lens)
         self.subgoal_succ_history.append(avg_subgoal_succ / avg_subgoals)
         avg_pred_correct /= self.T
