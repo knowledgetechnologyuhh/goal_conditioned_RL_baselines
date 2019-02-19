@@ -25,6 +25,7 @@ class HierarchicalRollout(Rollout):
         # self.subg = self.g.copy()
         self.rep_correct_history = deque(maxlen=history_len)
         self.subgoal_succ_history = deque(maxlen=history_len)
+        self.plan_cache = {}
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -105,6 +106,7 @@ class HierarchicalRollout(Rollout):
             overall_success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             n_hots = []
+            goal_preds = []
             for i in range(self.rollout_batch_size):
                 # We fully ignore the reward here because it will have to be re-computed
                 # for HER.
@@ -116,8 +118,9 @@ class HierarchicalRollout(Rollout):
                 if self.render:
                     self.envs[i].render()
 
-                this_n_hots = self.envs[i].env.get_preds()[1]
+                preds, this_n_hots, goals = self.envs[i].env.get_preds()
                 n_hots.append(this_n_hots)
+                goal_preds.append(goals)
 
             n_hots = np.array(n_hots)
             n_hots_from_model, losses = self.policy.predict_representation({'obs': o_new, 'goals': self.g, 'preds': n_hots})
@@ -132,7 +135,13 @@ class HierarchicalRollout(Rollout):
             new_plans = []
             for i in range(self.rollout_batch_size):
                 if str(last_n_hots[i]) != str(n_hots[i]):
-                    new_p = self.envs[i].env.get_plan()
+                    cache_key = str(n_hots[i]) + str(goal_preds[i])
+                    if cache_key in self.plan_cache.keys():
+                        new_p = self.plan_cache[cache_key]
+                    else:
+                        new_p = self.envs[i].env.get_plan()
+                        self.plan_cache[cache_key] = new_p
+
                 else:
                     new_p = plans[i]
                 new_plans.append(new_p)
