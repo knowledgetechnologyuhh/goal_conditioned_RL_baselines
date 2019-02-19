@@ -323,7 +323,10 @@ class TowerEnv(robot_env.RobotEnv):
                                                                                         self.target_range,
                                                                                         size=2)
                 self.goal_tower_height = self.n_objects
-                for n_o in range(self.n_objects):
+
+                height_list = list(range(self.n_objects))
+                random.shuffle(height_list)
+                for n_o in height_list:
                     height = n_o + 1
                     target_z = self.table_height + (height * self.obj_height) - (self.obj_height / 2)
                     target_goal = np.concatenate((target_goal_xy, [target_z]))
@@ -386,14 +389,17 @@ class TowerEnv(robot_env.RobotEnv):
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots = obs_to_preds_single(obs['observation'], g, self.n_objects)
-        return preds, one_hots
+        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        return preds, one_hots, goal_preds
 
     def get_plan(self):
         obs = self._get_obs()
-        preds, one_hots = obs_to_preds_single(obs['observation'], self.final_goal, self.n_objects)
-        tower_height = self.n_objects # TODO: Make this better, we may want situation where several objects are to be placed on the table without tower building.
-        plan = gen_plan_single(preds, self.gripper_has_target, tower_height)
+        if self.final_goal == []:
+            g = self.goal
+        else:
+            g = self.final_goal
+        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
         return plan
 
     def action2subgoal(self, action):

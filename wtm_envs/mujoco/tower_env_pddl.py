@@ -78,25 +78,45 @@ def obs_to_preds_single(obs, goal, n_objects):
 
     preds = {p: int(v) for p,v in preds.items()}
     one_hot = np.array([preds[k] for k in sorted(preds.keys())])
-    return preds, one_hot
+
+    goal_preds = []
+    if gripper_in_goal:
+        start_idx = 3
+    else:
+        start_idx = 0
 
 
-def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
+    goal_o_order = {}
+    goal_pos = {}
+    for o_idx in range(n_objects):
+        o_z = get_o_goal_pos(goal, o_idx)[2]
+        z_offset = 0.5
+        z_delta = 0.05
+        o_z -= (z_offset + z_delta/2)
+        n_order = o_z / z_delta
+        n_order = round(n_order)
+        n_order = int(n_order)
+        goal_o_order[o_idx] = n_order
+        goal_pos[n_order] = o_idx
 
-    head = "(define (domain tower) (:requirements :strips) \n{})\n"
+    goal_preds = []
+    for pos, o_idx in goal_pos.items():
+        if pos == 0:
+            goal_pred_str = "o{}_at_target".format(o_idx)
+        else:
+            goal_pred_str = "o{}_on_o{}".format(o_idx, goal_pos[pos - 1])
+        goal_preds.append(goal_pred_str)
+    if gripper_in_goal:
+        goal_preds.append('gripper_at_target')
 
-    predicates = "(:predicates \n"
-    for p in sorted(preds.keys()):
-        predicates += "\t{}\n".format(p)
-    predicates += ")\n"
+    return preds, one_hot, goal_preds
 
-    n_objects = len([p for p in preds if p.find("gripper_at_o") != -1])
-
+def gen_actions(n_objects):
     actions = []
     not_grasped_str = ''
     for o in range(n_objects):
         not_grasped_str += '(not (grasped_o{}))'.format(o)
-    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_at_o{}) {} (not (gripper_at_target)) )\n)\n\n"
+    move_gripper_to_o_act_template = "(:action move_gripper_to__o{} \n\t:parameters () \n\t:precondition () \n\t:effect (and (gripper_at_o{}) {} {} (not (gripper_at_target)) )\n)\n\n"
     move_o_to_target_template = "(:action move__o{}_to_target \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) ) \n\t:effect (and (o{}_at_target) )\n)\n\n"
     move_o1_on_o2_act_template = "(:action move__o{}_on__o{}  \n\t:parameters () \n\t:precondition (and (gripper_at_o{}) ) \n\t:effect (and (o{}_on_o{})  {} )\n)\n\n"
 
@@ -114,7 +134,7 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
             not_elsewhere_str += '(not (gripper_at_o{}))'.format(o_other)
 
         # Move gripper to object action
-        move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, o, not_elsewhere_str, o)
+        move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, o, not_elsewhere_str, not_o2_on_o_str)
         actions.append(move_gripper_to_o_act)
 
         # Move o to target action. This is to place the first object on the ground on which other objects will be stacked.
@@ -123,8 +143,8 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
 
         # Move o1 on o2 action. This is to stack objects on other objects.
         for o2 in range(n_objects):
-            if o-1 != o2:
-                continue # To restrict the action space, only allow to put an object with number o onto o-1 (e.g. object 1 on object 0, but not object 0 on object 2.)
+            # if o-1 != o2:
+            #     continue # To restrict the action space, only allow to put an object with number o onto o-1 (e.g. object 1 on object 0, but not object 0 on object 2.)
             not_o3_on_o2_str = ''
             for o3 in range(n_objects):
                 if o3 == o2:
@@ -135,16 +155,29 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
             move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, o, o2, not_o3_on_o2_str)
             actions.append(move_o1_on_o2_act)
 
-
     not_elsewhere_str = ''
     for o in range(n_objects):
         not_elsewhere_str += '(not (gripper_at_o{}))'.format(o)
-    move_gripper_to_target = "(:action move_gripper_to_target \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_at_target) {})\n)\n\n".format(not_grasped_str, not_elsewhere_str)
+    move_gripper_to_target = "(:action move_gripper_to_target \n\t:parameters () \n\t:precondition (and {}) \n\t:effect (and (gripper_at_target) {})\n)\n\n".format(
+        not_grasped_str, not_elsewhere_str)
 
     actions.append(move_gripper_to_target)
+    return actions
+
+def gen_pddl_domain_problem(preds, goal_preds, gripper_has_target=True):
+
+    head = "(define (domain tower) (:requirements :strips) \n{})\n"
+
+    predicates = "(:predicates \n"
+    for p in sorted(preds.keys()):
+        predicates += "\t{}\n".format(p)
+    predicates += ")\n"
+
+    n_objects = len([p for p in preds if p.find("gripper_at_o") != -1])
+
+    actions = gen_actions(n_objects)
     body = predicates + "".join(actions)
     domain = head.format(body)
-
 
     # Define problem
     problem = "(define (problem pb1) (:domain tower)\n {}\n)\n"
@@ -157,25 +190,10 @@ def gen_pddl_domain_problem(preds, tower_height, gripper_has_target=True):
     init_str += ")\n"
 
     # Define goal
-    tgt_goal_z_idx = 5
-    if gripper_has_target == False:
-        tgt_goal_z_idx -= 3
     goal_str = "(:goal (and \n"
-    if gripper_has_target:
-        pred_val = "o{}_at_target".format(0)
-        goal_str += "\t ({})\n".format(pred_val)
-        for o in range(tower_height - 1):
-            pred_val = "o{}_on_o{}".format(o + 1, o)
-            goal_str += "\t ({})\n".format(pred_val)
-
-        pred_val = "gripper_at_target"
-        goal_str += "\t ({})\n".format(pred_val)
-    else:
-        pred_val = "o{}_at_target".format(0)
-        goal_str += "\t ({})\n".format(pred_val)
-        for o in range(tower_height - 1):
-            pred_val = "o{}_on_o{}".format(o + 1, o)
-            goal_str += "\t ({})\n".format(pred_val)
+    # o_order = []
+    for g in goal_preds:
+        goal_str += '\t ({})\n'.format(g)
     goal_str += '))\n\n'
 
     problem = problem.format(init_str + goal_str)
@@ -257,17 +275,18 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
         break  # Stop after first useful action has been found.
     return subgoal
 
-def gen_plan_single(preds, gripper_has_target, tower_height, ignore_actions=[]):
+def gen_plan_single(preds, gripper_has_target, goal_preds, ignore_actions=[]):
 
-    hl_obs = [preds[k] for k in sorted(preds.keys())]
-    prob_key = str(hl_obs) + "_" + str(tower_height)
+    # hl_obs = [preds[k] for k in sorted(preds.keys())]
 
-    domain, problem = gen_pddl_domain_problem(preds, tower_height, gripper_has_target=gripper_has_target)
+    domain, problem = gen_pddl_domain_problem(preds, goal_preds, gripper_has_target=gripper_has_target)
 
     planner = Propositional_Planner()
     plan_start = time.time()
     plan = planner.solve(domain, problem)
-    # logger.info("plan generation took {:.2f} sec.".format(time.time() - plan_start))
+    duration = time.time() - plan_start
+    if duration > 0.5:
+        print("plan generation took {:.2f} sec.".format(time.time() - plan_start))
 
     plan_acts = []
     goal_achieved = False
