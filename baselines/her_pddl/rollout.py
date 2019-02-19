@@ -141,6 +141,7 @@ class HierarchicalRollout(Rollout):
                     else:
                         new_p = self.envs[i].env.get_plan()
                         self.plan_cache[cache_key] = new_p
+                        print("New plan generated. Number of cached plans: {}".format(len(self.plan_cache)))
 
                 else:
                     new_p = plans[i]
