@@ -15,13 +15,14 @@ from baselines.template.util import convert_episode_to_batch_major, store_args
 class HierarchicalRollout(Rollout):
 
     @store_args
-    def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
+    def __init__(self, make_env, policy, dims, logger, T, n_subgoals, rollout_batch_size=1,
                  exploit=False, history_len=100, render=False, **kwargs):
 
         parent_dims = dims.copy()
         parent_dims['u'] = parent_dims['g']
-        n_subgoals = 5 # TODO: fix this by parameterizing it
-        parent_T = T #int(T/n_subgoals)
+        # n_subgoals = 5 # TODO: fix this by parameterizing it
+        print(n_subgoals)
+        parent_T = int(T/n_subgoals)
         child_T = T #int(T/parent_T)
         # parent_policy = copy.deepcopy(policy)
         parent_policy = policy[0]
