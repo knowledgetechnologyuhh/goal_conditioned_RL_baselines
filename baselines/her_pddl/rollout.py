@@ -159,8 +159,8 @@ class HierarchicalRollout(Rollout):
                     plan_lens[i] = len(new_plans[i][0])
                     if self.render:
                         n_goals_achieved = init_plan_lens[i] - plan_lens[i]
-                        if n_goals_achieved > 0:
-                            print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
+                        # if n_goals_achieved > 0:
+                        #     print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
             next_subg = np.array(next_subg)

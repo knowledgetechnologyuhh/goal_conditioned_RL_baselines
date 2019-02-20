@@ -10,19 +10,24 @@ import mujoco_py
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
+    norm_dist = np.linalg.norm(goal_a - goal_b, axis=-1)
     if goal_a.shape[-1] % 3 == 0:
         n_xyz = int(goal_a.shape[-1] / 3)
-        max_dist = 0
+        max_dist = np.zeros(norm_dist.shape)
         for n in range(n_xyz):
             start = n * 3
             end = start + 3
             subg_a = goal_a[..., start:end]
             subg_b = goal_b[..., start:end]
-            dist = np.linalg.norm(subg_a - subg_b, axis=-1)
-            max_dist = max(dist, max_dist)
+            dist = np.asarray(np.linalg.norm(subg_a - subg_b, axis=-1))
+            if len(max_dist.shape) == 0:
+                max_dist = np.max([float(dist), float(max_dist)])
+            else:
+                max_dist = np.max([dist, max_dist], axis=0)
+
         return max_dist
     else:
-        return np.linalg.norm(goal_a - goal_b, axis=-1)
+        return norm_dist
 
 
 

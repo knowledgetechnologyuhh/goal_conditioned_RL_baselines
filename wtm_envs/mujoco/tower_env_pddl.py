@@ -289,7 +289,7 @@ def gen_plan_single(preds, gripper_has_target, goal_preds, ignore_actions=[]):
     plan_start = time.time()
     plan = planner.solve(domain, problem)
     duration = time.time() - plan_start
-    if duration > 0.0:
+    if duration > 1.0:
         print("plan generation took {:.2f} sec.".format(time.time() - plan_start))
 
     plan_acts = []
