@@ -58,7 +58,7 @@ class Obs2PredsModel():
 
 
 class Obs2PredsDenseModel(Obs2PredsModel):
-    def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
+    def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 256, 32]):
         self.define_prob_out = self.dense_prob_out
         super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
 
