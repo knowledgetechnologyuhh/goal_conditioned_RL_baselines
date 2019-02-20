@@ -426,7 +426,7 @@ class TowerEnv(robot_env.RobotEnv):
         else:
             plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
             self.plan_cache[cache_key] = plan
-            if len(self.plan_cache) % 10 == 0:
+            if len(self.plan_cache) % 50 == 0:
                 print("Number of cached plans: {}".format(len(self.plan_cache)))
         return plan
 
