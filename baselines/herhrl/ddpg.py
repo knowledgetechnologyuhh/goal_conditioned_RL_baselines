@@ -25,7 +25,7 @@ class DDPG_HRL(Policy):
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
                  rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-                 sample_transitions, gamma, n_preds, reuse=False, **kwargs):
+                 sample_transitions, gamma, n_preds, n_subgoals, reuse=False, **kwargs):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
 
         Args:
@@ -58,6 +58,8 @@ class DDPG_HRL(Policy):
         dims = input_dims.copy()
         dims['u'] = dims['g']
         input_dims = dims
+        # n_subgoals = 5
+        T = int(T/n_subgoals)
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
@@ -105,8 +107,7 @@ class DDPG_HRL(Policy):
         buffer_shapes['ag'] = (self.T+1, self.dimg)
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
-        # print("buffer_size = {}".format(buffer_size))
-        # print("buffer_shape = {}".format(buffer_shapes))
+        print("buffer_shape = {}".format(buffer_shapes))
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
         # TODO: Check this

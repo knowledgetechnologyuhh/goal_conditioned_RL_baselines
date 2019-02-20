@@ -51,6 +51,8 @@ DEFAULT_PARAMS = {
     # normalization
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
+    # hrl
+    'n_subgoals': 5,    # added for Hierarchical RL
 }
 
 POLICY_ACTION_PARAMS = {
@@ -89,7 +91,8 @@ use_target_net=self.use_target_net)
 
 OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name',
+                       'n_subgoals']
 
 
 def cached_make_env(make_env):
@@ -180,7 +183,7 @@ def configure_policy(dims, params):
     env = cached_make_env(params['make_env'])
     env.reset()
     preds = env.env.get_preds()
-
+    n_subgoals = params['n_subgoals']
     n_preds = len(preds[0])
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
@@ -192,7 +195,8 @@ def configure_policy(dims, params):
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
-                        'n_preds': n_preds
+                        'n_preds': n_preds,
+                        'n_subgoals': n_subgoals
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
@@ -200,7 +204,7 @@ def configure_policy(dims, params):
     policy_parent = DDPG(**ddpg_params)
     ddpg_params['scope'] += '_parent'
     policy_child = DDPG_HER(**ddpg_params)
-    policy = [policy_parent, policy_child]
+    policy = [policy_parent, policy_child]  # This one to deal with Hierarchical RL, currently supported for 2 layers
     return policy
 
 def load_policy(restore_policy_file, params):
