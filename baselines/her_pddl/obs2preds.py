@@ -102,7 +102,7 @@ class Obs2PredsAttnModel(Obs2PredsModel):
         norm_attns = [tf.nn.sigmoid(tf.Variable(expected_shape=[dim_in], initial_value=(tf.zeros(dim_in) + 0.5)))] * self.n_preds
         p_outs = []
         for i in range(self.n_preds):
-            attn_in = input * norm_attns[i]
+            attn_in = self.in_layer * norm_attns[i]
             out = self.dense_layers(attn_in, self.rep_model_layer_sizes + [2], reuse=None, flatten=False, name='obs2preds_nn_p_{}'.format(i))
             outputs = tf.reshape(out, [-1, 1, 2])
             pred_prob_out = tf.nn.softmax(outputs)
