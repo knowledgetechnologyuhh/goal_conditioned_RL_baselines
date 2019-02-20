@@ -10,7 +10,21 @@ import mujoco_py
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
-    return np.linalg.norm(goal_a - goal_b, axis=-1)
+    if goal_a.shape[-1] % 3 == 0:
+        n_xyz = int(goal_a.shape[-1] / 3)
+        max_dist = 0
+        for n in range(n_xyz):
+            start = n * 3
+            end = start + 3
+            subg_a = goal_a[..., start:end]
+            subg_b = goal_b[..., start:end]
+            dist = np.linalg.norm(subg_a - subg_b, axis=-1)
+            max_dist = max(dist, max_dist)
+        return max_dist
+    else:
+        return np.linalg.norm(goal_a - goal_b, axis=-1)
+
+
 
 
 class TowerEnv(robot_env.RobotEnv):
@@ -58,6 +72,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.min_tower_height = min_tower_height
         self.max_tower_height = max_tower_height
         self.step_ctr = 0
+
         self.plan_cache = {}
 
         self.goal = []
@@ -406,7 +421,8 @@ class TowerEnv(robot_env.RobotEnv):
         else:
             plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
             self.plan_cache[cache_key] = plan
-            print("New plan generated. Number of cached plans: {}".format(len(self.plan_cache)))
+            if len(self.plan_cache) % 10 == 0:
+                print("Number of cached plans: {}".format(len(self.plan_cache)))
         return plan
 
     def action2subgoal(self, action):
