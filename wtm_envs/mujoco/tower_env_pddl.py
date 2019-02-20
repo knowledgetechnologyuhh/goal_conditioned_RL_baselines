@@ -54,13 +54,13 @@ def obs_to_preds_single(obs, goal, n_objects):
     # Determine whether an object is on top of another object
     for o1 in range(n_objects):
         o1_pos = get_o_pos(obs, o1)
-        o1_tgt_pos = o1_pos + [0,0,BTT.on_z_offset]
         for o2 in range(n_objects):
             if o1 == o2:
                 continue
             pred_name = 'o{}_on_o{}'.format(o1,o2)
             o2_pos = get_o_pos(obs, o2)
-            distance = np.linalg.norm(o1_tgt_pos - o2_pos)
+            o1_tgt_pos = o2_pos + [0, 0, BTT.on_z_offset]
+            distance = np.linalg.norm(o1_tgt_pos - o1_pos)
             preds[pred_name] = distance < BTT.distance_threshold
 
     for o in range(n_objects):
@@ -224,15 +224,15 @@ def action2subgoal(action, obs, goal, n_objects):
         return o_pos
 
     final_goal = copy.deepcopy(goal)
-    subgoal = copy.deepcopy(goal)
-
+    # subgoal = copy.deepcopy(goal)
+    no_change_subgoal = copy.deepcopy(goal)
     # By default, all objects stays where they are:
     for o_idx in range(n_objects):
         o_pos = get_o_pos(obs, o_idx).copy()
         start_idx = (o_idx + 1) * 3
         end_idx = start_idx + 3
-        subgoal[start_idx:end_idx] = o_pos
-    no_change_subgoal = subgoal.copy()
+        no_change_subgoal[start_idx:end_idx] = o_pos
+    subgoal = no_change_subgoal.copy()
     for o_idx in range(n_objects):
         o_pos = get_o_pos(obs, o_idx)
         if action == 'move_gripper_to__o{}'.format(o_idx):
@@ -253,12 +253,16 @@ def action2subgoal(action, obs, goal, n_objects):
             o2_pos = get_o_pos(obs, o2_idx)
             if action == 'move__o{}_on__o{}'.format(o_idx, o2_idx):
                 # First three elements of goal represent target gripper pos.
-                subgoal[:3] = o2_pos.copy()  # Gripper should be above (at) object
-                subgoal[2] += np.mean(BTT.grasp_z_offset)
-                # Object should be at object goal
+                # subgoal[:3] = o2_pos.copy()  # Gripper should be above (at) object
+                # subgoal[2] += np.mean(BTT.grasp_z_offset)
+                # Object should be on top of o2
+                o_goal = o2_pos
+                o_goal[2] += (BTT.on_z_offset * 1.0)
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
-                subgoal[start_idx:end_idx] = o2_pos.copy()
+                subgoal[start_idx:end_idx] = o_goal
+                subgoal[:3] = o_goal
+                subgoal[2] += np.mean(BTT.grasp_z_offset)
     if action == 'move_gripper_to_target':
         subgoal[3:] = final_goal[3:]  # Gripper should be at gripper goal
 
