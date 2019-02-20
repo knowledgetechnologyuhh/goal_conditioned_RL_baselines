@@ -9,6 +9,7 @@ import pickle
 import copy
 from mujoco_py import MujocoException
 from baselines.template.util import convert_episode_to_batch_major, store_args
+from tqdm import tqdm
 
 class HierarchicalRollout(Rollout):
 
@@ -250,7 +251,7 @@ class RolloutWorker(HierarchicalRollout):
         dur_train = 0
         dur_start = time.time()
         rep_ce_loss = 0
-        for cyc in range(n_episodes):
+        for cyc in tqdm(range(n_episodes)):
             ro_start = time.time()
             episode = self.generate_rollouts()
             self.policy.store_episode(episode)

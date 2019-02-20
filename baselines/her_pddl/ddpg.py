@@ -11,7 +11,7 @@ from baselines.her_pddl.normalizer import Normalizer
 from baselines.her_pddl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
-from baselines.her_pddl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
+from baselines.her_pddl.obs2preds import Obs2PredsModel, Obs2PredsBuffer, Obs2PredsAttnModel
 
 
 def dims_to_shapes(input_dims):
@@ -76,11 +76,11 @@ class DDPG_PDDL(Policy):
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
         self.n_preds = n_preds
-
         if self.clip_return is None:
             self.clip_return = np.inf
-
         self.create_actor_critic = import_function(self.network_class)
+        self.rep_network = import_function(kwargs['rep_network_class'])
+
 
         # Create network.
         with tf.variable_scope(self.scope):
@@ -102,7 +102,7 @@ class DDPG_PDDL(Policy):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
-        self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
+        self.obs2preds_model = self.rep_network(self.n_preds, self.dimo, self.dimg)
         self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=1000)
 
     def _random_action(self, n):

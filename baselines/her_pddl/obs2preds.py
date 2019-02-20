@@ -3,22 +3,34 @@ from queue import deque
 import tensorflow as tf
 import threading
 
+
 class Obs2PredsModel():
     def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
+        self.rep_model_layer_sizes = rep_model_layer_sizes
+        self.n_preds = n_preds
         with tf.variable_scope('obs2preds'):
             self.inputs_o = tf.placeholder(shape=[None, dim_o], dtype=tf.float32)
             self.inputs_g = tf.placeholder(shape=[None, dim_g], dtype=tf.float32)
             self.preds = tf.placeholder(shape=[None, n_preds, 2], dtype=tf.uint8)
-            in_layer = tf.concat([self.inputs_o, self.inputs_g], axis=1)
-            # outputs =
-            # self.prob_out = self.mixed_layers(in_layer, rep_model_layer_sizes, n_preds, name='obs2preds_nn')
-            self.prob_out = self.per_pred_attn_layers(in_layer, rep_model_layer_sizes, n_preds, name='obs2preds_nn')
-            self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
-            self.celosses = tf.losses.softmax_cross_entropy(self.preds, self.prob_out, reduction=tf.losses.Reduction.NONE)
-            self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
-            # self.optimizer = tf.train.RMSPropOptimizer(learning_rate=0.001).minimize(self.celoss)
+            self.in_layer = tf.concat([self.inputs_o, self.inputs_g], axis=1)
+            self.prob_out = self.define_prob_out()
+            self.define_losses()
+        self.init_vars()
+
+    def init_vars(self):
         obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='obs2preds')
         tf.variables_initializer(obs2preds_vars).run()
+
+    def define_prob_out(self):
+        self.prob_out = None  # To be overwritten by child classes
+        raise NotImplementedError("Final layers not defined")
+
+
+
+    def define_losses(self):
+        self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
+        self.celosses = tf.losses.softmax_cross_entropy(self.preds, self.prob_out, reduction=tf.losses.Reduction.NONE)
+        self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
 
 
     def dense_layers(self, input, layers_sizes, reuse=None, flatten=False, name=""):
@@ -38,17 +50,61 @@ class Obs2PredsModel():
             input = tf.reshape(input, [-1])
         return input
 
-    def mixed_layers(self, input, layer_sizes, n_preds, reuse=None, flatten=False, name=""):
-        out = self.dense_layers(input, layer_sizes + [n_preds * 2], reuse=reuse, flatten=flatten, name=name)
-        outputs = tf.reshape(out, [-1, n_preds, 2])
-        prob_out = tf.nn.softmax(outputs)
-        return prob_out
+    # def mixed_layers(self, input, layer_sizes, n_preds, reuse=None, flatten=False, name=""):
+    #     out = self.dense_layers(input, layer_sizes + [n_preds * 2], reuse=reuse, flatten=flatten, name=name)
+    #     outputs = tf.reshape(out, [-1, n_preds, 2])
+    #     prob_out = tf.nn.softmax(outputs)
+    #     return prob_out
+
+
+class Obs2PredsDenseModel(Obs2PredsModel):
+    def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
+        self.define_prob_out = self.dense_prob_out
+        super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
+
+    def dense_prob_out(self):
+        with tf.variable_scope('obs2preds'):
+            out = self.dense_layers(self.in_layer, self.rep_model_layer_sizes + [2 * self.n_preds], reuse=None, flatten=False,
+                                        name='obs2preds_nn')
+            outputs = tf.reshape(out, [-1, self.n_preds, 2])
+            prob_out = tf.nn.softmax(outputs, axis=-1)
+            return prob_out
+
+class Obs2PredsEmbeddingModel(Obs2PredsModel):
+    def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
+        dim_emb = [n_preds * 2]
+        pred_embeddings = tf.Variable(expected_shape=dim_emb, initial_value=(tf.zeros(dim_emb) + 0.5))
+        self.define_prob_out = self.embedding_prob_out
+        super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
+
+    def embedding_prob_out(self):
+        with tf.variable_scope('obs2preds'):
+            dim_in = self.input.shape[1]
+
+            p_outs = []
+            for i in range(self.n_preds):
+                out = self.dense_layers(self.input, self.rep_model_layer_sizes + [2 * self.n_preds], reuse=None, flatten=False,
+                                        name='obs2preds_nn' + "p_{}".format(i))
+                outputs = tf.reshape(out, [-1, 1, 2])
+                pred_prob_out = tf.nn.softmax(outputs)
+                p_outs.append(pred_prob_out)
+            prob_out = tf.nn.softmax(p_outs, axis=1)
+            return prob_out
+
+
+class Obs2PredsAttnModel(Obs2PredsModel):
+
+    def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
+        self.define_prob_out = self.attn_prob_out
+        super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
+
+    def attn_prob_out(self):
+        with tf.variable_scope('obs2preds'):
+            self.prob_out = self.per_pred_attn_layers(self.in_layer, self.rep_model_layer_sizes, self.n_preds, name='obs2preds_nn')
 
     def per_pred_attn_layers(self, input, layer_sizes, n_preds, reuse=None, flatten=False, name=""):
         dim_in = input.shape[1]
         norm_attns = [tf.nn.sigmoid(tf.Variable(expected_shape=[dim_in], initial_value=(tf.zeros(dim_in) + 0.5)))] * n_preds
-        # norm_attns = tf.nn.sigmoid(attns)
-
         p_outs = []
         for i in range(n_preds):
             attn_in = input * norm_attns[i]
@@ -56,9 +112,7 @@ class Obs2PredsModel():
             outputs = tf.reshape(out, [-1, 1, 2])
             pred_prob_out = tf.nn.softmax(outputs)
             p_outs.append(pred_prob_out)
-
         prob_out = tf.concat(p_outs, axis=1)
-
         return prob_out
 
 
