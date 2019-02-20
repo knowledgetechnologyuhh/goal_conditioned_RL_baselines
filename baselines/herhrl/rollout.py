@@ -20,11 +20,12 @@ class HierarchicalRollout(Rollout):
 
         parent_dims = dims.copy()
         parent_dims['u'] = parent_dims['g']
-        n_subgoals = 5
+        n_subgoals = 5 # TODO: fix this by parameterizing it
         parent_T = T #int(T/n_subgoals)
         child_T = T #int(T/parent_T)
         # parent_policy = copy.deepcopy(policy)
         parent_policy = policy[0]
+        child_policy = policy[1]
         # parent_policy.scope = policy[0].scope + '_parent'
         # print("parent_policy scope {}".format(parent_policy.scope))
         # parent_policy.input_dims['u'] = parent_dims['u']
@@ -41,13 +42,9 @@ class HierarchicalRollout(Rollout):
         self.rep_correct_history = deque(maxlen=history_len)
         self.subgoal_succ_history = deque(maxlen=history_len)
 
-        # TODO: add self.child_rollout
-        # self.child_rollout = Rollout(make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
-        #                              history_len=history_len, render=render, **kwargs)
-        # self.child_rollout = RolloutWorker(make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
-        #                                    history_len=history_len, render=render, **kwargs)
-        print("policy dimu {}".format(policy[1].dimu))
-        self.child_rollout = SubRollout(make_env, policy[1], dims, logger, child_T,
+        print("policy dimu {}".format(child_policy.dimu))
+        # TODO: add condition to make this more modular
+        self.child_rollout = SubRollout(make_env, child_policy, dims, logger, child_T, self.envs,
                                         rollout_batch_size=rollout_batch_size,
                                         history_len=history_len, render=render, **kwargs)
 
@@ -269,13 +266,14 @@ class HierarchicalRollout(Rollout):
 
 class SubRollout(Rollout):
     @store_args
-    def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
+    def __init__(self, make_env, policy, dims, logger, T, envs, rollout_batch_size=1,
                  exploit=False, history_len=100, render=False, **kwargs):
         Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, **kwargs)
         self.inherited_g = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # goals
         self.o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         self.ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
+        self.envs = envs
         # self.success = np.zeros(self.rollout_batch_size)
 
     def inherited_values(self, o, ag, g):
