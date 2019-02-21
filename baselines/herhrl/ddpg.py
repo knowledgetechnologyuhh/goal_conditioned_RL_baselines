@@ -51,7 +51,7 @@ class DDPG_HRL(Policy):
             relative_goals (boolean): whether or not relative goals should be fed into the network
             clip_pos_returns (boolean): whether or not positive returns should be clipped
             clip_return (float): clip returns to be in [-clip_return, clip_return]
-            sample_transitions (function) function that samples from the replay buffer
+            sample_transitions (function) function that samples from the replay buffer, reward function is called here
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
