@@ -25,13 +25,10 @@ class Obs2PredsModel():
         self.prob_out = None  # To be overwritten by child classes
         raise NotImplementedError("Final layers not defined")
 
-
-
     def define_losses(self):
         self.celoss = tf.losses.softmax_cross_entropy(self.preds, self.prob_out)
         self.celosses = tf.losses.softmax_cross_entropy(self.preds, self.prob_out, reduction=tf.losses.Reduction.NONE)
         self.optimizer = tf.train.AdamOptimizer().minimize(self.celoss)
-
 
     def dense_layers(self, input, layers_sizes, reuse=None, flatten=False, name=""):
         """Creates a simple neural network
@@ -50,12 +47,6 @@ class Obs2PredsModel():
             input = tf.reshape(input, [-1])
         return input
 
-    # def mixed_layers(self, input, layer_sizes, n_preds, reuse=None, flatten=False, name=""):
-    #     out = self.dense_layers(input, layer_sizes + [n_preds * 2], reuse=reuse, flatten=flatten, name=name)
-    #     outputs = tf.reshape(out, [-1, n_preds, 2])
-    #     prob_out = tf.nn.softmax(outputs)
-    #     return prob_out
-
 
 class Obs2PredsDenseModel(Obs2PredsModel):
     def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 256, 32]):
@@ -70,12 +61,14 @@ class Obs2PredsDenseModel(Obs2PredsModel):
             prob_out = tf.nn.softmax(outputs, axis=-1)
             return prob_out
 
+
 class Obs2PredsEmbeddingModel(Obs2PredsModel):
     def __init__(self, n_preds, dim_o, dim_g, rep_model_layer_sizes=[32, 16, 8]):
-        dim_emb = [n_preds * 2]
-        pred_embeddings = tf.Variable(expected_shape=dim_emb, initial_value=(tf.zeros(dim_emb) + 0.5))
         self.define_prob_out = self.embedding_prob_out
+        dim_emb = [n_preds * 2]
+        self.pred_embeddings = tf.Variable(expected_shape=dim_emb, initial_value=(tf.zeros(dim_emb) + 0.5))
         super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
+
 
     def embedding_prob_out(self):
         dim_in = self.input.shape[1]
@@ -109,7 +102,6 @@ class Obs2PredsAttnModel(Obs2PredsModel):
             p_outs.append(pred_prob_out)
         prob_out = tf.concat(p_outs, axis=1)
         return prob_out
-
 
 
 class Obs2PredsBuffer():
@@ -151,7 +143,6 @@ class Obs2PredsBuffer():
                                    p=prob_dist)
         return idx
 
-
     def store_sample(self, preds, obs, goal, loss=None):
         if self.obs2preds_sample_buffer is None:
             self.init_buffer(len(preds), len(obs), len(goal))
@@ -177,7 +168,6 @@ class Obs2PredsBuffer():
                 self.update_idx_losses([idx], [loss])
             self.current_buf_size += 1
             self.current_buf_size = min(self.current_buf_size, self.buffer_len)
-
 
     def store_sample_batch(self, preds, obs, goal, loss=None):
         for i, (p,o,g) in enumerate(zip(preds, obs, goal)):
