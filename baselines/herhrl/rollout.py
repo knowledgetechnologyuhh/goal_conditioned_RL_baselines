@@ -141,7 +141,6 @@ class HierarchicalRollout(Rollout):
             # action(i) --> subgoal(i-1)
             self.subg = u
             self.child_rollout.inherited_values(o, ag, self.subg)
-            print("child g {}".format(self.child_rollout.g))
             # TODO: HAC proposes to stop this earlier if self.subg achieves
             for cyc in range(child_n_episodes):
                 # print("child_episode = {}/{}".format(cyc, child_n_episodes))
@@ -168,11 +167,7 @@ class HierarchicalRollout(Rollout):
                         'is_success': is_success
                     }
                     # print("parent action    {}".format(u[i]))
-                    print("parent self.subg {}".format(self.subg[i]))
-                    print("parent self.g    {}".format(self.g[i]))
-                    print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
-                    print("parent achieved_goal {}".format(curr_o_new['achieved_goal']))
-                    print("parent is success    {}".format(is_success))
+
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
                     for idx, key in enumerate(self.info_keys):
@@ -184,7 +179,13 @@ class HierarchicalRollout(Rollout):
                     overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
                 # print('child_rollout.success_history {}'.format(self.child_rollout.success_history))
-                if subgoal_success > np.zeros(self.rollout_batch_size)+0.1:
+                if np.any(subgoal_success > np.zeros(self.rollout_batch_size)+0.5) or \
+                        np.any(overall_success > np.zeros(self.rollout_batch_size)+0.5):
+                    print("parent self.subg {}".format(self.subg[i]))
+                    print("parent self.g    {}".format(self.g[i]))
+                    print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
+                    print("parent achieved_goal {}".format(curr_o_new['achieved_goal']))
+                    print("parent is success    {}".format(is_success))
                     print(subgoal_success)
                     break
                     #
@@ -253,6 +254,7 @@ class HierarchicalRollout(Rollout):
         self.subgoal_succ_history.append(self.child_rollout.success_history)
         # avg_pred_correct /= self.T
         # self.rep_correct_history.append(avg_pred_correct)
+
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
         if return_states:
@@ -267,6 +269,7 @@ class HierarchicalRollout(Rollout):
                        ag=achieved_goals)
         for key, value in zip(self.info_keys, info_values):
             episode['info_{}'.format(key)] = value
+            # print("episode {}".format(episode))
 
         # stats
         successful = np.array(successes)[-1, :]
@@ -283,7 +286,14 @@ class HierarchicalRollout(Rollout):
             ret = convert_episode_to_batch_major(episode), mj_states
         else:
             ret = convert_episode_to_batch_major(episode)
-        return ret
+
+        penalty = False
+        # TODO: add penalized transition if subgoal_success doesn't have any positive value
+        if np.all(subgoal_success < np.ones(self.rollout_batch_size)-0.5):
+            print("penalize subgoal")
+            penalty = True
+            # self.policy.store_episode(episode, penalty=True)
+        return ret, penalty
 
 
 class SubRollout(Rollout):
@@ -362,7 +372,8 @@ class RolloutWorker(HierarchicalRollout):
         rep_ce_loss = 0
         for cyc in range(n_episodes):
             ro_start = time.time()
-            episode = self.generate_rollouts(n_episodes)
+            episode, penalty = self.generate_rollouts(n_episodes)
+            self.policy.store_episode(episode, penalty=penalty)
             self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()

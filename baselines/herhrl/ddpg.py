@@ -168,10 +168,13 @@ class DDPG_HRL(Policy):
         else:
             return ret
 
-    def store_episode(self, episode_batch, update_stats=True):
+    def store_episode(self, episode_batch, update_stats=True, penalty=False):
         """
-        episode_batch: array of batch_size x (T or T+1) x dim_key
+        Args:
+            episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
+            update_stats:
+            penalty: boolean value to penalize subgoal
         """
 
         self.buffer.store_episode(episode_batch)
@@ -181,7 +184,7 @@ class DDPG_HRL(Policy):
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
             episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
             num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
-            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions)
+            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions, penalty=penalty)
 
             o, o_2, g, ag = transitions['o'], transitions['o_2'], transitions['g'], transitions['ag']
             transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
