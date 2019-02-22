@@ -248,6 +248,7 @@ class RolloutWorker(HierarchicalRollout):
             pickle.dump(self.policy, f)
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):
+        rep_train_batches = 1
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
@@ -260,6 +261,7 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()
+            for _ in range(rep_train_batches):
                 total_rep_loss, batch_rep_losses, rep_indexes = self.policy.train_representation()
                 self.policy.obs2preds_buffer.update_idx_losses(rep_indexes, batch_rep_losses)
                 mean_total = np.mean(batch_rep_losses)
