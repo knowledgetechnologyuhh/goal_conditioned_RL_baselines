@@ -100,6 +100,11 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
+    nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
+    # print("PID: {}".format(os.getpid()))
+    # print("Rollouts stored: {}".format(nrs))
+    # print("Last obs: {}".format(rollout_worker.policy.buffer.buffers['o'][nrs-1][-1][0]))
+    # print("bye")
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
