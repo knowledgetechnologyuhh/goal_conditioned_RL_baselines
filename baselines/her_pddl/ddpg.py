@@ -233,7 +233,7 @@ class DDPG_PDDL(Policy):
         return critic_loss, actor_loss
 
     def train_representation(self):
-        rep_batch_size = 32
+        rep_batch_size = 64
         batch = self.obs2preds_buffer.sample_batch(rep_batch_size)
         indexes = batch['indexes']
         feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
