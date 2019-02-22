@@ -77,6 +77,7 @@ class HierarchicalRollout(Rollout):
         avg_pred_correct = 0
 
         for t in range(self.T):
+
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
@@ -259,9 +260,9 @@ class RolloutWorker(HierarchicalRollout):
             train_start = time.time()
             for _ in range(n_train_batches):
                 self.policy.train()
-                total_loss, batch_losses, indexes = self.policy.train_representation()
-                self.policy.obs2preds_buffer.update_idx_losses(indexes, batch_losses)
-                mean_total = np.mean(batch_losses)
+                total_rep_loss, batch_rep_losses, rep_indexes = self.policy.train_representation()
+                self.policy.obs2preds_buffer.update_idx_losses(rep_indexes, batch_rep_losses)
+                mean_total = np.mean(batch_rep_losses)
                 rep_ce_loss += mean_total
             self.policy.update_target_net()
             dur_train += time.time() - train_start

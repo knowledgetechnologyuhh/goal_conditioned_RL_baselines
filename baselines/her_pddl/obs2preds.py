@@ -18,7 +18,10 @@ class Obs2PredsModel():
         self.init_vars()
 
     def init_vars(self):
-        obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='obs2preds')
+        obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='ddpg/obs2preds')
+        tf.variables_initializer(obs2preds_vars).run()
+        # TODO: I have to do this with ddpg_1 because otherwise the attn_layers would not be initialized. However, I don't understand why... They should not be in scope ddpg_1, but ddpg...
+        obs2preds_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='ddpg_1/obs2preds')
         tf.variables_initializer(obs2preds_vars).run()
 
     def define_prob_out(self):
@@ -54,12 +57,11 @@ class Obs2PredsDenseModel(Obs2PredsModel):
         super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
 
     def dense_prob_out(self):
-        with tf.variable_scope('obs2preds'):
-            out = self.dense_layers(self.in_layer, self.rep_model_layer_sizes + [2 * self.n_preds], reuse=None, flatten=False,
-                                        name='obs2preds_nn')
-            outputs = tf.reshape(out, [-1, self.n_preds, 2])
-            prob_out = tf.nn.softmax(outputs, axis=-1)
-            return prob_out
+        out = self.dense_layers(self.in_layer, self.rep_model_layer_sizes + [2 * self.n_preds], reuse=None, flatten=False,
+                                    name='obs2preds_nn')
+        outputs = tf.reshape(out, [-1, self.n_preds, 2])
+        prob_out = tf.nn.softmax(outputs, axis=-1)
+        return prob_out
 
 
 class Obs2PredsEmbeddingModel(Obs2PredsModel):
@@ -92,10 +94,12 @@ class Obs2PredsAttnModel(Obs2PredsModel):
 
     def attn_prob_out(self):
         dim_in = self.in_layer.shape[1]
-        norm_attns = [tf.nn.sigmoid(tf.Variable(expected_shape=[dim_in], initial_value=(tf.zeros(dim_in) + 0.5)))] * self.n_preds
+        # norm_attns = [tf.nn.sigmoid(tf.Variable(expected_shape=[dim_in], initial_value=(tf.zeros(dim_in) + 0.5), name='attn_var_{}'.format(p_idx))) for p_idx in range(self.n_preds)]
         p_outs = []
         for i in range(self.n_preds):
-            attn_in = self.in_layer * norm_attns[i]
+            norm_attn = tf.nn.sigmoid(tf.Variable(expected_shape=[dim_in], initial_value=(tf.zeros(dim_in) + 0.5), name='attn_var_{}'.format(i)))
+            attn_in = self.in_layer * norm_attn
+            # attn_in = self.in_layer
             out = self.dense_layers(attn_in, self.rep_model_layer_sizes + [2], reuse=None, flatten=False, name='obs2preds_nn_p_{}'.format(i))
             outputs = tf.reshape(out, [-1, 1, 2])
             pred_prob_out = tf.nn.softmax(outputs)
