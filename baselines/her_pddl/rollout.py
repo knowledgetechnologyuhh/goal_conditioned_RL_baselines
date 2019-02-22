@@ -148,11 +148,15 @@ class HierarchicalRollout(Rollout):
                 if len(newp[0]) > 0:
                     if p[0] == newp[0][1:]:
                         new_plans[i] = p
-            plans = new_plans
+
             next_subg = []
             for i in range(self.rollout_batch_size):
                 if len(new_plans[i][0]) > 0:
-                    subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
+                    # Only if the plan has changed, set a new subgoal:
+                    if str(new_plans[i]) != str(plans[i]):
+                        subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
+                    else:
+                        subg = self.envs[i].env.goal
                 else:
                     subg = self.g[i]
                 next_subg.append(subg)
@@ -165,6 +169,8 @@ class HierarchicalRollout(Rollout):
                         #     print("Achieved subgoal {} of {}".format(n_goals_achieved, init_plan_lens[i]))
                 if self.render:
                     self.envs[i].render()
+            plans = new_plans
+
             next_subg = np.array(next_subg)
 
             obs.append(o.copy())
