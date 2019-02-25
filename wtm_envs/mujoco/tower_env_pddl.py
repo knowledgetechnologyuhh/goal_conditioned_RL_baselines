@@ -7,7 +7,7 @@ import copy
 class BuildTowerThresholds:
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
-    distance_threshold = 0.05
+    distance_threshold = 0.025
     grasp_z_offset = 0.02
     on_z_offset = 0.05
 
