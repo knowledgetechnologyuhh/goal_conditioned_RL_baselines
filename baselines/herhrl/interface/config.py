@@ -3,9 +3,10 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.herhrl.ddpg import DDPG_HRL as DDPG
-from baselines.her.ddpg import DDPG as DDPG_HER
-from baselines.herhrl.her import make_sample_her_transitions
+from baselines.herhrl.ddpg import DDPG_HRL as DDPG_HRL
+from baselines.her.ddpg import DDPG as DDPG
+from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
+from baselines.her.her import make_sample_her_transitions
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 
 DEFAULT_ENV_PARAMS = {
@@ -145,7 +146,7 @@ def log_params(params, logger=logger):
         logger.info('{}: {}'.format(key, params[key]))
 
 
-def configure_her(params):
+def configure_her(params, hrl=True):
     env = cached_make_env(params['make_env'])
     env.reset()
 
@@ -160,7 +161,10 @@ def configure_her(params):
         her_params[name] = params[name]
         params['_' + name] = her_params[name]
         del params[name]
-    sample_her_transitions = make_sample_her_transitions(**her_params)
+    if hrl:
+        sample_her_transitions = make_sample_her_transitions_hrl(**her_params)
+    else:
+        sample_her_transitions = make_sample_her_transitions(**her_params)
 
     return sample_her_transitions
 
@@ -171,7 +175,9 @@ def simple_goal_subtract(a, b):
 
 
 def configure_policy(dims, params):
+    params_child = params.copy()
     sample_her_transitions = configure_her(params)
+    sample_her_transitions_child = configure_her(params_child, hrl=False)
     # Extract relevant parameters.
     gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
@@ -191,7 +197,7 @@ def configure_policy(dims, params):
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
-                        'sample_transitions': sample_her_transitions,
+                        'sample_transitions': sample_her_transitions_child,
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
@@ -201,9 +207,12 @@ def configure_policy(dims, params):
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
-    policy_parent = DDPG(**ddpg_params)
+    ddpg_params['T'] = n_subgoals
+    policy_child = DDPG(**ddpg_params)
     ddpg_params['scope'] += '_parent'
-    policy_child = DDPG_HER(**ddpg_params)
+    ddpg_params['T'] = params['T']
+    ddpg_params['sample_transitions'] = sample_her_transitions
+    policy_parent = DDPG_HRL(**ddpg_params)
     policy = [policy_parent, policy_child]  # This one to deal with Hierarchical RL, currently supported for 2 layers
     return policy
 
