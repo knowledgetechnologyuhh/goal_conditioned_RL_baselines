@@ -141,4 +141,5 @@ def reshape_for_broadcasting(source, target):
 
 def prob_dist2discrete(prob_dist):
     discrete = np.argmax(prob_dist, axis=-1)
+    # discrete = np.reshape(discrete, newshape=(prob_dist.shape[0],-1))
     return discrete

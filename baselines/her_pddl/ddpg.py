@@ -11,9 +11,7 @@ from baselines.her_pddl.normalizer import Normalizer
 from baselines.her_pddl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
-from baselines.her_pddl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
-# from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
-
+from baselines.her_pddl.obs2preds import Obs2PredsModel, Obs2PredsBuffer, Obs2PredsAttnModel
 
 
 def dims_to_shapes(input_dims):
@@ -78,11 +76,12 @@ class DDPG_PDDL(Policy):
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
         self.n_preds = n_preds
-
+        self.rep_lr = Q_lr
         if self.clip_return is None:
             self.clip_return = np.inf
-
         self.create_actor_critic = import_function(self.network_class)
+        self.rep_network = import_function(kwargs['rep_network_class'])
+
 
         # Create network.
         with tf.variable_scope(self.scope):
@@ -104,10 +103,10 @@ class DDPG_PDDL(Policy):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
-        # self.n_preds = 6
-        # n_preds = len(obs_to_preds_single(np.zeros(self.dimo), np.zeros(self.dimg), n_objects)[0])
-        self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
-        self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
+        # Creat rep. network
+        with tf.variable_scope(self.scope):
+            self._create_rep_network(reuse=reuse)
+        self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=2000)
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -191,6 +190,10 @@ class DDPG_PDDL(Policy):
         self.Q_adam.sync()
         self.pi_adam.sync()
 
+    def _sync_rep_optimizers(self):
+        self.rep_adam.sync()
+        # self.pi_adam.sync()
+
     def _grads(self):
         # Avoid feed_dict here for performance!
         critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run([
@@ -202,6 +205,8 @@ class DDPG_PDDL(Policy):
         return critic_loss, actor_loss, Q_grad, pi_grad
 
     def _update(self, Q_grad, pi_grad):
+        import os
+        # print("PID: {}. Updating AC.".format(os.getpid()))
         self.Q_adam.update(Q_grad, self.Q_lr)
         self.pi_adam.update(pi_grad, self.pi_lr)
 
@@ -211,7 +216,6 @@ class DDPG_PDDL(Policy):
         ag, ag_2 = transitions['ag'], transitions['ag_2']
         transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
         transitions['o_2'], transitions['g_2'] = self._preprocess_og(o_2, ag_2, g)
-
         transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
         return transitions_batch
 
@@ -229,25 +233,47 @@ class DDPG_PDDL(Policy):
         return critic_loss, actor_loss
 
     def train_representation(self):
-        rep_batch_size = 128
+        rep_batch_size = 64
         batch = self.obs2preds_buffer.sample_batch(rep_batch_size)
+        indexes = batch['indexes']
         feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
                                  self.obs2preds_model.inputs_g: batch['goals'],
                                  self.obs2preds_model.preds: batch['preds']}
-        opti_res, celoss = self.sess.run([self.obs2preds_model.optimizer,
-                                          self.obs2preds_model.celoss],
-                      feed_dict=feed_dict)
 
-        return celoss
+        rep_grad = self.sess.run([self.rep_grad_tf], feed_dict=feed_dict)[0]
+        self.rep_adam.update(rep_grad, self.rep_lr)
+        # opti_res, celoss, celosses = self.sess.run([self.obs2preds_model.optimizer,
+        #                                   self.obs2preds_model.celoss,
+        #                                   self.obs2preds_model.celosses],
+        #               feed_dict=feed_dict)
+        #
+        # celosses = np.mean(celosses, axis=-1)
+        _, celosses_after = self.predict_representation(batch)
+        celoss = np.mean(celosses_after)
+        return celoss, celosses_after, indexes
 
     def predict_representation(self, batch):
         feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
                      self.obs2preds_model.inputs_g: batch['goals']}
         pred_dist = self.sess.run([self.obs2preds_model.prob_out],
-                                         feed_dict=feed_dict)
-        preds = prob_dist2discrete(pred_dist[0])
-        return preds
+                                  feed_dict=feed_dict)
+        losses = None
+        if 'preds' in batch:
+            preds = batch['preds']
+            if len(preds.shape) != 3:
+                preds_probdist = np.zeros(shape=[preds.shape[0], preds.shape[1], 2])
+                for j,p in enumerate(preds):
+                    for i, v in enumerate(p):
+                        preds_probdist[j][i][int(v)] = 1
+                preds = preds_probdist
+            feed_dict.update({self.obs2preds_model.preds: preds})
+            pred_dist, loss = self.sess.run([self.obs2preds_model.prob_out, self.obs2preds_model.celosses],
+                                      feed_dict=feed_dict)
+            loss = np.mean(loss, axis=-1)
 
+            losses = np.reshape(loss,newshape=(preds.shape[0]))
+        preds = prob_dist2discrete(pred_dist)
+        return preds, losses
 
 
 
@@ -268,6 +294,14 @@ class DDPG_PDDL(Policy):
     def _global_vars(self, scope):
         res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
         return res
+
+    def _create_rep_network(self, reuse=False):
+        self.obs2preds_model = self.rep_network(self.n_preds, self.dimo, self.dimg)
+        self.rep_loss_tf = tf.reduce_mean(self.obs2preds_model.celoss)
+        rep_grads_tf = tf.gradients(self.rep_loss_tf, self._vars('obs2preds'))
+        self.rep_grad_tf = flatten_grads(grads=rep_grads_tf, var_list=self._vars('obs2preds'))
+        self.rep_adam = MpiAdam(self._vars('obs2preds'), scale_grad_by_procs=False)
+        self._sync_rep_optimizers()
 
     def _create_network(self, reuse=False):
         logger.info("Creating a DDPG agent with action space %d x %s..." % (self.dimu, self.max_u))

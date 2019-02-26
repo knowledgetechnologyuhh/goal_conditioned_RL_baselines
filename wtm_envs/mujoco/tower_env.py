@@ -10,7 +10,26 @@ import mujoco_py
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
-    return np.linalg.norm(goal_a - goal_b, axis=-1)
+    norm_dist = np.linalg.norm(goal_a - goal_b, axis=-1)
+    if goal_a.shape[-1] % 3 == 0:
+        n_xyz = int(goal_a.shape[-1] / 3)
+        max_dist = np.zeros(norm_dist.shape)
+        for n in range(n_xyz):
+            start = n * 3
+            end = start + 3
+            subg_a = goal_a[..., start:end]
+            subg_b = goal_b[..., start:end]
+            dist = np.asarray(np.linalg.norm(subg_a - subg_b, axis=-1))
+            if len(max_dist.shape) == 0:
+                max_dist = np.max([float(dist), float(max_dist)])
+            else:
+                max_dist = np.max([dist, max_dist], axis=0)
+
+        return max_dist
+    else:
+        return norm_dist
+
+
 
 
 class TowerEnv(robot_env.RobotEnv):
@@ -58,6 +77,8 @@ class TowerEnv(robot_env.RobotEnv):
         self.min_tower_height = min_tower_height
         self.max_tower_height = max_tower_height
         self.step_ctr = 0
+
+        self.plan_cache = {}
 
         self.goal = []
         self.goal_size = (n_objects * 3)
@@ -323,7 +344,10 @@ class TowerEnv(robot_env.RobotEnv):
                                                                                         self.target_range,
                                                                                         size=2)
                 self.goal_tower_height = self.n_objects
-                for n_o in range(self.n_objects):
+
+                height_list = list(range(self.n_objects))
+                random.shuffle(height_list)
+                for n_o in height_list:
                     height = n_o + 1
                     target_z = self.table_height + (height * self.obj_height) - (self.obj_height / 2)
                     target_goal = np.concatenate((target_goal_xy, [target_z]))
@@ -386,14 +410,24 @@ class TowerEnv(robot_env.RobotEnv):
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots = obs_to_preds_single(obs['observation'], g, self.n_objects)
-        return preds, one_hots
+        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        return preds, one_hots, goal_preds
 
     def get_plan(self):
         obs = self._get_obs()
-        preds, one_hots = obs_to_preds_single(obs['observation'], self.final_goal, self.n_objects)
-        tower_height = self.n_objects # TODO: Make this better, we may want situation where several objects are to be placed on the table without tower building.
-        plan = gen_plan_single(preds, self.gripper_has_target, tower_height)
+        if self.final_goal == []:
+            g = self.goal
+        else:
+            g = self.final_goal
+        preds, n_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        cache_key = str(n_hots) + str(goal_preds)
+        if cache_key in self.plan_cache.keys():
+            plan = self.plan_cache[cache_key]
+        else:
+            plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
+            self.plan_cache[cache_key] = plan
+            if len(self.plan_cache) % 50 == 0:
+                print("Number of cached plans: {}".format(len(self.plan_cache)))
         return plan
 
     def action2subgoal(self, action):
