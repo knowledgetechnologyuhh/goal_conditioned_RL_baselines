@@ -22,11 +22,9 @@ class HierarchicalRollout(Rollout):
         parent_dims['u'] = parent_dims['g']
         parent_T = int(T/n_subgoals)
         child_T = n_subgoals    #T #int(T/parent_T)
-        # parent_policy = copy.deepcopy(policy)
         parent_policy = policy[0]
         child_policy = policy[1]
         # parent_policy.scope = policy[0].scope + '_parent'
-        # print("parent_policy scope {}".format(parent_policy.scope))
         # parent_policy.input_dims['u'] = parent_dims['u']
         # parent_policy.dimu = parent_dims['u']
         Rollout.__init__(self, make_env, parent_policy, parent_dims, logger, parent_T,
@@ -41,7 +39,6 @@ class HierarchicalRollout(Rollout):
         self.rep_correct_history = deque(maxlen=history_len)
         self.subgoal_succ_history = deque(maxlen=history_len)
 
-        # print("policy dimu {}".format(child_policy.dimu))
         # TODO: add condition to make this more modular
         self.child_rollout = SubRollout(make_env, child_policy, dims, logger, child_T, self.envs,
                                         rollout_batch_size=rollout_batch_size,
@@ -99,10 +96,6 @@ class HierarchicalRollout(Rollout):
 
             # TODO: if not testing: add_noise to get_action if random_sample()>0.2 otherwise get_random_action
             # TODO: if testing: get_action
-            # if self.policy_action_params:
-            #     policy_output = self.policy.get_actions(o, ag, self.subg, **self.policy_action_params)
-            # else:
-            #     policy_output = self.policy.get_actions(o, ag, self.subg)
             # print('o {}'.format(o))
             # print('g {}'.format(self.g))
             if self.policy_action_params:
@@ -170,8 +163,6 @@ class HierarchicalRollout(Rollout):
                     # print("parent action    {}".format(u[i]))
                     # print("parent self.subg     {}".format(self.subg[i]))
                     # print("parent self.g        {}".format(self.g[i]))
-                    # print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
-                    # print("parent achieved_goal {}".format(curr_o_new['achieved_goal']))
 
                     child_o_new[i] = child_curr_o_new['observation']
                     child_ag_new[i] = child_curr_o_new['achieved_goal']
@@ -210,19 +201,7 @@ class HierarchicalRollout(Rollout):
 
                     # preds.append(self.envs[i].env.get_preds()[0])   # TODO: check
                     # n_hots.append(self.envs[i].env.get_preds()[1])
-            # TODO: For performance, perform planning only if preds has changed. May in addition use a caching approach
-            #  where plans for known preds are stored.
-            # n_hots[0] = np.array([0,0,1])
-            # self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g)  # TODO: check
-            # n_hots_from_model = self.policy.predict_representation({'obs': o_new, 'goals': self.g}) # TODO: check
-            # n_hots = np.array(n_hots)
-            # avg_pred_correct += np.mean([str(n_hots[i]) == str(n_hots_from_model[i])
-            #                              for i in range(self.rollout_batch_size)])
 
-            # Compute subgoal and goal success
-            # for i in range(self.rollout_batch_size):
-            #     subgoal_success[i] = self.envs[i].env._is_success(ag_new[i], self.subg[i])
-            #     overall_success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
             if np.any(subgoal_success > np.zeros(self.rollout_batch_size)+0.5) or \
                         np.any(overall_success > np.zeros(self.rollout_batch_size)+0.5):
                 print("sucess: subgoal = {}, overall = {}".format(subgoal_success, overall_success))
@@ -322,7 +301,6 @@ class SubRollout(Rollout):
         Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, **kwargs)
         self.envs = envs
-        # self.success = np.zeros(self.rollout_batch_size)
 
     def inherited_values(self, o, ag, g):
         """
@@ -346,10 +324,6 @@ class SubRollout(Rollout):
         self.initial_o = self.o
         self.initial_ag = self.ag
         self.g  = self.inherited_g
-
-    # def get_result
-    #     super().generate_rollouts()
-    #     self.success = successes
 
 
 class RolloutWorker(HierarchicalRollout):
@@ -403,9 +377,7 @@ class RolloutWorker(HierarchicalRollout):
             dur_ro += time.time() - ro_start
             train_start = time.time()
             for _ in range(n_train_batches):
-                # print("train {}/{}".format(_,n_train_batches))
                 self.policy.train()     # train actor-critic
-                # rep_ce_loss += self.policy.train_representation()   # TODO: check
             self.policy.update_target_net()
 
             for _ in range(n_train_batches):
