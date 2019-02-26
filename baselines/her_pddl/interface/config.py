@@ -20,7 +20,7 @@ DEFAULT_PARAMS = {
     # ddpg
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden': 256,  # number of neurons in each hidden layers
-    'network_class': 'baselines.her.actor_critic:ActorCritic',
+    'network_class': 'baselines.pddl_her.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
     'buffer_size': int(1E6),  # for experience replay
@@ -86,7 +86,7 @@ random_eps=self.random_eps if not self.exploit else 0.,
 use_target_net=self.use_target_net)
 """
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy', 'rep_network_class']
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
 
@@ -191,7 +191,8 @@ def configure_policy(dims, params):
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
-                        'n_preds': n_preds
+                        'n_preds': n_preds,
+                        'rep_network_class': params['rep_network_class']
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],

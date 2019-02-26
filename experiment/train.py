@@ -73,6 +73,9 @@ def train(rollout_worker, evaluator,
             print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
 
+        # save latest policy
+        evaluator.save_policy(latest_policy_path)
+
         # save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())
         success_rates.append(success_rate)
@@ -80,7 +83,6 @@ def train(rollout_worker, evaluator,
             best_success_rate = success_rate
             logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
             evaluator.save_policy(best_policy_path)
-            evaluator.save_policy(latest_policy_path)
         if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
             policy_path = periodic_policy_path.format(epoch)
             logger.info('Saving periodic policy to {} ...'.format(policy_path))
@@ -98,6 +100,11 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
+    nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
+    # print("PID: {}".format(os.getpid()))
+    # print("Rollouts stored: {}".format(nrs))
+    # print("Last obs: {}".format(rollout_worker.policy.buffer.buffers['o'][nrs-1][-1][0]))
+    # print("bye")
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):

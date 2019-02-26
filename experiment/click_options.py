@@ -6,7 +6,7 @@ click.option('--env', type=str, default='NicobotTowerBuildMujocoEnv-sparse-gripp
 click.option('--algorithm', default='baselines.her', help='the name of the algorithm to be used',
              type=click.Choice(['baselines.her', 'baselines.model_based', 'baselines.her_pddl', 'baselines.herhrl'])
              ),
-click.option('--base_logdir', type=str, default='data/her_pddl_data', help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/'),
+click.option('--base_logdir', type=str, default='/data/eppe/her_pddl_data', help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/'),
 click.option('--n_epochs', type=int, default=300, help='the max. number of training epochs to run'),
 click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)'),
 click.option('--seed', type=int, default=0, help='the random seed used to seed both the environment and the training code'),
@@ -17,7 +17,7 @@ click.option('--n_episodes', type=int, default=50, help='The number of training 
 click.option('--render', type=int, default=1, help='Whether or not to render the rollout execution.'),
 click.option('--max_try_idx', type=int, default=199, help='Max. number of tries for this training config.'),
 click.option('--try_start_idx', type=int, default=100, help='Index for first try.'),
-click.option('--early_stop_success_rate', type=int, default=95, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping'),
+click.option('--early_stop_success_rate', type=int, default=99, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping'),
 click.option('--info', type=str, default='', help='A command line comment that will be integrated in the folder where the results are stored. Useful for debugging and addressing temporary changes to the code..')
 ]
 
