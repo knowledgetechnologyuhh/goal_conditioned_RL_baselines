@@ -32,7 +32,7 @@ def obs_to_preds_single(obs, goal, n_objects):
         start_idx = (o_idx + 1) * 3
         end_idx = start_idx + 3
         o_pos = obs[start_idx:end_idx]
-        return o_pos
+        return o_pos.copy()
 
     def get_o_goal_pos(goal, o_idx):
         start_idx = (o_idx + 1) * 3
@@ -46,8 +46,8 @@ def obs_to_preds_single(obs, goal, n_objects):
     for o in range(n_objects):
         pred_name = 'gripper_at_o{}'.format(o)
         o_pos = get_o_pos(obs, o)
-        gripper_tgt_pos = o_pos
-        gripper_tgt_pos[2] = o_pos[2] + BTT.grasp_z_offset
+        gripper_tgt_pos = o_pos.copy()
+        gripper_tgt_pos[2] += BTT.grasp_z_offset
         distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
         preds[pred_name] = distance < BTT.distance_threshold
 
