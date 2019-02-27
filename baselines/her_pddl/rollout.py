@@ -113,6 +113,7 @@ class HierarchicalRollout(Rollout):
                 # We fully ignore the reward here because it will have to be re-computed
                 # for HER.
                 curr_o_new, _, _, info = self.envs[i].step(u[i])
+                # obs_new = self.envs[i].env._get_obs()
                 o_new[i] = curr_o_new['observation']
                 ag_new[i] = curr_o_new['achieved_goal']
                 for idx, key in enumerate(self.info_keys):
@@ -120,10 +121,9 @@ class HierarchicalRollout(Rollout):
                 if self.render:
                     self.envs[i].render()
 
-                preds, this_n_hots, goals = self.envs[i].env.get_preds()
+                preds, this_n_hots, goals = self.envs[i].env.get_preds(o_new[i].copy())
                 n_hots.append(this_n_hots)
                 goal_preds.append(goals)
-
             n_hots = np.array(n_hots)
             n_hots_from_model, losses = self.policy.predict_representation({'obs': o_new, 'goals': self.g, 'preds': n_hots})
             self.policy.obs2preds_buffer.store_sample_batch(n_hots, o_new, self.g, losses)
@@ -142,15 +142,14 @@ class HierarchicalRollout(Rollout):
                     new_p = plans[i]
                 new_plans.append(new_p)
                 last_n_hots = n_hots
-
             # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
             for i, (newp,p) in enumerate(zip(new_plans, plans)):
                 if len(newp[0]) > 0:
                     if p[0] == newp[0][1:]:
                         new_plans[i] = p
-
             next_subg = []
             for i in range(self.rollout_batch_size):
+
                 if len(new_plans[i][0]) > 0:
                     # Only if the plan has changed, set a new subgoal:
                     if str(new_plans[i]) != str(plans[i]):

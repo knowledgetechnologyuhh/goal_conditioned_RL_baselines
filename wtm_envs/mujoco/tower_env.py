@@ -97,7 +97,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     # GoalEnv methods
     # ----------------------------
-
     def compute_reward(self, achieved_goal, goal, info):
         if self.reward_type == 'sparse':
             success = self._is_success(achieved_goal, goal)
@@ -108,7 +107,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     # RobotEnv methods
     # ----------------------------
-
     def _step_callback(self):
         if self.block_gripper:
             self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
@@ -404,13 +402,15 @@ class TowerEnv(robot_env.RobotEnv):
         if self.n_objects > 0:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
-    def get_preds(self):
-        obs = self._get_obs()
+    def get_preds(self, obs=None):
+        # We may want to refer to previous observations, because if we get the observation directly from the simulator they may differ from other relevant observatios.
+        if obs is None:
+            obs = self._get_obs()['observation']
         if self.final_goal == []:
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        preds, one_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
         return preds, one_hots, goal_preds
 
     def get_plan(self):
