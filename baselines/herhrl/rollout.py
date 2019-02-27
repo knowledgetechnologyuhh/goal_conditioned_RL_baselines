@@ -57,6 +57,9 @@ class HierarchicalRollout(Rollout):
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
         policy acting on it accordingly.
         """
+
+        """ ==================== Step 1: initialize s0, s1, goal =================================
+        """
         self.reset_all_rollouts()
 
         if return_states:
@@ -81,7 +84,7 @@ class HierarchicalRollout(Rollout):
         subgoal_success = np.zeros(self.rollout_batch_size)
         overall_success = np.zeros(self.rollout_batch_size)
 
-        for t in range(int(self.T)):
+        for t in range(int(self.T)):    # self.T is a number of attempt of sampling the action a1 from parent policy
             if t == self.T - 1:
                 print("t/T = {}/{}".format(t, int(self.T)))
             if return_states:
@@ -98,6 +101,12 @@ class HierarchicalRollout(Rollout):
             # TODO: if testing: get_action
             # print('o {}'.format(o))
             # print('g {}'.format(self.g))
+
+            ''' =========================== Step 2: Sampling action a1 <-- policy pi1(s1, goal) ========================
+            - if not testing: add_noise to get_action if random_sample()>0.2 otherwise get_random_action
+            - if testing: get_action
+            '''
+            # TODO check policy.get_action --> seeming that only get_random_action take places
             if self.policy_action_params:
                 policy_output = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             else:
@@ -119,22 +128,25 @@ class HierarchicalRollout(Rollout):
             child_o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             child_ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
 
-            # # TODO: check
             # subgoal_success = np.zeros(self.rollout_batch_size)
             # overall_success = np.zeros(self.rollout_batch_size)
-            # action(i) --> subgoal(i-1)
+            """ ============================== Step 3: Setting subgoal g0 = subg1 <-- action a1 ========================
+            """
             self.subg = u
             self.child_rollout.inherited_values(o, ag, self.subg)
 
-            # TODO: check
+            # Setting subgoal and goal to environment, for visualization purpose
             for i, env in enumerate(self.envs):
                 env.env.goal = self.subg[i]
                 env.env.final_goal = self.g[i]
 
             # TODO: HAC proposes to stop this earlier if self.subg achieves
-            for cyc in range(child_n_episodes):
-            # for cyc in range(1):
-                # print("child_episode = {}/{}".format(cyc, child_n_episodes))
+            for cyc in range(child_n_episodes): # child_n_episodes is nummber of attemps d1 in HAC
+                """ ============================== Step 4: Sampling  action a1 <-- policy pi0(s0, a1)===================
+                    ============================== Step 5: Executing  action a1 & observe s0_new =======================
+                    ============================== Step 6: Store transition t0 in replay_buffer B0 =====================
+                    ============================== Step 7: Setting s0 <-- s0_new                    ====================
+                """
                 episode = self.child_rollout.generate_rollouts()    # policy.get_actions & execute action happen inside
                 self.child_rollout.policy.store_episode(episode)    # transition t0 is stored in replay buffer
 
@@ -160,15 +172,15 @@ class HierarchicalRollout(Rollout):
                     info = {
                         'is_success': is_success
                     }
-                    # print("parent action    {}".format(u[i]))
-                    # print("parent self.subg     {}".format(self.subg[i]))
-                    # print("parent self.g        {}".format(self.g[i]))
 
                     child_o_new[i] = child_curr_o_new['observation']
                     child_ag_new[i] = child_curr_o_new['achieved_goal']
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
-                    #
+
+                    # print("parent action        {}".format(u[i]))
+                    # print("parent self.subg     {}".format(self.subg[i]))
+                    # print("parent self.g        {}".format(self.g[i]))
                     # print("child desired_goal   {}".format(child_curr_o_new['desired_goal']))
                     # print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
                     # print("child achieved_goal  {}".format(child_curr_o_new['achieved_goal']))
@@ -209,6 +221,8 @@ class HierarchicalRollout(Rollout):
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(overall_success.copy())
+            u = self.policy.normalize_u(u)
+            # print('u normalized {}'.format(u))
             acts.append(u.copy())
             goals.append(self.g.copy())
             subgoals.append(self.subg.copy())
@@ -216,7 +230,8 @@ class HierarchicalRollout(Rollout):
             u_next = np.empty(u.shape, dtype=np.float32)
             for i in range(self.rollout_batch_size):
                 # u_next[i] = self.envs[i].env._obs2goal(o_new[i])
-                u_next[i] = self.child_rollout.envs[i].env._obs2goal(self.child_rollout.initial_o)
+                # u_next[i] = self.child_rollout.envs[i].env._obs2goal(self.child_rollout.initial_o)
+                u_next[i] = self.child_rollout.envs[i].env._obs2goal(child_o_new[i])
 
             # print("child o next {}".format(self.child_rollout.initial_o))
             # print("u_next       {}".format(u_next))
@@ -229,8 +244,6 @@ class HierarchicalRollout(Rollout):
         # avg_subgoals = np.mean(init_plan_lens)
         # self.subgoal_succ_history.append(avg_subgoal_succ / avg_subgoals)
         self.subgoal_succ_history.append(self.child_rollout.success_history)
-        # avg_pred_correct /= self.T
-        # self.rep_correct_history.append(avg_pred_correct)
 
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
@@ -249,9 +262,6 @@ class HierarchicalRollout(Rollout):
             # print("episode {}".format(episode))
 
         # print('episode {}'.format(episode))
-
-        # print("acts      {}".format(acts))
-        # print("acts_next {}".format(acts_next))
         episode_normal = dict(o=obs,
                               u=acts_next,
                               # u=acts,
@@ -260,12 +270,14 @@ class HierarchicalRollout(Rollout):
                               ag=achieved_goals)
         for key, value in zip(self.info_keys, info_values):
             episode_normal['info_{}'.format(key)] = value
-        # ret_normal = None
+
         # stats
         successful = np.array(successes)[-1, :]
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
         self.success_history.append(success_rate)
+
+        # history --> mean_Q
         if other_histories:
             for history_index in range(len(other_histories[0])):
                 self.custom_histories.append(deque(maxlen=self.history_len))
@@ -274,22 +286,23 @@ class HierarchicalRollout(Rollout):
 
         if return_states:
             ret = convert_episode_to_batch_major(episode), mj_states
-            # ret_normal = convert_episode_to_batch_major(episode_normal), mj_states
+            ret_normal = convert_episode_to_batch_major(episode_normal), mj_states
         else:
             ret = convert_episode_to_batch_major(episode)
-            # ret_normal = convert_episode_to_batch_major(episode_normal)
+            ret_normal = convert_episode_to_batch_major(episode_normal)
 
         penalty = False
-        # TODO: add penalized transition if subgoal_success doesn't have any positive value
+        """ =============== Step 8: Add penalized transition if subgoal_success doesn't have any positive value=========
+        """
         if np.all(subgoal_success < np.ones(self.rollout_batch_size)-0.5):
             print("PENALIZE SUBGOAL")
             penalty = True
-        # else:
-        #     ret = None
+        else:
+            ret = None
             # self.policy.store_episode(episode, penalty=True)
-        return ret, penalty
-        # return ret_normal, penalty, ret
 
+        return ret_normal, penalty, ret
+        # return ret, penalty
 
 class SubRollout(Rollout):
     @store_args
@@ -365,14 +378,14 @@ class RolloutWorker(HierarchicalRollout):
         rep_ce_loss = 0
         for cyc in range(n_episodes):
             ro_start = time.time()
-            episode, penalty = self.generate_rollouts(n_episodes)
-            self.policy.store_episode(episode, penalty=penalty)
-            self.policy.store_episode(episode)
+            # episode, penalty = self.generate_rollouts(n_episodes)
+            # self.policy.store_episode(episode, penalty=penalty)
+            # self.policy.store_episode(episode)
             # print("parent cyc/n_episodes {}/{}".format(cyc,n_episodes))
-            # episode_normal, penalty, episode = self.generate_rollouts(n_episodes)
-            # if penalty:
-            #     self.policy.store_episode(episode, penalty=penalty)
-            # self.policy.store_episode(episode_normal)
+            episode_normal, penalty, episode = self.generate_rollouts(n_episodes)
+            if penalty:
+                self.policy.store_episode(episode, penalty=penalty)
+            self.policy.store_episode(episode_normal)
 
             dur_ro += time.time() - ro_start
             train_start = time.time()
@@ -402,8 +415,11 @@ class RolloutWorker(HierarchicalRollout):
         """
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
+        logs += [('subg_success_rate', np.mean(self.child_rollout.success_history))]
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
+        if self.child_rollout.custom_histories:
+            logs += [('subgoal_mean_Q', np.mean(self.child_rollout.custom_histories[0]))]
         logs += [('episode', self.n_episodes)]
         if len(self.rep_loss_history) > 0:
             logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
