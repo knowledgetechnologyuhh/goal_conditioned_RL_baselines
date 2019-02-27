@@ -54,10 +54,11 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
         if not penalty:
             transitions['r'] = reward_fun(**reward_params)
         else: # this is for the case subgoal is missed
-            transitions['r'] = -50.*np.ones(shape=(transitions['g'].shape[0]))  # TODO: parameterize this
-            # transitions['r'] = 50. * reward_fun(**reward_params)
+            # transitions['r'] = -50.*np.ones(shape=(transitions['g'].shape[0]))  # TODO: parameterize this
+            transitions['r'] = 50. * reward_fun(**reward_params)
             # for k in transitions.keys():
-            #     if (k is not 'o') and (k is not 'o_2') and (k is not 'ag'):
+            #     # if (k is not 'o') and (k is not 'o_2') and (k is not 'ag'):
+            #     if (k is 'ag_2') or (k is 'g'):
             #         print('transition[{}] = \n{}'.format(k, transitions[k]))
             #         # print(transitions[k])
             # print("reward_fun value {}".format(reward_fun(**reward_params)))
