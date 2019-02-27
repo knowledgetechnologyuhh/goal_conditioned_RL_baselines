@@ -81,8 +81,8 @@ class HierarchicalRollout(Rollout):
         acts_next = []
 
         # TODO: check
-        subgoal_success = np.zeros(self.rollout_batch_size)
-        overall_success = np.zeros(self.rollout_batch_size)
+        # subgoal_success = np.zeros(self.rollout_batch_size)
+        # overall_success = np.zeros(self.rollout_batch_size)
 
         for t in range(int(self.T)):    # self.T is a number of attempt of sampling the action a1 from parent policy
             if t == self.T - 1:
@@ -128,8 +128,8 @@ class HierarchicalRollout(Rollout):
             child_o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             child_ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
 
-            # subgoal_success = np.zeros(self.rollout_batch_size)
-            # overall_success = np.zeros(self.rollout_batch_size)
+            subgoal_success = np.zeros(self.rollout_batch_size)
+            overall_success = np.zeros(self.rollout_batch_size)
             """ ============================== Step 3: Setting subgoal g0 = subg1 <-- action a1 ========================
             """
             self.subg = u
@@ -205,8 +205,7 @@ class HierarchicalRollout(Rollout):
                     print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
                     print("parent achieved_goal {}".format(curr_o_new['achieved_goal']))
                     print("parent is success    {}".format(is_success))
-                    print(subgoal_success)
-                    break
+                    # break # TODO this make server hung
                     #
                     # if 'is_success' in info:
                     #     subgoal_success[i] = info['is_success']
@@ -220,6 +219,7 @@ class HierarchicalRollout(Rollout):
 
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
+            subgoal_successes.append(subgoal_success.copy())
             successes.append(overall_success.copy())
             u = self.policy.normalize_u(u)
             # print('u normalized {}'.format(u))
@@ -243,7 +243,7 @@ class HierarchicalRollout(Rollout):
         # avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
         # avg_subgoals = np.mean(init_plan_lens)
         # self.subgoal_succ_history.append(avg_subgoal_succ / avg_subgoals)
-        self.subgoal_succ_history.append(self.child_rollout.success_history)
+        # self.subgoal_succ_history.append(self.child_rollout.success_history)
 
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
@@ -276,6 +276,11 @@ class HierarchicalRollout(Rollout):
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
         self.success_history.append(success_rate)
+
+        subgoal_successful = np.array(subgoal_successes)[-1, :]
+        assert subgoal_successful.shape == (self.rollout_batch_size,)
+        subgoal_success_rate = np.mean(subgoal_successful)
+        self.subgoal_succ_history.append(subgoal_success_rate)
 
         # history --> mean_Q
         if other_histories:
@@ -427,7 +432,7 @@ class RolloutWorker(HierarchicalRollout):
             logs += [('rep_correct', np.mean(self.rep_correct_history))]
         # TODO: check subg things
         if len(self.subgoal_succ_history) > 0:
-            logs += [('subgoal successes', np.mean(self.subgoal_succ_history))]
+            logs += [('subgoal_successes', np.mean(self.subgoal_succ_history))]
 
         return logger(logs, prefix)
 
