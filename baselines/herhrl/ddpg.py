@@ -84,10 +84,18 @@ class DDPG_HRL(Policy):
         self.action_l2 = action_l2
         self.n_preds = n_preds
 
+        self.u_range = np.empty((2, dims['u']))
+        u_range = [[1.2*self.max_u, -self.max_u, self.max_u],
+                   [2.6*self.max_u, self.max_u, 1.8*self.max_u]]
+        self.u_range[:, :3] = np.array(u_range)
+        if dims['u'] > 3:
+            self.u_range[:, 3:] = np.array(u_range)
+
         if self.clip_return is None:
             self.clip_return = np.inf
 
-        self.create_actor_critic = import_function(self.network_class) # ActorCritic is called here
+        with tf.variable_scope(self.scope):
+            self.create_actor_critic = import_function(self.network_class) # ActorCritic is called here
 
         # Create network.
         with tf.variable_scope(self.scope):
@@ -107,7 +115,6 @@ class DDPG_HRL(Policy):
         buffer_shapes['ag'] = (self.T+1, self.dimg)
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
-        print("buffer_shape = {}".format(buffer_shapes))
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
         # TODO: Check this
@@ -117,7 +124,12 @@ class DDPG_HRL(Policy):
         # self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
 
     def _random_action(self, n):
-        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
+        # return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
+        u = np.empty((n,self.dimu))
+        for i in range(self.dimu):
+            u[0, i] = np.random.uniform(low=self.u_range[0, i], high=self.u_range[1, i],)
+        # print('random action {}'.format(u))
+        return u
 
     def _preprocess_og(self, o, ag, g):
         if self.relative_goals:
@@ -134,8 +146,8 @@ class DDPG_HRL(Policy):
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True):
 
-        noise_eps = noise_eps if not exploit else 0.
-        random_eps = random_eps if not exploit else 0.
+        noise_eps = noise_eps/2. if not exploit else 0.
+        random_eps = random_eps/2. if not exploit else 0.
 
         o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
@@ -144,7 +156,6 @@ class DDPG_HRL(Policy):
         if compute_Q:
             vals += [policy.Q_pi_tf]
         # feed
-        # print('self dimu {}'.format(self.dimu))
         feed = {
             policy.o_tf: o.reshape(-1, self.dimo),
             policy.g_tf: g.reshape(-1, self.dimg),
@@ -154,9 +165,25 @@ class DDPG_HRL(Policy):
         ret = self.sess.run(vals, feed_dict=feed)
         # action postprocessing
         u = ret[0]
+        # print('u {}'.format(u))
+        u = self.denomalize_u(u)
+        # print('u {}'.format(u))
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
-        u = np.clip(u, -self.max_u, self.max_u)
+        # u[0][0] = np.clip(u[0][0], -self.max_u, self.max_u)
+        # u[0][3] = np.clip(u[0][3], -self.max_u, self.max_u)
+        # u = np.clip(u, 0, self.max_u)
+        for i in range(u.shape[1]):
+            u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
+            # if i == 0 or i == 3:
+            #     u[0][i] = np.clip(u[0][i], self.max_u, 3*self.max_u)    # x pointing forward
+            # elif i == 1 or i == 4:
+            #     u[0][i] = np.clip(u[0][i], -self.max_u, self.max_u)     # y pointing left
+            # else:
+            #     u[0][i] = np.clip(u[0][i], self.max_u, 2*self.max_u)    # z pointing upward
+
+        # u = np.clip(u, -self.max_u, self.max_u)
+        # print('u {}'.format(u))
         u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
         if u.shape[0] == 1:
             u = u[0]
@@ -168,6 +195,18 @@ class DDPG_HRL(Policy):
         else:
             return ret
 
+    def denomalize_u(self, u):
+        u_min = self.u_range[0, :]
+        u_max = self.u_range[1, :]
+
+        return u*(u_max - u_min) + (u_max - u_min)/2. + u_min
+
+    def normalize_u(self, u):
+        u_min = self.u_range[0, :]
+        u_max = self.u_range[1, :]
+
+        return (u - ((u_max-u_min)/2. + u_min)) / (u_max-u_min)
+
     def store_episode(self, episode_batch, update_stats=True, penalty=False):
         """
         Args:
@@ -178,7 +217,6 @@ class DDPG_HRL(Policy):
         """
 
         self.buffer.store_episode(episode_batch)
-
         if update_stats:
             # add transitions to normalizer
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
