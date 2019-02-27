@@ -178,9 +178,9 @@ class HierarchicalRollout(Rollout):
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']
 
+                    # print("parent self.g        {}".format(self.g[i]))
                     # print("parent action        {}".format(u[i]))
                     # print("parent self.subg     {}".format(self.subg[i]))
-                    # print("parent self.g        {}".format(self.g[i]))
                     # print("child desired_goal   {}".format(child_curr_o_new['desired_goal']))
                     # print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
                     # print("child achieved_goal  {}".format(child_curr_o_new['achieved_goal']))
@@ -237,8 +237,8 @@ class HierarchicalRollout(Rollout):
             # print("u_next       {}".format(u_next))
             acts_next.append(u_next.copy())
 
-            # o[...] = o_new
-            # ag[...] = ag_new
+            o[...] = o_new
+            ag[...] = ag_new
             # self.subg = next_subg   # TODO: check subg things
         # avg_subgoal_succ = np.mean([ip - p for ip, p in zip(init_plan_lens, plan_lens)])
         # avg_subgoals = np.mean(init_plan_lens)
