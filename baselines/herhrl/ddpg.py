@@ -85,8 +85,8 @@ class DDPG_HRL(Policy):
         self.n_preds = n_preds
 
         self.u_range = np.empty((2, dims['u']))
-        u_range = [[1.2*self.max_u, -self.max_u, self.max_u],
-                   [2.6*self.max_u, self.max_u, 1.8*self.max_u]]
+        u_range = [[1.3*self.max_u, -0.8*self.max_u, self.max_u],
+                   [2.5*self.max_u, 0.8*self.max_u, 1.5*self.max_u]]
         self.u_range[:, :3] = np.array(u_range)
         if dims['u'] > 3:
             self.u_range[:, 3:] = np.array(u_range)
