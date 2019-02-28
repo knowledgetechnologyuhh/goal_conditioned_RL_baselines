@@ -141,7 +141,8 @@ class HierarchicalRollout(Rollout):
                 env.env.final_goal = self.g[i]
 
             # TODO: HAC proposes to stop this earlier if self.subg achieves
-            for cyc in range(child_n_episodes): # child_n_episodes is nummber of attemps d1 in HAC
+            # for cyc in range(child_n_episodes): # child_n_episodes is nummber of attemps d1 in HAC
+            for cyc in range(1):  # child_n_episodes is nummber of attemps d1 in HAC
                 """ ============================== Step 4: Sampling  action a1 <-- policy pi0(s0, a1)===================
                     ============================== Step 5: Executing  action a1 & observe s0_new =======================
                     ============================== Step 6: Store transition t0 in replay_buffer B0 =====================
@@ -205,8 +206,8 @@ class HierarchicalRollout(Rollout):
                     print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
                     print("parent achieved_goal {}".format(curr_o_new['achieved_goal']))
                     print("parent is success    {}".format(is_success))
-                    print("subgoal_success      {}".format(subgoal_success))
-                    print("overall_success      {}".format(overall_success))
+                    # print("subgoal_success      {}".format(subgoal_success))
+                    # print("overall_success      {}".format(overall_success))
                     # break # TODO this make server hung
                     #
                     # if 'is_success' in info:
@@ -215,29 +216,29 @@ class HierarchicalRollout(Rollout):
                     # preds.append(self.envs[i].env.get_preds()[0])   # TODO: check
                     # n_hots.append(self.envs[i].env.get_preds()[1])
 
-            if np.any(subgoal_success > np.zeros(self.rollout_batch_size)+0.5) or \
-                        np.any(overall_success > np.zeros(self.rollout_batch_size)+0.5):
-                print("sucess: subgoal = {}, overall = {}".format(subgoal_success, overall_success))
+                if np.any(subgoal_success > np.zeros(self.rollout_batch_size)+0.5) or \
+                            np.any(overall_success > np.zeros(self.rollout_batch_size)+0.5):
+                    print("sucess: subgoal = {}, overall = {}".format(subgoal_success, overall_success))
 
-            obs.append(o.copy())
-            achieved_goals.append(ag.copy())
-            subgoal_successes.append(subgoal_success.copy())
-            successes.append(overall_success.copy())
-            u = self.policy.normalize_u(u)
-            # print('u normalized {}'.format(u))
-            acts.append(u.copy())
-            goals.append(self.g.copy())
-            subgoals.append(self.subg.copy())
+                obs.append(o.copy())
+                achieved_goals.append(ag.copy())
+                subgoal_successes.append(subgoal_success.copy())
+                successes.append(overall_success.copy())
+                u = self.policy.normalize_u(u)
+                # print('u normalized {}'.format(u))
+                acts.append(u.copy())
+                goals.append(self.g.copy())
+                subgoals.append(self.subg.copy())
 
-            u_next = np.empty(u.shape, dtype=np.float32)
-            for i in range(self.rollout_batch_size):
-                # u_next[i] = self.envs[i].env._obs2goal(o_new[i])
-                # u_next[i] = self.child_rollout.envs[i].env._obs2goal(self.child_rollout.initial_o)
-                u_next[i] = self.child_rollout.envs[i].env._obs2goal(child_o_new[i])
+                u_next = np.empty(u.shape, dtype=np.float32)
+                for i in range(self.rollout_batch_size):
+                    # u_next[i] = self.envs[i].env._obs2goal(o_new[i])
+                    # u_next[i] = self.child_rollout.envs[i].env._obs2goal(self.child_rollout.initial_o)
+                    u_next[i] = self.child_rollout.envs[i].env._obs2goal(child_o_new[i])
 
-            # print("child o next {}".format(self.child_rollout.initial_o))
-            # print("u_next       {}".format(u_next))
-            acts_next.append(u_next.copy())
+                # print("child o next {}".format(self.child_rollout.initial_o))
+                # print("u_next       {}".format(u_next))
+                acts_next.append(u_next.copy())
 
             o[...] = o_new
             ag[...] = ag_new
