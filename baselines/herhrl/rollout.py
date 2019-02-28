@@ -224,6 +224,9 @@ class HierarchicalRollout(Rollout):
                 achieved_goals.append(ag.copy())
                 subgoal_successes.append(subgoal_success.copy())
                 successes.append(overall_success.copy())
+                if np.any(subgoal_success > np.zeros(self.rollout_batch_size)+0.5) or \
+                            np.any(overall_success > np.zeros(self.rollout_batch_size)+0.5):
+                    print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
                 u = self.policy.normalize_u(u)
                 # print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
                 # print('u normalized {}'.format(u))
@@ -303,13 +306,14 @@ class HierarchicalRollout(Rollout):
         penalty = False
         """ =============== Step 8: Add penalized transition if subgoal_success doesn't have any positive value=========
         """
-        print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
+        # print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
         # if np.all(subgoal_success < np.ones(self.rollout_batch_size)-0.5):
         if np.all(subgoal_successes < np.ones(self.rollout_batch_size)-0.5):
             print("PENALIZE SUBGOAL")
             penalty = True
         else:
             ret = None
+            print("NO PENALIZE SUBGOAL")
             # self.policy.store_episode(episode, penalty=True)
 
         return ret_normal, penalty, ret
