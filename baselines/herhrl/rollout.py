@@ -205,6 +205,8 @@ class HierarchicalRollout(Rollout):
                     print("parent desired_goal  {}".format(curr_o_new['desired_goal']))
                     print("parent achieved_goal {}".format(curr_o_new['achieved_goal']))
                     print("parent is success    {}".format(is_success))
+                    print("subgoal_success      {}".format(subgoal_success))
+                    print("overall_success      {}".format(overall_success))
                     # break # TODO this make server hung
                     #
                     # if 'is_success' in info:
