@@ -309,10 +309,10 @@ class HierarchicalRollout(Rollout):
         # print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
         # if np.all(subgoal_success < np.ones(self.rollout_batch_size)-0.5):
         if np.all(subgoal_successes < np.ones(self.rollout_batch_size)-0.5):
-            print("PENALIZE SUBGOAL")
+            # print("PENALIZE SUBGOAL")
             penalty = True
         else:
-            ret = None
+            # ret = None
             print("NO PENALIZE SUBGOAL")
             # self.policy.store_episode(episode, penalty=True)
 
