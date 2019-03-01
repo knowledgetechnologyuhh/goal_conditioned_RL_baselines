@@ -316,7 +316,7 @@ class HierarchicalRollout(Rollout):
         else:
             # ret = None
             print("NO PENALIZE SUBGOAL")
-            print("success_rate: subgoal {}, goal {}".format(success_rate, subgoal_success_rate))
+            print("success_rate: subgoal {}, goal {}".format(subgoal_success_rate, success_rate))
             # self.policy.store_episode(episode, penalty=True)
 
         return ret_normal, penalty, ret
