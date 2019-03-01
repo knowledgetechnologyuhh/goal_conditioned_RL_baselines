@@ -55,13 +55,17 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
             transitions['r'] = reward_fun(**reward_params)
         else: # this is for the case subgoal is missed
             # transitions['r'] = -50.*np.ones(shape=(transitions['g'].shape[0]))  # TODO: parameterize this
-            transitions['r'] = 50. * reward_fun(**reward_params)
-            # for k in transitions.keys():
-            #     # if (k is not 'o') and (k is not 'o_2') and (k is not 'ag'):
-            #     if (k is 'ag_2') or (k is 'g'):
-            #         print('transition[{}] = \n{}'.format(k, transitions[k]))
-            #         # print(transitions[k])
+            # transitions['r'] = 50. * reward_fun(**reward_params)
+            transitions['r'] = np.empty(shape=(transitions['g'].shape[0]))
+            for k in transitions.keys():
+                # if (k is not 'o') and (k is not 'o_2') and (k is not 'ag'):
+                # if (k is 'ag_2') or (k is 'g'):
+                if k == 'info_is_success':
+                    print('transition[{}] = \n{}'.format(k, transitions[k]))
+                    transitions['r'] = 50. * (transitions[k][0] - np.ones(shape=(transitions['g'].shape[0])))  # TODO: parameterize this
+                    # print(transitions[k])
             # print("reward_fun value {}".format(reward_fun(**reward_params)))
+            print("transitions[r] {}".format(transitions['r']))
 
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:])
                        for k in transitions.keys()}
