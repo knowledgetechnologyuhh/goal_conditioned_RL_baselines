@@ -166,15 +166,17 @@ class DDPG_HRL(Policy):
         # action postprocessing
         u = ret[0]
         # print('u {}'.format(u))
-        u = self.denomalize_u(u)
+        # u = self.denomalize_u(u)
         # print('u {}'.format(u))
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
         # u[0][0] = np.clip(u[0][0], -self.max_u, self.max_u)
         # u[0][3] = np.clip(u[0][3], -self.max_u, self.max_u)
         # u = np.clip(u, 0, self.max_u)
-        for i in range(u.shape[1]):
-            u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
+
+        # for i in range(u.shape[1]):
+        #     u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
+
             # if i == 0 or i == 3:
             #     u[0][i] = np.clip(u[0][i], self.max_u, 3*self.max_u)    # x pointing forward
             # elif i == 1 or i == 4:

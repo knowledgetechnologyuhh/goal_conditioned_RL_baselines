@@ -20,7 +20,7 @@ DEFAULT_PARAMS = {
     # env
     'max_u': 1.,  # max absolute value of actions on different coordinates
     # ddpg
-    'layers': 5,  # number of layers in the critic/actor networks
+    'layers': 3,  # number of layers in the critic/actor networks
     'hidden': 256,  # number of neurons in each hidden layers
     'network_class': 'baselines.herhrl.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
@@ -211,7 +211,7 @@ def configure_policy(dims, params):
     ddpg_params['T'] = n_subgoals
     policy_child = DDPG(**ddpg_params)
 
-    ddpg_params['max_u'] = .5
+    # ddpg_params['max_u'] = .5
     ddpg_params['scope'] += '_parent'
     ddpg_params['T'] = params['T']
     ddpg_params['sample_transitions'] = sample_her_transitions

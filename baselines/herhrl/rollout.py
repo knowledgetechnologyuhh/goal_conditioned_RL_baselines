@@ -227,7 +227,7 @@ class HierarchicalRollout(Rollout):
                 if np.any(subgoal_success > np.zeros(self.rollout_batch_size)+0.5) or \
                             np.any(overall_success > np.zeros(self.rollout_batch_size)+0.5):
                     print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
-                u = self.policy.normalize_u(u)
+                # u = self.policy.normalize_u(u)
                 # print("sucesses: subgoal = {}, overall = {}".format(subgoal_successes, successes))
                 # print('u normalized {}'.format(u))
                 acts.append(u.copy())
