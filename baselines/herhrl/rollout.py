@@ -279,14 +279,16 @@ class HierarchicalRollout(Rollout):
             episode_normal['info_{}'.format(key)] = value
 
         # stats
-        successful = np.array(successes)[-1, :]
-        assert successful.shape == (self.rollout_batch_size,)
-        success_rate = np.mean(successful)
+        # successful = np.array(successes)[-1, :]
+        # assert successful.shape == (self.rollout_batch_size,)
+        # success_rate = np.mean(successful)
+        success_rate = np.mean(successes)
         self.success_history.append(success_rate)
 
-        subgoal_successful = np.array(subgoal_successes)[-1, :]
-        assert subgoal_successful.shape == (self.rollout_batch_size,)
-        subgoal_success_rate = np.mean(subgoal_successful)
+        # subgoal_successful = np.array(subgoal_successes)[-1, :]
+        # assert subgoal_successful.shape == (self.rollout_batch_size,)
+        # subgoal_success_rate = np.mean(subgoal_successful)
+        subgoal_success_rate = np.mean(subgoal_successes)
         self.subgoal_succ_history.append(subgoal_success_rate)
 
         # history --> mean_Q
@@ -314,10 +316,12 @@ class HierarchicalRollout(Rollout):
         else:
             # ret = None
             print("NO PENALIZE SUBGOAL")
+            print("success_rate: subgoal {}, goal {}".format(success_rate, subgoal_success_rate))
             # self.policy.store_episode(episode, penalty=True)
 
         return ret_normal, penalty, ret
         # return ret, penalty
+
 
 class SubRollout(Rollout):
     @store_args
