@@ -404,6 +404,8 @@ class RolloutWorker(HierarchicalRollout):
             episode_normal, penalty, episode = self.generate_rollouts(n_episodes)
             if penalty:
                 self.policy.store_episode(episode, penalty=penalty)
+            else:
+                self.policy.store_episode(episode)
             self.policy.store_episode(episode_normal)
 
             dur_ro += time.time() - ro_start
@@ -434,7 +436,7 @@ class RolloutWorker(HierarchicalRollout):
         """
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
-        logs += [('subg_success_rate', np.mean(self.child_rollout.success_history))]
+        # logs += [('subg_success_rate', np.mean(self.child_rollout.success_history))]
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
         if self.child_rollout.custom_histories:
@@ -446,7 +448,7 @@ class RolloutWorker(HierarchicalRollout):
             logs += [('rep_correct', np.mean(self.rep_correct_history))]
         # TODO: check subg things
         if len(self.subgoal_succ_history) > 0:
-            logs += [('subgoal_successes', np.mean(self.subgoal_succ_history))]
+            logs += [('subgoal_success_rate', np.mean(self.subgoal_succ_history))]
 
         return logger(logs, prefix)
 
