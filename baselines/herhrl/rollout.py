@@ -20,7 +20,7 @@ class HierarchicalRollout(Rollout):
 
         parent_dims = dims.copy()
         parent_dims['u'] = parent_dims['g']
-        parent_T = int(T/n_subgoals)
+        parent_T = T #int(T/n_subgoals)
         child_T = n_subgoals    #T #int(T/parent_T)
         parent_policy = policy[0]
         child_policy = policy[1]
