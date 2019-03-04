@@ -59,7 +59,7 @@ class DDPG_HRL(Policy):
         dims['u'] = dims['g']
         input_dims = dims
         # n_subgoals = 5
-        T = int(T/n_subgoals)
+        # T = int(T/n_subgoals)
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
@@ -174,8 +174,8 @@ class DDPG_HRL(Policy):
         # u[0][3] = np.clip(u[0][3], -self.max_u, self.max_u)
         # u = np.clip(u, 0, self.max_u)
 
-        # for i in range(u.shape[1]):
-        #     u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
+        for i in range(u.shape[1]):
+            u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
 
             # if i == 0 or i == 3:
             #     u[0][i] = np.clip(u[0][i], self.max_u, 3*self.max_u)    # x pointing forward
