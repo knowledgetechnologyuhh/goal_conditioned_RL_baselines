@@ -79,7 +79,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.step_ctr = 0
 
         self.plan_cache = {}
-
+        self.goal_hierarchy = {}
         self.goal = []
         self.goal_size = (n_objects * 3)
         self.final_goal = []
