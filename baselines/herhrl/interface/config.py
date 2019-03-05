@@ -53,7 +53,7 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
     # hrl
-    'n_subgoals': 10,    # added for Hierarchical RL
+    'n_subgoals': [5]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
 }
 
 POLICY_ACTION_PARAMS = {
@@ -175,9 +175,7 @@ def simple_goal_subtract(a, b):
 
 
 def configure_policy(dims, params):
-    params_child = params.copy()
     sample_her_transitions = configure_her(params)
-    sample_her_transitions_child = configure_her(params_child, hrl=False)
     # Extract relevant parameters.
     gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
@@ -189,35 +187,45 @@ def configure_policy(dims, params):
     env = cached_make_env(params['make_env'])
     env.reset()
     preds = env.env.get_preds()
-    n_subgoals = params['n_subgoals']
     n_preds = len(preds[0])
-    ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
+    ddpg_params.update({
                         'T': params['T'],
-                        'clip_pos_returns': True,  # clip positive returns
-                        'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
-                        #'sample_transitions': sample_her_transitions_child,
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
                         'n_preds': n_preds,
-                        'n_subgoals': n_subgoals
-                        })
+                        'sample_transitions': sample_her_transitions,
+                        'clip_pos_returns': True,  # clip positive returns for Q-values
+                        'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
+    })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
-    ddpg_params['sample_transitions'] = sample_her_transitions_child
-    ddpg_params['T'] = n_subgoals
-    policy_child = DDPG(**ddpg_params)
 
-    # ddpg_params['max_u'] = .5
-    ddpg_params['scope'] += '_parent'
-    ddpg_params['T'] = params['T']
-    ddpg_params['sample_transitions'] = sample_her_transitions
-    policy_parent = DDPG_HRL(**ddpg_params)
-    policy = [policy_parent, policy_child]  # This one to deal with Hierarchical RL, currently supported for 2 layers
-    return policy
+    t_remaining = params['T']
+    policies = []
+    for l, n_s in enumerate(params['n_subgoals'] + [None]):
+        if n_s is None: # If this is the final lowest layer
+            input_dims = dims.copy()
+            n_s = t_remaining
+            # max_u = 1.0
+            # u_offset = np.array([0, 0, 0, 0])
+        else:
+            input_dims = dims.copy()
+            input_dims['u'] = input_dims['g']
+            # max_u = 0.15 # TODO: This pertains to the tower building environment. Should be set somewhere else in the environment
+            #             # u_offset = np.array([1.0, 0.27, 0.515, 1.0, 0.27, 0.515]) definition...
+        this_params = ddpg_params.copy()
+        this_params.update({'input_dims': input_dims,  # agent takes an input observations
+                            'T': n_s
+                            })
+        t_remaining = int(t_remaining / n_s)
+        this_params['scope'] += '_l_{}'.format(l)
+        policy = DDPG_HRL(**this_params)
+        policies.append(policy)
+    return policies
 
 def load_policy(restore_policy_file, params):
     # Load policy.

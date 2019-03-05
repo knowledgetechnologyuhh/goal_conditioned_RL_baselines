@@ -142,7 +142,7 @@ def launch(
     params['n_episodes'] = kwargs['n_episodes']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
-    params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
+    params.update(**kwargs)
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)

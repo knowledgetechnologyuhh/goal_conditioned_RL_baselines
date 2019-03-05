@@ -25,7 +25,7 @@ class DDPG_HRL(Policy):
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
                  rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-                 sample_transitions, gamma, n_preds, n_subgoals, reuse=False, **kwargs):
+                 sample_transitions, gamma, n_preds, reuse=False, **kwargs):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
 
         Args:
@@ -55,11 +55,6 @@ class DDPG_HRL(Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
-        dims = input_dims.copy()
-        dims['u'] = dims['g']
-        input_dims = dims
-        # n_subgoals = 5
-        # T = int(T/n_subgoals)
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
@@ -84,12 +79,16 @@ class DDPG_HRL(Policy):
         self.action_l2 = action_l2
         self.n_preds = n_preds
 
-        self.u_range = np.empty((2, dims['u']))
-        u_range = [[1.3*self.max_u, -0.8*self.max_u, self.max_u],
-                   [2.5*self.max_u, 0.8*self.max_u, 1.5*self.max_u]]
-        self.u_range[:, :3] = np.array(u_range)
-        if dims['u'] > 3:
-            self.u_range[:, 3:] = np.array(u_range)
+        # self.u_range = np.empty((2, input_dims['u']))
+        # if input_dims['u'] == 6:
+        #     u_range = [[1.3*self.max_u, -0.8*self.max_u, self.max_u],
+        #                [2.5*self.max_u, 0.8*self.max_u, 1.5*self.max_u]]
+        #     self.u_range[:, :3] = np.array(u_range)
+        #     self.u_range[:, 3:] = np.array(u_range)
+        # else:
+        #     u_range = [[-self.max_u] * input_dims['u'],
+        #                [self.max_u] * input_dims['u']]
+        #     self.u_range = np.array(u_range)
 
         if self.clip_return is None:
             self.clip_return = np.inf
@@ -117,19 +116,16 @@ class DDPG_HRL(Policy):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
-        # TODO: Check this
-        # self.n_preds = 6
-        # n_preds = len(obs_to_preds_single(np.zeros(self.dimo), np.zeros(self.dimg), n_objects)[0])
-        # self.obs2preds_model = Obs2PredsModel(self.n_preds, self.dimo, self.dimg)
-        # self.obs2preds_buffer = Obs2PredsBuffer(buffer_len=4000)
+    # def _random_action_phuong(self, n):
+    #     # return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
+    #     u = np.empty((n,self.dimu))
+    #     for i in range(self.dimu):
+    #         u[0, i] = np.random.uniform(low=self.u_range[0, i], high=self.u_range[1, i],)
+    #     # print('random action {}'.format(u))
+    #     return u
 
     def _random_action(self, n):
-        # return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
-        u = np.empty((n,self.dimu))
-        for i in range(self.dimu):
-            u[0, i] = np.random.uniform(low=self.u_range[0, i], high=self.u_range[1, i],)
-        # print('random action {}'.format(u))
-        return u
+        return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 
     def _preprocess_og(self, o, ag, g):
         if self.relative_goals:
@@ -145,9 +141,8 @@ class DDPG_HRL(Policy):
     # TODO: check noise
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True):
-
-        noise_eps = noise_eps/2. if not exploit else 0.
-        random_eps = random_eps/2. if not exploit else 0.
+        noise_eps = noise_eps if not exploit else 0.
+        random_eps = random_eps if not exploit else 0.
 
         o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
@@ -165,28 +160,12 @@ class DDPG_HRL(Policy):
         ret = self.sess.run(vals, feed_dict=feed)
         # action postprocessing
         u = ret[0]
-        # print('u {}'.format(u))
-        # u = self.denomalize_u(u)
-        # print('u {}'.format(u))
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
-        # u[0][0] = np.clip(u[0][0], -self.max_u, self.max_u)
-        # u[0][3] = np.clip(u[0][3], -self.max_u, self.max_u)
-        # u = np.clip(u, 0, self.max_u)
-
-        for i in range(u.shape[1]):
-            u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
-
-            # if i == 0 or i == 3:
-            #     u[0][i] = np.clip(u[0][i], self.max_u, 3*self.max_u)    # x pointing forward
-            # elif i == 1 or i == 4:
-            #     u[0][i] = np.clip(u[0][i], -self.max_u, self.max_u)     # y pointing left
-            # else:
-            #     u[0][i] = np.clip(u[0][i], self.max_u, 2*self.max_u)    # z pointing upward
-
-        # u = np.clip(u, -self.max_u, self.max_u)
-        # print('u {}'.format(u))
-        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
+        u = np.clip(u, -1.0, 1.0)
+        u *= self.max_u
+        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (
+                    self._random_action(u.shape[0]) - u)  # eps-greedy
         if u.shape[0] == 1:
             u = u[0]
         u = u.copy()
@@ -196,20 +175,73 @@ class DDPG_HRL(Policy):
             return ret[0]
         else:
             return ret
+    # def get_actions_phuong(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
+    #                 compute_Q=False, exploit=True):
+    #
+    #     noise_eps = noise_eps/2. if not exploit else 0.
+    #     random_eps = random_eps/2. if not exploit else 0.
+    #
+    #     o, g = self._preprocess_og(o, ag, g)
+    #     policy = self.target if use_target_net else self.main
+    #     # values to compute
+    #     vals = [policy.pi_tf]
+    #     if compute_Q:
+    #         vals += [policy.Q_pi_tf]
+    #     # feed
+    #     feed = {
+    #         policy.o_tf: o.reshape(-1, self.dimo),
+    #         policy.g_tf: g.reshape(-1, self.dimg),
+    #         policy.u_tf: np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
+    #     }
+    #
+    #     ret = self.sess.run(vals, feed_dict=feed)
+    #     # action postprocessing
+    #     u = ret[0]
+    #     # print('u {}'.format(u))
+    #     # u = self.denomalize_u(u)
+    #     # print('u {}'.format(u))
+    #     noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
+    #     u += noise
+    #     # u[0][0] = np.clip(u[0][0], -self.max_u, self.max_u)
+    #     # u[0][3] = np.clip(u[0][3], -self.max_u, self.max_u)
+    #     # u = np.clip(u, 0, self.max_u)
+    #
+    #     for i in range(u.shape[1]):
+    #         u[0][i] = np.clip(u[0][i], self.u_range[0, i], self.u_range[1, i])
+    #
+    #         # if i == 0 or i == 3:
+    #         #     u[0][i] = np.clip(u[0][i], self.max_u, 3*self.max_u)    # x pointing forward
+    #         # elif i == 1 or i == 4:
+    #         #     u[0][i] = np.clip(u[0][i], -self.max_u, self.max_u)     # y pointing left
+    #         # else:
+    #         #     u[0][i] = np.clip(u[0][i], self.max_u, 2*self.max_u)    # z pointing upward
+    #
+    #     # u = np.clip(u, -self.max_u, self.max_u)
+    #     # print('u {}'.format(u))
+    #     u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
+    #     if u.shape[0] == 1:
+    #         u = u[0]
+    #     u = u.copy()
+    #     ret[0] = u
+    #
+    #     if len(ret) == 1:
+    #         return ret[0]
+    #     else:
+    #         return ret
 
-    def denomalize_u(self, u):
-        u_min = self.u_range[0, :]
-        u_max = self.u_range[1, :]
+    # def denomalize_u(self, u):
+    #     u_min = self.u_range[0, :]
+    #     u_max = self.u_range[1, :]
+    #
+    #     return u*(u_max - u_min) + (u_max - u_min)/2. + u_min
+    #
+    # def normalize_u(self, u):
+    #     u_min = self.u_range[0, :]
+    #     u_max = self.u_range[1, :]
+    #
+    #     return (u - ((u_max-u_min)/2. + u_min)) / (u_max-u_min)
 
-        return u*(u_max - u_min) + (u_max - u_min)/2. + u_min
-
-    def normalize_u(self, u):
-        u_min = self.u_range[0, :]
-        u_max = self.u_range[1, :]
-
-        return (u - ((u_max-u_min)/2. + u_min)) / (u_max-u_min)
-
-    def store_episode(self, episode_batch, update_stats=True, penalty=False):
+    def store_episode(self, episode_batch, update_stats=True):
         """
         Args:
             episode_batch: array of batch_size x (T or T+1) x dim_key
@@ -224,7 +256,7 @@ class DDPG_HRL(Policy):
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
             episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
             num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
-            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions, penalty=penalty)
+            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions)
 
             o, o_2, g, ag = transitions['o'], transitions['o_2'], transitions['g'], transitions['ag']
             transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
@@ -279,26 +311,6 @@ class DDPG_HRL(Policy):
         critic_loss, actor_loss, Q_grad, pi_grad = self._grads()
         self._update(Q_grad, pi_grad)
         return critic_loss, actor_loss
-
-    # def train_representation(self):
-    #     rep_batch_size = 128
-    #     batch = self.obs2preds_buffer.sample_batch(rep_batch_size)
-    #     feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
-    #                              self.obs2preds_model.inputs_g: batch['goals'],
-    #                              self.obs2preds_model.preds: batch['preds']}
-    #     opti_res, celoss = self.sess.run([self.obs2preds_model.optimizer,
-    #                                       self.obs2preds_model.celoss],
-    #                   feed_dict=feed_dict)
-    #
-    #     return celoss
-
-    # def predict_representation(self, batch):
-    #     feed_dict = {self.obs2preds_model.inputs_o: batch['obs'],
-    #                  self.obs2preds_model.inputs_g: batch['goals']}
-    #     pred_dist = self.sess.run([self.obs2preds_model.prob_out],
-    #                                      feed_dict=feed_dict)
-    #     preds = prob_dist2discrete(pred_dist[0])
-    #     return preds
 
     def _init_target_net(self):
         self.sess.run(self.init_target_net_op)
