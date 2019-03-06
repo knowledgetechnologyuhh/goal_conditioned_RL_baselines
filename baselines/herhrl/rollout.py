@@ -129,7 +129,7 @@ class HierarchicalRollout(Rollout):
             """
             if self.is_leaf is False:
                 subg = u
-                subg = self.g.copy()  # For testing use final goal only and set n_subgoals to 1.
+                # subg = self.g.copy()  # For testing use final goal only and set n_subgoals to 1.
                 self.child_rollout.g = subg
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
             for i in range(self.rollout_batch_size):
