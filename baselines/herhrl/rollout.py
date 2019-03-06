@@ -19,14 +19,12 @@ class HierarchicalRollout(Rollout):
     def __init__(self, make_env, policy, dims, logger, rollout_batch_size=1,
                  exploit=False, render=False, **kwargs):
 
-        self.is_leaf = len(policy) == 1
-        this_policy = policy[0]
-        dims = this_policy.input_dims
-        self.T = this_policy.T
-        history_len = this_policy.history_len
+        self.is_leaf = policy.child_policy == None
+        dims = policy.input_dims
+        self.T = policy.T
+        history_len = policy.history_len
         if self.is_leaf is False:
-            child_policies = policy[1:]
-            self.child_rollout = RolloutWorker(make_env, child_policies, dims, logger,
+            self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                 h_level=self.h_level+1,
                                                 rollout_batch_size=rollout_batch_size,
                                                 render=render, **kwargs)
@@ -35,7 +33,7 @@ class HierarchicalRollout(Rollout):
         if self.is_leaf is False:
             make_env = self.make_env_from_child
         self.tmp_env_ctr = 0
-        Rollout.__init__(self, make_env, this_policy, dims, logger, self.T,
+        Rollout.__init__(self, make_env, policy, dims, logger, self.T,
                          rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, **kwargs)
 

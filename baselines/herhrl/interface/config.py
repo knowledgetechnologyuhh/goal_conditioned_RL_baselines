@@ -53,7 +53,7 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
     # hrl
-    'n_subgoals': [1]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
+    'n_subgoals': [2]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
 }
 
 POLICY_ACTION_PARAMS = {
@@ -229,15 +229,26 @@ def configure_policy(dims, params):
         policy = DDPG_HRL(**this_params)
         policies.append(policy)
         last_ns = n_s
-    return policies
+    if len(policies) > 0:
+        for p, p_child in zip(policies[:-1], policies[1:]):
+            p.child_policy = p_child
+    return policies[0]
+    # return policies
 
 def load_policy(restore_policy_file, params):
     # Load policy.
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
+    policy = set_policy_sample_transitions(policy, params)
+    return policy
+
+def set_policy_sample_transitions(policy, params):
+    child_params = params.copy()
     policy.sample_transitions = configure_her(params)
     policy.buffer.sample_transitions = policy.sample_transitions
+    if policy.child_policy is not None:
+        set_policy_sample_transitions(policy.child_policy, child_params)
     return policy
 
 def configure_dims(params):
