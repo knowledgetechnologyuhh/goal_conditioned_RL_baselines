@@ -79,17 +79,6 @@ class DDPG_HRL(Policy):
         self.action_l2 = action_l2
         self.n_preds = n_preds
 
-        # self.u_range = np.empty((2, input_dims['u']))
-        # if input_dims['u'] == 6:
-        #     u_range = [[1.3*self.max_u, -0.8*self.max_u, self.max_u],
-        #                [2.5*self.max_u, 0.8*self.max_u, 1.5*self.max_u]]
-        #     self.u_range[:, :3] = np.array(u_range)
-        #     self.u_range[:, 3:] = np.array(u_range)
-        # else:
-        #     u_range = [[-self.max_u] * input_dims['u'],
-        #                [self.max_u] * input_dims['u']]
-        #     self.u_range = np.array(u_range)
-
         if self.clip_return is None:
             self.clip_return = np.inf
 

@@ -3,7 +3,7 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.herhrl.ddpg import DDPG_HRL as DDPG_HRL
+from baselines.herhrl.hrl_ddpg import DDPG_HRL as DDPG_HRL
 from baselines.her.ddpg import DDPG as DDPG
 from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
 from baselines.her.her import make_sample_her_transitions
