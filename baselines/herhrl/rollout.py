@@ -259,8 +259,6 @@ class RolloutWorker(HierarchicalRollout):
             ro_start = time.time()
             episode = self.generate_rollouts()
             self.policy.store_episode(episode)
-
-
             dur_ro += time.time() - ro_start
             train_start = time.time()
             # Train only if this is the parent rollout worker
