@@ -53,7 +53,7 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
     # hrl
-    'n_subgoals': [1]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
+    'n_subgoals': []    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
 }
 
 POLICY_ACTION_PARAMS = {
