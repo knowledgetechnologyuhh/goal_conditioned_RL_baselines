@@ -23,7 +23,7 @@ class HierarchicalRollout(Rollout):
         this_policy = policy[0]
         dims = this_policy.input_dims
         self.T = this_policy.T
-        history_len = None
+        history_len = this_policy.history_len
         if self.is_leaf is False:
             child_policies = policy[1:]
             self.child_rollout = RolloutWorker(make_env, child_policies, dims, logger,
@@ -130,8 +130,9 @@ class HierarchicalRollout(Rollout):
             """ ============================== Step 3: Setting subgoal g0 = subg1 <-- action a1 ========================
             """
             if self.is_leaf is False:
-                self.subg = u
-                # self.subg = self.g.copy()  # For testing use final goal only and set n_subgoals to 1.
+                subg = u
+                subg = self.g.copy()  # For testing use final goal only and set n_subgoals to 1.
+                self.child_rollout.g = subg
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
             for i in range(self.rollout_batch_size):
                 if self.is_leaf:
@@ -171,7 +172,9 @@ class HierarchicalRollout(Rollout):
         for key, value in zip(self.info_keys, info_values):
             episode['info_{}'.format(key)] = value
 
-        success_rate = np.mean(successes)
+        success_rate = np.mean(successes[-1])
+        if success_rate > 0:
+            print("success on l {}".format(self.h_level))
         self.success_history.append(success_rate)
 
         # history --> mean_Q
@@ -254,7 +257,6 @@ class RolloutWorker(HierarchicalRollout):
         dur_train = 0
         dur_start = time.time()
         rep_ce_loss = 0
-        self.success_history = deque(maxlen=n_episodes)
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
             episode = self.generate_rollouts()

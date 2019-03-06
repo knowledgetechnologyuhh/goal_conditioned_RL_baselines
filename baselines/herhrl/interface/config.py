@@ -53,7 +53,7 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
     # hrl
-    'n_subgoals': [2]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
+    'n_subgoals': [1]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
 }
 
 POLICY_ACTION_PARAMS = {
@@ -206,6 +206,7 @@ def configure_policy(dims, params):
 
     t_remaining = params['T']
     policies = []
+    last_ns = 1
     for l, n_s in enumerate(params['n_subgoals'] + [None]):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
@@ -217,14 +218,17 @@ def configure_policy(dims, params):
             input_dims['u'] = input_dims['g']
             # max_u = 0.15 # TODO: This pertains to the tower building environment. Should be set somewhere else in the environment
             #             # u_offset = np.array([1.0, 0.27, 0.515, 1.0, 0.27, 0.515]) definition...
+        history_len = params['n_episodes'] * last_ns
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
-                            'T': n_s
+                            'T': n_s,
+                            'history_len': history_len
                             })
         t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)
         policy = DDPG_HRL(**this_params)
         policies.append(policy)
+        last_ns = n_s
     return policies
 
 def load_policy(restore_policy_file, params):
