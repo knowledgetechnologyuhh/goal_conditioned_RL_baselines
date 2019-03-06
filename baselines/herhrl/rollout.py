@@ -285,16 +285,20 @@ class RolloutWorker(HierarchicalRollout):
         """
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
-        # logs += [('subg_success_rate', np.mean(self.child_rollout.success_history))]
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
-        if self.child_rollout.custom_histories:
-            logs += [('subgoal_mean_Q', np.mean(self.child_rollout.custom_histories[0]))]
         logs += [('episode', self.n_episodes)]
         if len(self.rep_loss_history) > 0:
             logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
         if len(self.rep_correct_history) > 0:
             logs += [('rep_correct', np.mean(self.rep_correct_history))]
 
-        return logger(logs, prefix+"_l_{}".format(self.h_level))
+
+        logs = logger(logs, prefix+"_l_{}".format(self.h_level))
+
+        if self.is_leaf is False:
+            child_logs = self.child_rollout.logs(prefix=prefix)
+            logs += child_logs
+
+        return logs
 
