@@ -320,7 +320,7 @@ class DDPG_HRL(Policy):
         return res
 
     def _create_network(self, reuse=False):
-        logger.info("Creating a DDPG_HRL agent with action space %d x %s..." % (self.dimu, self.max_u))
+        logger.info("Creating a DDPG_HRL policy with action space %d x %s..." % (self.dimu, self.max_u))
 
         self.sess = tf.get_default_session()
         if self.sess is None:
