@@ -173,8 +173,6 @@ class HierarchicalRollout(Rollout):
             episode['info_{}'.format(key)] = value
 
         success_rate = np.mean(successes[-1])
-        if success_rate > 0:
-            print("success on l {}".format(self.h_level))
         self.success_history.append(success_rate)
 
         # history --> mean_Q
@@ -248,9 +246,10 @@ class RolloutWorker(HierarchicalRollout):
     def train_policy(self, n_train_batches):
         for _ in range(n_train_batches):
             self.policy.train()  # train actor-critic
-        self.policy.update_target_net()
-        if self.is_leaf is False:
-            self.child_rollout.train_policy(n_train_batches)
+        if n_train_batches > 0:
+            self.policy.update_target_net()
+            if self.is_leaf is False:
+                self.child_rollout.train_policy(n_train_batches)
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):
         dur_ro = 0
@@ -263,9 +262,7 @@ class RolloutWorker(HierarchicalRollout):
             self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
-            # Train only if this is the parent rollout worker
-            if self.h_level == 0:
-                self.train_policy(n_train_batches)
+            self.train_policy(n_train_batches)
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
         updated_policy = self.policy
