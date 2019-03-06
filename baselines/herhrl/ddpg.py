@@ -405,6 +405,7 @@ class DDPG_HRL(Policy):
         self._init_target_net()
 
     def logs(self, prefix=''):
+        # TODO: Also involve policies of child_rollout_workers here. This will probably require to broaden the definition of policy in a more general hierarchical context.
         logs = []
         logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
         logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]

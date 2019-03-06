@@ -299,8 +299,8 @@ class RolloutWorker(HierarchicalRollout):
             logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
         if len(self.rep_correct_history) > 0:
             logs += [('rep_correct', np.mean(self.rep_correct_history))]
-        if len(self.subgoal_succ_history) > 0:
-            logs += [('subgoal successes', np.mean(self.subgoal_succ_history))]
+        # if len(self.subgoal_succ_history) > 0:
+        #     logs += [('subgoal successes', np.mean(self.subgoal_succ_history))]
 
         return logger(logs, prefix)
 
