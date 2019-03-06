@@ -25,7 +25,7 @@ class DDPG_HRL(Policy):
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
                  rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-                 sample_transitions, gamma, n_preds, history_len, reuse=False, **kwargs):
+                 sample_transitions, gamma, n_preds, history_len, child_policy=None, reuse=False, **kwargs):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
 
         Args:
@@ -79,6 +79,7 @@ class DDPG_HRL(Policy):
         self.action_l2 = action_l2
         self.n_preds = n_preds
         self.history_len = history_len
+        self.child_policy = child_policy
 
         if self.clip_return is None:
             self.clip_return = np.inf
@@ -338,9 +339,6 @@ class DDPG_HRL(Policy):
             return logs
 
     def __getstate__(self):
-        """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-        """
-        # [print(key, ": ", item) for key,item in self.__dict__.items()]
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic',
