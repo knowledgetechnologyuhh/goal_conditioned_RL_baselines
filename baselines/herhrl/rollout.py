@@ -188,6 +188,8 @@ class HierarchicalRollout(Rollout):
         """ =============== Step 8: Add penalized transition if subgoal_success doesn't have any positive value=========
         """
         return ret
+
+
     def scale_and_offset(self, u):
         if self.is_leaf:
             return u
