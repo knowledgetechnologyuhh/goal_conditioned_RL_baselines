@@ -25,7 +25,7 @@ class DDPG_HRL(Policy):
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
                  rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-                 sample_transitions, gamma, n_preds, reuse=False, **kwargs):
+                 sample_transitions, gamma, n_preds, history_len, reuse=False, **kwargs):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
 
         Args:
@@ -78,6 +78,7 @@ class DDPG_HRL(Policy):
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
         self.n_preds = n_preds
+        self.history_len = history_len
 
         if self.clip_return is None:
             self.clip_return = np.inf

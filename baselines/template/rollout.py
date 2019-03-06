@@ -37,7 +37,6 @@ class Rollout:
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
 
-        self.history_len = history_len
         self.success_history = deque(maxlen=history_len)
         self.custom_histories = []
 
