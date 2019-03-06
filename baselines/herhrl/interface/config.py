@@ -51,9 +51,7 @@ DEFAULT_PARAMS = {
     'replay_k': 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # normalization
     'norm_eps': 0.01,  # epsilon used for observation normalization
-    'norm_clip': 5,  # normalized observations are cropped to this values
-    # hrl
-    'n_subgoals': [2]    # added for Hierarchical RL. Subgoals per layer, except for the lowest layer.
+    'norm_clip': 5 # normalized observations are cropped to this values
 }
 
 POLICY_ACTION_PARAMS = {
@@ -92,8 +90,7 @@ use_target_net=self.use_target_net)
 
 OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name',
-                       'n_subgoals']
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -207,7 +204,8 @@ def configure_policy(dims, params):
     t_remaining = params['T']
     policies = []
     last_ns = 1
-    for l, n_s in enumerate(params['n_subgoals'] + [None]):
+    n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",")]
+    for l, n_s in enumerate(n_subgoals + [None]):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
             n_s = t_remaining
