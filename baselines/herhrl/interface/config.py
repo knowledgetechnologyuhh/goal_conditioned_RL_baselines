@@ -211,13 +211,9 @@ def configure_policy(dims, params):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
             n_s = t_remaining
-            # max_u = 1.0
-            # u_offset = np.array([0, 0, 0, 0])
         else:
             input_dims = dims.copy()
             input_dims['u'] = input_dims['g']
-            # max_u = 0.15 # TODO: This pertains to the tower building environment. Should be set somewhere else in the environment
-            #             # u_offset = np.array([1.0, 0.27, 0.515, 1.0, 0.27, 0.515]) definition...
         history_len = params['n_episodes'] * last_ns
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
@@ -233,7 +229,6 @@ def configure_policy(dims, params):
         for p, p_child in zip(policies[:-1], policies[1:]):
             p.child_policy = p_child
     return policies[0]
-    # return policies
 
 def load_policy(restore_policy_file, params):
     # Load policy.
