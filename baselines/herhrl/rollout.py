@@ -94,7 +94,7 @@ class HierarchicalRollout(Rollout):
         info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
                        in self.info_keys]
 
-        for t_parent in tqdm(range(self.T)):
+        for t_parent in range(self.T):
             if return_states:
                 for i in range(self.rollout_batch_size):
                     mj_states[i].append(self.envs[i].env.sim.get_state())
@@ -132,7 +132,6 @@ class HierarchicalRollout(Rollout):
             if self.is_leaf is False:
                 self.subg = u
                 self.subg = self.g.copy()  # For testing use final goal only and set n_subgoals to 1.
-                self.child_rollout.g = self.subg.copy()
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
             for i in range(self.rollout_batch_size):
                 if self.is_leaf:
@@ -256,7 +255,7 @@ class RolloutWorker(HierarchicalRollout):
         dur_start = time.time()
         rep_ce_loss = 0
         self.success_history = deque(maxlen=n_episodes)
-        for cyc in range(n_episodes):
+        for cyc in tqdm(range(n_episodes)):
             ro_start = time.time()
             episode = self.generate_rollouts()
             self.policy.store_episode(episode)
