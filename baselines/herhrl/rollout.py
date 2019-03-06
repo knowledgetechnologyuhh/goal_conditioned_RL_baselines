@@ -255,7 +255,7 @@ class RolloutWorker(HierarchicalRollout):
         dur_start = time.time()
         rep_ce_loss = 0
         self.success_history = deque(maxlen=n_episodes)
-        for cyc in tqdm(range(n_episodes)):
+        for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
             episode = self.generate_rollouts()
             self.policy.store_episode(episode)
