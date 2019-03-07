@@ -1,16 +1,14 @@
+import tensorflow as tf
 import os
 import sys
 this_path =os.getcwd()
-print(this_path)
 sys.path.append(this_path)
 os.chdir(this_path)
-
 import click
 import numpy as np
 import json
 from mpi4py import MPI
 import time
-
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
@@ -18,10 +16,6 @@ from baselines.util import mpi_fork
 import experiment.click_options as main_linker
 from subprocess import CalledProcessError
 import subprocess
-
-
-# sys.path.append(os.getcwd())
-
 import wtm_envs.register_envs
 
 def mpi_average(value):
