@@ -126,9 +126,9 @@ class HierarchicalRollout(Rollout):
             """ ============================== Step 3: Setting subgoal g0 = subg1 <-- action a1 ========================
             """
             if self.is_leaf is False:
-                subg = u
-                # subg = self.g.copy()  # For testing use final goal only and set n_subgoals to 1.
-                self.child_rollout.g = subg
+                if t_parent != 0:
+                    u = self.g.copy()  # For testing use final goal
+                self.child_rollout.g = u
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
             for i in range(self.rollout_batch_size):
                 if self.is_leaf:
@@ -231,7 +231,6 @@ class RolloutWorker(HierarchicalRollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
-        print("RW")
         self.h_level = h_level
         HierarchicalRollout.__init__(self, make_env, policy, dims, logger, rollout_batch_size=rollout_batch_size, render=render, **kwargs)
         self.rep_loss_history = []
