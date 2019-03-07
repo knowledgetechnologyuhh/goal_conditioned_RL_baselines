@@ -1,6 +1,5 @@
 import numpy as np
 import time, datetime
-
 from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
 from baselines.her.rollout import RolloutWorker as HER_RolloutWorker
@@ -11,7 +10,6 @@ import copy
 from mujoco_py import MujocoException
 from baselines.template.util import convert_episode_to_batch_major, store_args
 from tqdm import tqdm
-
 
 class HierarchicalRollout(Rollout):
 
@@ -233,6 +231,7 @@ class RolloutWorker(HierarchicalRollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
+        print("RW")
         self.h_level = h_level
         HierarchicalRollout.__init__(self, make_env, policy, dims, logger, rollout_batch_size=rollout_batch_size, render=render, **kwargs)
         self.rep_loss_history = []

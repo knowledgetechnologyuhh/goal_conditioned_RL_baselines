@@ -4,12 +4,9 @@ import sys
 import importlib
 import inspect
 import functools
-
 import tensorflow as tf
 import numpy as np
-
 from baselines.common import tf_util as U
-
 
 def store_args(method):
     """Stores provided method args as instance attributes.

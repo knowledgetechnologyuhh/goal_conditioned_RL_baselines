@@ -32,8 +32,17 @@ def get_policy_click(ctx, **kwargs):
     return policy_args
 
 def import_creator(library_path):
+    print("ic")
     config = importlib.import_module(library_path + ".interface.config", package=__package__)
+    print("ic")
+    print(library_path)
+    print(__package__)
+    # res = importlib.import_module(library_path + ".rollout", package=__package__)
+    res = importlib.import_module(library_path + ".rollout")
+    print("import successful")
+    print(res)
     RolloutWorker = getattr(importlib.import_module(library_path + ".rollout", package=__package__), "RolloutWorker")
+    print("ic")
     # policy_linker = importlib.import_module(library_path + ".interface.click_options", package=__package__)
     # from baselines.her.experiment.plot import load_results
     return config, RolloutWorker
