@@ -89,6 +89,7 @@ class PDDL_POLICY(HRL_Policy):
         pass
 
     def logs(self, prefix=''):
+        self.logs = []
         pass
 
     # def __getstate__(self):
