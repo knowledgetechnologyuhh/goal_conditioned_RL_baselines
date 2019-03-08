@@ -88,6 +88,9 @@ class PDDL_POLICY(HRL_Policy):
     def update_target_net(self):
         pass
 
+    def logs(self, prefix=''):
+        pass
+
     # def __getstate__(self):
     #     excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
     #                          'main', 'target', 'lock', 'env', 'sample_transitions',
