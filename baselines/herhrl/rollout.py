@@ -133,14 +133,16 @@ class HierarchicalRollout(Rollout):
                 info = {}
                 if self.is_leaf:
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
+                    o_new[i] = curr_o_new['observation']
+                    ag_new[i] = curr_o_new['achieved_goal']
                 else:
                     curr_o_new = self.envs[i].env._get_obs()
                     # TODO: Fix penalty computation and realize penalties during training
                     penalty[i] = False
+                    o_new[i] = curr_o_new['observation']
+                    ag_new[i] = curr_o_new['achieved_goal']
                     info['is_success'] = self.envs[i].env._is_success(ag_new[i], self.g[i])
 
-                o_new[i] = curr_o_new['observation']
-                ag_new[i] = curr_o_new['achieved_goal']
                 success[i] = info['is_success']
 
                 if self.render and self.is_leaf:
