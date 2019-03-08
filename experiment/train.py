@@ -176,7 +176,6 @@ def launch(
 
     rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
     rollout_worker.seed(rank_seed)
-
     eval_params['training_rollout_worker'] = rollout_worker
 
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)

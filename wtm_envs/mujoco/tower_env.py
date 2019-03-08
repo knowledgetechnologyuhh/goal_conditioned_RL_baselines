@@ -435,3 +435,22 @@ class TowerEnv(robot_env.RobotEnv):
         subg = action2subgoal(action, obs, self.final_goal, self.n_objects)
         return subg
 
+    def get_scale_and_offset_for_normalized_subgoal(self):
+        n_objects = self.n_objects
+        obj_height = self.obj_height
+        scale_xy = self.target_range
+        scale_z = obj_height * n_objects / 2
+        scale = np.array([scale_xy, scale_xy, scale_z] * (n_objects + 1))
+        offset = np.array(list(self.initial_gripper_xpos) * (n_objects + 1))
+        for j, off in enumerate(offset):
+            if j == 2:
+                offset[j] += self.random_gripper_goal_pos_offset[2]
+                if self.gripper_goal == 'gripper_random':
+                    scale[j] = self.target_range
+            elif (j + 1) % 3 == 0:
+                offset[j] += obj_height * n_objects / 2
+        if self.gripper_goal == 'gripper_none':
+            scale = scale[3:]
+            offset = offset[3:]
+        return scale, offset
+

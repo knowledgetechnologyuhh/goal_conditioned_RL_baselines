@@ -17,7 +17,7 @@ class HierarchicalRollout(Rollout):
     def __init__(self, make_env, policy, dims, logger, rollout_batch_size=1,
                  exploit=False, render=False, **kwargs):
 
-        self.is_leaf = policy.child_policy == None
+        self.is_leaf = policy.child_policy is None
         dims = policy.input_dims
         self.T = policy.T
         history_len = policy.history_len
@@ -67,11 +67,10 @@ class HierarchicalRollout(Rollout):
         # Setting subgoal and goal to environment, for visualization purpose
         for i, env in enumerate(self.envs):
             if self.is_leaf:
-                env.env.goal = self.g[i]
+                self.envs[i].env.goal = self.g[i].copy()
             if self.h_level == 0:
-                env.env.final_goal = self.g[i]
-            env.env.goal_hierarchy[self.h_level] = self.g[i]
-
+                self.envs[i].env.final_goal = self.g[i].copy()
+            self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
 
         if return_states:
             mj_states = [[] for _ in range(self.rollout_batch_size)]
@@ -117,7 +116,7 @@ class HierarchicalRollout(Rollout):
                 self.logger.warn('Action "u" is not a Numpy array.')
 
             # Now rescaling and offsetting u
-            u = self.scale_and_offset(u)
+            # u = self.scale_and_offset(u)
 
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
@@ -192,24 +191,7 @@ class HierarchicalRollout(Rollout):
         return ret
 
 
-    def scale_and_offset(self, u):
-        if self.is_leaf:
-            return u
-        for i in range(self.rollout_batch_size):
-            n_objects = self.envs[i].env.n_objects
-            obj_height = self.envs[i].env.obj_height
-            offset = np.array(list(self.envs[i].env.initial_gripper_xpos) * (n_objects + 1))
-            for j, off in enumerate(offset):
-                if j == 2:
-                    offset[j] += self.envs[i].env.random_gripper_goal_pos_offset[2]
-                elif (j+1) % 3 == 0:
-                    offset[j] += obj_height * n_objects / 2
-            scale_xy = self.envs[i].env.target_range
-            scale_z = obj_height * n_objects / 2
-            scale = np.array([scale_xy, scale_xy, scale_z] * (n_objects + 1))
-            u[i] *= scale
-            u[i] += offset
-        return u
+
 
 
 class RolloutWorker(HierarchicalRollout):
@@ -250,10 +232,12 @@ class RolloutWorker(HierarchicalRollout):
             self.policy.train()  # train actor-critic
         if n_train_batches > 0:
             self.policy.update_target_net()
-            if self.is_leaf is False:
+            if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):
+        # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.
+        self.policy.set_envs(self.envs)
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
@@ -267,6 +251,7 @@ class RolloutWorker(HierarchicalRollout):
             self.train_policy(n_train_batches)
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
+
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
         if n_episodes > 0 and n_train_batches > 0:
