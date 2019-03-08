@@ -126,24 +126,28 @@ class HierarchicalRollout(Rollout):
             """ ============================== Step 3: Setting subgoal g0 = subg1 <-- action a1 ========================
             """
             if self.is_leaf is False:
-                if t_parent != 0:
+                if t_parent == self.T-1:
                     u = self.g.copy()  # For testing use final goal
                 self.child_rollout.g = u
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
             for i in range(self.rollout_batch_size):
+                info = {}
                 if self.is_leaf:
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                 else:
                     curr_o_new = self.envs[i].env._get_obs()
                     # TODO: Fix penalty computation and realize penalties during training
                     penalty[i] = False
+                    info['is_success'] = self.envs[i].env._is_success(ag_new[i], self.g[i])
+
                 o_new[i] = curr_o_new['observation']
                 ag_new[i] = curr_o_new['achieved_goal']
-                success[i] = self.envs[i].env._is_success(ag_new[i], self.g[i])
+                success[i] = info['is_success']
+
                 if self.render and self.is_leaf:
                     self.envs[i].render()
-                # for idx, key in enumerate(self.info_keys):
-                #     info_values[idx][t_parent, i] = info[key]
+                for idx, key in enumerate(self.info_keys):
+                    info_values[idx][t_parent, i] = info[key]
 
 
             obs.append(o.copy())
