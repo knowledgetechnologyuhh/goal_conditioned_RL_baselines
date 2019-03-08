@@ -3,7 +3,8 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.herhrl.hrl_ddpg import DDPG_HRL as DDPG_HRL
+from baselines.herhrl.hrl_ddpg_policy import DDPG_HRL
+from baselines.herhrl.pddl_policy import PDDL_POLICY
 from baselines.her.ddpg import DDPG as DDPG
 from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
 from baselines.her.her import make_sample_her_transitions
@@ -185,6 +186,7 @@ def configure_policy(dims, params):
     env.reset()
     preds = env.env.get_preds()
     n_preds = len(preds[0])
+    subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
     ddpg_params.update({
                         'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
@@ -202,13 +204,17 @@ def configure_policy(dims, params):
     }
 
     t_remaining = params['T']
+    policy_types = [DDPG_HRL, DDPG_HRL]
+    # policy_types = [PDDL_POLICY, DDPG_HRL]
     policies = []
     last_ns = 1
     n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",")]
-    for l, n_s in enumerate(n_subgoals + [None]):
+    for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
             n_s = t_remaining
+            subgoal_scale = np.ones(input_dims['u'])
+            subgoal_offset = np.zeros(input_dims['u'])
         else:
             input_dims = dims.copy()
             input_dims['u'] = input_dims['g']
@@ -216,11 +222,13 @@ def configure_policy(dims, params):
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
                             'T': n_s,
-                            'history_len': history_len
+                            'history_len': history_len,
+                            'subgoal_scale': subgoal_scale,
+                            'subgoal_offset': subgoal_offset
                             })
         t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)
-        policy = DDPG_HRL(**this_params)
+        policy = ThisPolicy(**this_params)
         policies.append(policy)
         last_ns = n_s
     if len(policies) > 0:

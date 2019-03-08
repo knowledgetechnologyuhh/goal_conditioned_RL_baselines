@@ -10,7 +10,7 @@ from baselines.util import (
 from baselines.herhrl.normalizer import Normalizer
 from baselines.herhrl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
-from baselines.template.policy import Policy
+from baselines.herhrl.hrl_policy import HRL_Policy
 from baselines.herhrl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 
@@ -20,7 +20,7 @@ def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class DDPG_HRL(Policy):
+class DDPG_HRL(HRL_Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
@@ -55,7 +55,7 @@ class DDPG_HRL(Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
-        Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
+        HRL_Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
         self.layers = layers
@@ -80,6 +80,9 @@ class DDPG_HRL(Policy):
         self.n_preds = n_preds
         self.history_len = history_len
         self.child_policy = child_policy
+        self.subgoal_scale = kwargs['subgoal_scale']
+        self.subgoal_offset = kwargs['subgoal_offset']
+        self.envs = []
 
         if self.clip_return is None:
             self.clip_return = np.inf
@@ -122,7 +125,6 @@ class DDPG_HRL(Policy):
         g = np.clip(g, -self.clip_obs, self.clip_obs)
         return o, g
 
-    # TODO: check noise
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True):
         noise_eps = noise_eps if not exploit else 0.
@@ -153,12 +155,15 @@ class DDPG_HRL(Policy):
         if u.shape[0] == 1:
             u = u[0]
         u = u.copy()
-        ret[0] = u
-
-        if len(ret) == 1:
-            return ret[0]
-        else:
-            return ret
+        u *= self.subgoal_scale
+        u += self.subgoal_offset
+        return u
+        # ret[0] = u
+        #
+        # if len(ret) == 1:
+        #     return ret[0]
+        # else:
+        #     return ret
 
 
     def store_episode(self, episode_batch, update_stats=True):
