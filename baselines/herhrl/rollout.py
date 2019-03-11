@@ -21,6 +21,7 @@ class HierarchicalRollout(Rollout):
         dims = policy.input_dims
         self.T = policy.T
         # history_len = policy.history_len
+        # TODO: set history_len appropriately, such that it is reset after each epoch and takes exactly the number of episodes per epoch for each layer.
         history_len = 50
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
