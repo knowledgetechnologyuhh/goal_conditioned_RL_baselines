@@ -100,7 +100,7 @@ class PDDL_POLICY(HRL_Policy):
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
-        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
+        # state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
         return state
 
     def __setstate__(self, state):
@@ -114,7 +114,7 @@ class PDDL_POLICY(HRL_Policy):
             if k[-6:] == '_stats':
                 self.__dict__[k] = v
         # load TF variables
-        vars = [x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name]
-        assert(len(vars) == len(state["tf"]))
-        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
-        self.sess.run(node)
+        # vars = [x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name]
+        # assert(len(vars) == len(state["tf"]))
+        # node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        # self.sess.run(node)
