@@ -61,9 +61,6 @@ class PDDL_POLICY(HRL_Policy):
             if self.sess is None:
                 self.sess = tf.InteractiveSession()
 
-    # def _random_action(self, n):
-    #     return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
-
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True):
 
