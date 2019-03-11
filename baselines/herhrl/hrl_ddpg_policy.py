@@ -157,6 +157,11 @@ class DDPG_HRL(HRL_Policy):
         u = u.copy()
         u *= self.subgoal_scale
         u += self.subgoal_offset
+
+        # If last success does nto improve with pddl, use DDPG+HER
+
+        # Get last success rate and
+
         return u
         # ret[0] = u
         #
