@@ -252,10 +252,6 @@ class DDPG_HRL(HRL_Policy):
         assert len(res) > 0
         return res
 
-    def _global_vars(self, scope):
-        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
-        return res
-
     def _create_network(self, reuse=False):
         logger.info("Creating a DDPG_HRL policy with action space %d x %s..." % (self.dimu, self.max_u))
 
@@ -343,29 +339,3 @@ class DDPG_HRL(HRL_Policy):
         else:
             return logs
 
-    def __getstate__(self):
-        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
-                             'main', 'target', 'lock', 'env', 'sample_transitions',
-                             'stage_shapes', 'create_actor_critic',
-                             'obs2preds_buffer', 'obs2preds_model']
-
-        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
-        state['buffer_size'] = self.buffer_size
-        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
-        return state
-
-    def __setstate__(self, state):
-        if 'sample_transitions' not in state:
-            # We don't need this for playing the policy.
-            state['sample_transitions'] = None
-
-        self.__init__(**state)
-        # set up stats (they are overwritten in __init__)
-        for k, v in state.items():
-            if k[-6:] == '_stats':
-                self.__dict__[k] = v
-        # load TF variables
-        vars = [x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name]
-        assert(len(vars) == len(state["tf"]))
-        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
-        self.sess.run(node)
