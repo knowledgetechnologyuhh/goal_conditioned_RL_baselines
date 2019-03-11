@@ -66,8 +66,6 @@ class PDDL_POLICY(HRL_Policy):
 
         u = []
         for i in range(self.rollout_batch_size):
-            # self.envs[i].env.final_goal = g[i] #TODO: Check why goal has to be set here. It should be set already by reference during the rollout.
-            # last_n_hots.append(self.envs[i].env.get_preds()[1])
             plan = self.envs[i].env.get_plan()
             if len(plan[0]) > 0:
                 this_u = self.envs[i].env.action2subgoal(plan[0][0])
