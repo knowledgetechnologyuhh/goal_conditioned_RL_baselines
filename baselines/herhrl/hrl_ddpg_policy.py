@@ -78,7 +78,7 @@ class DDPG_HRL(HRL_Policy):
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
         self.n_preds = n_preds
-        self.history_len = history_len
+        # self.history_len = history_len
         self.child_policy = child_policy
         self.subgoal_scale = kwargs['subgoal_scale']
         self.subgoal_offset = kwargs['subgoal_offset']
