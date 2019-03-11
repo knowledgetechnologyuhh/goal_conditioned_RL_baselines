@@ -55,6 +55,7 @@ class PDDL_POLICY(HRL_Policy):
         self.child_policy = child_policy
         self.max_u = max_u
         self.scope = scope
+        self.buffer = None
         with tf.variable_scope(self.scope):
             self.sess = tf.get_default_session()
             if self.sess is None:

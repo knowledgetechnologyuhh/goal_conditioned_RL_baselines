@@ -247,7 +247,8 @@ def load_policy(restore_policy_file, params):
 def set_policy_sample_transitions(policy, params):
     child_params = params.copy()
     policy.sample_transitions = configure_her(params)
-    policy.buffer.sample_transitions = policy.sample_transitions
+    if policy.buffer is not None:
+        policy.buffer.sample_transitions = policy.sample_transitions
     if policy.child_policy is not None:
         set_policy_sample_transitions(policy.child_policy, child_params)
     return policy
