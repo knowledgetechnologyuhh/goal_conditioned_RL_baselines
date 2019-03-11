@@ -208,7 +208,7 @@ def configure_policy(dims, params):
     # policy_types = [PDDL_POLICY, DDPG_HRL]
     policies = []
     last_ns = 1
-    n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",")]
+    n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
