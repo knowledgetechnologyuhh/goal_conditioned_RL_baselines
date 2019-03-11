@@ -20,7 +20,8 @@ class HierarchicalRollout(Rollout):
         self.is_leaf = policy.child_policy is None
         dims = policy.input_dims
         self.T = policy.T
-        history_len = policy.history_len
+        # history_len = policy.history_len
+        history_len = 50
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                 h_level=self.h_level+1,
@@ -174,8 +175,9 @@ class HierarchicalRollout(Rollout):
             episode['info_{}'.format(key)] = value
 
         success_rate = np.mean(successes[-1])
-        # if success_rate > 0:
-        #     print('yay!')
+        if success_rate > 0:
+            print('h {}: succ: {} '.format(self.h_level, success_rate))
+            print('yay!')
         self.success_history.append(success_rate)
 
         # history --> mean_Q

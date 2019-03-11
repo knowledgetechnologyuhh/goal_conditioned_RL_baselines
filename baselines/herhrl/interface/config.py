@@ -218,11 +218,11 @@ def configure_policy(dims, params):
         else:
             input_dims = dims.copy()
             input_dims['u'] = input_dims['g']
-        history_len = params['n_episodes'] * last_ns
+        # history_len = params['n_episodes'] * last_ns
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
                             'T': n_s,
-                            'history_len': history_len,
+                            # 'history_len': history_len,
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset
                             })
