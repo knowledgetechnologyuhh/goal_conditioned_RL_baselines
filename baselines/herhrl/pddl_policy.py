@@ -22,7 +22,7 @@ def dims_to_shapes(input_dims):
 
 class PDDL_POLICY(HRL_Policy):
     @store_args
-    def __init__(self, input_dims, max_u, T, rollout_batch_size, **kwargs):
+    def __init__(self, input_dims, max_u, scope, T, rollout_batch_size, child_policy=None, **kwargs):
         """Implementation of PDDL-Planner that generates actions and grounds them to low-level subgoals.
         Args:
             input_dims (dict of ints): dimensions for the observation (o), the goal (g), and the
@@ -52,8 +52,13 @@ class PDDL_POLICY(HRL_Policy):
             reuse (boolean): whether or not the networks should be reused
         """
         HRL_Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
-
+        self.child_policy = child_policy
         self.max_u = max_u
+        self.scope = scope
+        with tf.variable_scope(self.scope):
+            self.sess = tf.get_default_session()
+            if self.sess is None:
+                self.sess = tf.InteractiveSession()
 
     # def _random_action(self, n):
     #     return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -100,7 +105,7 @@ class PDDL_POLICY(HRL_Policy):
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
-        # state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
         return state
 
     def __setstate__(self, state):
@@ -114,7 +119,7 @@ class PDDL_POLICY(HRL_Policy):
             if k[-6:] == '_stats':
                 self.__dict__[k] = v
         # load TF variables
-        # vars = [x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name]
-        # assert(len(vars) == len(state["tf"]))
-        # node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
-        # self.sess.run(node)
+        vars = [x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name]
+        assert(len(vars) == len(state["tf"]))
+        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        self.sess.run(node)
