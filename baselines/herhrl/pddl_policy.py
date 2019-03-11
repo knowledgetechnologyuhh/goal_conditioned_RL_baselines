@@ -89,8 +89,8 @@ class PDDL_POLICY(HRL_Policy):
         pass
 
     def logs(self, prefix=''):
-        self.logs = []
-        pass
+        logs = []
+        return logs
 
     # def __getstate__(self):
     #     excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
