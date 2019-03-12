@@ -26,6 +26,7 @@ DEFAULT_PARAMS = {
     'network_class': 'baselines.herhrl.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
+    # 'buffer_size': int(1E6),  # for experience replay
     'buffer_size': int(1E6),  # for experience replay
     'polyak': 0.95,  # polyak averaging coefficient
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
@@ -198,6 +199,7 @@ def configure_policy(dims, params):
                         'sample_transitions': sample_her_transitions,
                         'clip_pos_returns': True,  # clip positive returns for Q-values
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
+                        'h_level': 0,
     })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
@@ -218,11 +220,9 @@ def configure_policy(dims, params):
         else:
             input_dims = dims.copy()
             input_dims['u'] = input_dims['g']
-        # history_len = params['n_episodes'] * last_ns
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
                             'T': n_s,
-                            # 'history_len': history_len,
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset
                             })
@@ -230,10 +230,13 @@ def configure_policy(dims, params):
         this_params['scope'] += '_l_{}'.format(l)
         policy = ThisPolicy(**this_params)
         policies.append(policy)
-        last_ns = n_s
     if len(policies) > 0:
+        h_level_ctr = 1
         for p, p_child in zip(policies[:-1], policies[1:]):
             p.child_policy = p_child
+            p.child_policy.h_level = h_level_ctr
+            h_level_ctr += 1
+
     return policies[0]
 
 def load_policy(restore_policy_file, params):

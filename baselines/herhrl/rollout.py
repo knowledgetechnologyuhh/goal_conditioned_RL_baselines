@@ -1,6 +1,7 @@
 import numpy as np
 import time, datetime
-from baselines.template.util import store_args, logger
+from baselines.template.util import store_args
+from baselines.template.util import logger as log_formater
 from baselines.template.rollout import Rollout
 from baselines.her.rollout import RolloutWorker as HER_RolloutWorker
 from collections import deque
@@ -20,7 +21,6 @@ class HierarchicalRollout(Rollout):
         self.is_leaf = policy.child_policy is None
         dims = policy.input_dims
         self.T = policy.T
-        # history_len = policy.history_len
         # TODO: set history_len appropriately, such that it is reset after each epoch and takes exactly the number of episodes per epoch for each layer.
         history_len = 50
         if self.is_leaf is False:
@@ -74,9 +74,6 @@ class HierarchicalRollout(Rollout):
                 self.envs[i].env.final_goal = self.g[i].copy()
             self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
 
-        if return_states:
-            mj_states = [[] for _ in range(self.rollout_batch_size)]
-
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
@@ -92,34 +89,12 @@ class HierarchicalRollout(Rollout):
                        in self.info_keys]
 
         for t_parent in range(self.T):
-            if return_states:
-                for i in range(self.rollout_batch_size):
-                    mj_states[i].append(self.envs[i].env.sim.get_state())
 
             ''' =========================== Step 2: Sampling action a1 <-- policy pi1(s1, goal) ========================
             - if not testing: add_noise to get_action if random_sample()>0.2 otherwise get_random_action
             - if testing: get_action
             '''
-            if self.policy_action_params:
-                policy_output = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
-            else:
-                policy_output = self.policy.get_actions(o, ag, self.g)
-
-            if isinstance(policy_output, np.ndarray):
-                u = policy_output
-            else:
-                u = policy_output[0]
-                other_histories.append(policy_output[1:])
-            try:
-                if u.ndim == 1:
-                    # The non-batched case should still have a reasonable shape.
-                    u = u.reshape(1, -1)
-            except:
-                self.logger.warn('Action "u" is not a Numpy array.')
-
-            # Now rescaling and offsetting u
-            # u = self.scale_and_offset(u)
-
+            u = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
@@ -147,10 +122,10 @@ class HierarchicalRollout(Rollout):
 
                 success[i] = info['is_success']
 
-                if self.render and self.is_leaf:
-                    self.envs[i].render()
                 for idx, key in enumerate(self.info_keys):
                     info_values[idx][t_parent, i] = info[key]
+                if self.render and self.is_leaf:
+                    self.envs[i].render()
 
 
             obs.append(o.copy())
@@ -163,9 +138,6 @@ class HierarchicalRollout(Rollout):
 
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
-        if return_states:
-            for i in range(self.rollout_batch_size):
-                mj_states[i].append(self.envs[i].env.sim.get_state())
 
         self.initial_o[:] = o
         episode = dict(o=obs,
@@ -188,17 +160,11 @@ class HierarchicalRollout(Rollout):
                 self.custom_histories[history_index].append([x[history_index] for x in other_histories])
         self.n_episodes += self.rollout_batch_size
 
-        if return_states:
-            ret = convert_episode_to_batch_major(episode), mj_states
-        else:
-            ret = convert_episode_to_batch_major(episode)
+        ret = convert_episode_to_batch_major(episode)
 
         """ =============== Step 8: Add penalized transition if subgoal_success doesn't have any positive value=========
         """
         return ret
-
-
-
 
 
 class RolloutWorker(HierarchicalRollout):
@@ -258,14 +224,13 @@ class RolloutWorker(HierarchicalRollout):
             self.train_policy(n_train_batches)
             dur_train += time.time() - train_start
         dur_total = time.time() - dur_start
-
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
-        if n_episodes > 0 and n_train_batches > 0:
-            rep_ce_loss /= (n_train_batches * n_episodes)
-        else:
-            rep_ce_loss = np.nan
-        self.rep_loss_history.append(rep_ce_loss)
+        # if n_episodes > 0 and n_train_batches > 0:
+        #     rep_ce_loss /= (n_train_batches * n_episodes)
+        # else:
+        #     rep_ce_loss = np.nan
+        # self.rep_loss_history.append(rep_ce_loss)
         return updated_policy, time_durations
 
     def current_mean_Q(self):
@@ -278,14 +243,13 @@ class RolloutWorker(HierarchicalRollout):
         logs += [('success_rate', np.mean(self.success_history))]
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
-        logs += [('episode', self.n_episodes)]
-        if len(self.rep_loss_history) > 0:
-            logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
-        if len(self.rep_correct_history) > 0:
-            logs += [('rep_correct', np.mean(self.rep_correct_history))]
-
-
-        logs = logger(logs, prefix+"_l_{}".format(self.h_level))
+        # logs += [('episode', self.n_episodes)]
+        # if len(self.rep_loss_history) > 0:
+        #     logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
+        # if len(self.rep_correct_history) > 0:
+        #     logs += [('rep_correct', np.mean(self.rep_correct_history))]
+        # logs += [('episode', self.n_episodes)]
+        logs = log_formater(logs, prefix+"_{}".format(self.h_level))
 
         if self.is_leaf is False:
             child_logs = self.child_rollout.logs(prefix=prefix)
