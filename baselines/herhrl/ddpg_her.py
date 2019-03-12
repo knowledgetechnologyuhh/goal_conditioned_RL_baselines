@@ -11,12 +11,13 @@ from baselines.her.normalizer import Normalizer
 from baselines.her.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
+from baselines.herhrl.hrl_policy import HRL_Policy
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class DDPG_HER(Policy):
+class DDPG_HER(HRL_Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
@@ -51,7 +52,7 @@ class DDPG_HER(Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
-        Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
+        HRL_Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
         self.layers = layers
@@ -73,7 +74,6 @@ class DDPG_HER(Policy):
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
-        self.child_policy = None
 
         if self.clip_return is None:
             self.clip_return = np.inf
