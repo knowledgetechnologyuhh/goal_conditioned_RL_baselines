@@ -24,7 +24,7 @@ class DDPG_HRL(HRL_Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
-                 rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
+                 rollout_batch_size, clip_pos_returns, clip_return,
                  sample_transitions, gamma, n_preds, child_policy=None, reuse=False, **kwargs):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
 
@@ -47,8 +47,6 @@ class DDPG_HRL(HRL_Policy):
             scope (str): the scope used for the TensorFlow graph
             T (int): the time horizon for rollouts
             rollout_batch_size (int): number of parallel rollouts per DDPG agent
-            subtract_goals (function): function that subtracts goals from each other
-            relative_goals (boolean): whether or not relative goals should be fed into the network
             clip_pos_returns (boolean): whether or not positive returns should be clipped
             clip_return (float): clip returns to be in [-clip_return, clip_return]
             sample_transitions (function) function that samples from the replay buffer, reward function is called here
@@ -63,8 +61,6 @@ class DDPG_HRL(HRL_Policy):
         self.network_class = network_class
         self.sample_transitions = sample_transitions
         self.scope = scope
-        self.subtract_goals = subtract_goals
-        self.relative_goals = relative_goals
         self.clip_obs = clip_obs
         self.Q_lr = Q_lr
         self.pi_lr = pi_lr
@@ -114,12 +110,6 @@ class DDPG_HRL(HRL_Policy):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 
     def _preprocess_og(self, o, ag, g):
-        if self.relative_goals:
-            g_shape = g.shape
-            g = g.reshape(-1, self.dimg)
-            ag = ag.reshape(-1, self.dimg)
-            g = self.subtract_goals(g, ag)
-            g = g.reshape(*g_shape)
         o = np.clip(o, -self.clip_obs, self.clip_obs)
         g = np.clip(g, -self.clip_obs, self.clip_obs)
         return o, g
