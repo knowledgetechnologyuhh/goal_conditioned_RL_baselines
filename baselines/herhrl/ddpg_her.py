@@ -73,6 +73,7 @@ class DDPG_HER(Policy):
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
+        self.child_policy = None
 
         if self.clip_return is None:
             self.clip_return = np.inf
