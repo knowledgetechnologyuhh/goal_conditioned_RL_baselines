@@ -188,6 +188,7 @@ def configure_policy(dims, params):
                         'reuse': reuse,
                         'use_mpi': use_mpi,
                         'n_preds' : 0,
+                        'h_level' : 0,
                         'subgoal_scale': [1,1,1,1],
                         'subgoal_offset': [0, 0, 0, 0],
                         })
