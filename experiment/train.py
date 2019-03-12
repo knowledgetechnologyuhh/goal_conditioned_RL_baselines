@@ -60,7 +60,7 @@ def train(rollout_worker, evaluator,
             logger.record_tabular(key, mpi_average(val))
         for key, val in rollout_worker.logs('train'):
             logger.record_tabular(key, mpi_average(val))
-        for key, val in policy.logs():
+        for key, val in policy.logs('policy'):
             logger.record_tabular(key, mpi_average(val))
 
         if rank == 0:
@@ -94,7 +94,7 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
-    nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
+    # nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
     # print("PID: {}".format(os.getpid()))
     # print("Rollouts stored: {}".format(nrs))
     # print("Last obs: {}".format(rollout_worker.policy.buffer.buffers['o'][nrs-1][-1][0]))

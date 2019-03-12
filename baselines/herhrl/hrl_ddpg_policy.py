@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
-
+from baselines.template.util import logger as log_formater
 from baselines import logger
 from baselines.util import (
     import_function, store_args, flatten_grads, transitions_in_episode_batch, prob_dist2discrete)
@@ -78,7 +78,6 @@ class DDPG_HRL(HRL_Policy):
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
         self.n_preds = n_preds
-        # self.history_len = history_len
         self.child_policy = child_policy
         self.subgoal_scale = kwargs['subgoal_scale']
         self.subgoal_offset = kwargs['subgoal_offset']
@@ -158,17 +157,10 @@ class DDPG_HRL(HRL_Policy):
         u *= self.subgoal_scale
         u += self.subgoal_offset
 
-        # If last success does nto improve with pddl, use DDPG+HER
-
-        # Get last success rate and
-
+        if u.ndim == 1:
+            # The non-batched case should still have a reasonable shape.
+            u = u.reshape(1, -1)
         return u
-        # ret[0] = u
-        #
-        # if len(ret) == 1:
-        #     return ret[0]
-        # else:
-        #     return ret
 
 
     def store_episode(self, episode_batch, update_stats=True):
@@ -331,16 +323,17 @@ class DDPG_HRL(HRL_Policy):
         self._sync_optimizers()
         self._init_target_net()
 
-    def logs(self, prefix=''):
-        # TODO: Also involve policies of child_rollout_workers here. This will probably require to broaden the definition of policy in a more general hierarchical context.
+    def logs(self, prefix='policy'):
         logs = []
-        logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
-        logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
-        logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
-        logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
+        # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
+        # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
+        # logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
+        # logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
+        logs += [('buffer_size', self.buffer.current_size)]
+        logs = log_formater(logs, prefix + "_{}".format(self.h_level))
+        if self.child_policy is not None:
+            child_logs = self.child_policy.logs(prefix=prefix)
+            logs += child_logs
 
-        if prefix is not '' and not prefix.endswith('/'):
-            return [(prefix + '/' + key, val) for key, val in logs]
-        else:
-            return logs
+        return logs
 
