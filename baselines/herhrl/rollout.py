@@ -176,9 +176,9 @@ class HierarchicalRollout(Rollout):
             episode['info_{}'.format(key)] = value
 
         success_rate = np.mean(successes[-1])
-        if success_rate > 0:
-            print('h {}: succ: {} '.format(self.h_level, success_rate))
-            print('yay!')
+        # if success_rate > 0:
+        #     print('h {}: succ: {} '.format(self.h_level, success_rate))
+        #     print('yay!')
         self.success_history.append(success_rate)
 
         # history --> mean_Q
