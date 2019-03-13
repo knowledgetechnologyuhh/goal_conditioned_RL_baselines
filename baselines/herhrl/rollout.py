@@ -31,13 +31,13 @@ class RolloutWorker(Rollout):
             render (boolean): whether or not to render the rollouts
         """
         self.is_leaf = policy.child_policy is None
+        self.h_level = policy.h_level
         dims = policy.input_dims
         self.T = policy.T
         # TODO: set history_len appropriately, such that it is reset after each epoch and takes exactly the number of episodes per epoch for each layer.
         history_len = 50
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
-                                               h_level=self.h_level + 1,
                                                rollout_batch_size=rollout_batch_size,
                                                render=render, **kwargs)
 
@@ -55,10 +55,10 @@ class RolloutWorker(Rollout):
         self.tower_height = self.envs[0].env.goal_tower_height
         self.rep_correct_history = deque(maxlen=history_len)
 
-        self.is_leaf = True
-        self.child_rollout = None
-        self.h_level = 0
-        Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
+        # self.is_leaf = True
+        # self.child_rollout = None
+        # self.h_level = 0
+        # Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
 
     def make_env_from_child(self):
         env = self.child_rollout.envs[self.tmp_env_ctr]
