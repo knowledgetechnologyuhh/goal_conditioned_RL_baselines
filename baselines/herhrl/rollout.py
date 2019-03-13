@@ -12,7 +12,7 @@ class RolloutWorker(Rollout):
 
     @store_args
     def __init__(self, make_env, policy, dims, logger, rollout_batch_size=1,
-                 exploit=False, history_len=100, render=False, **kwargs):
+                 exploit=False, history_len=200, render=False, **kwargs):
         """Rollout worker generates experience by interacting with one or many environments.
 
         Args:
@@ -35,8 +35,6 @@ class RolloutWorker(Rollout):
         self.is_leaf = policy.child_policy is None
         self.h_level = policy.h_level
         dims = policy.input_dims
-        # TODO: set history_len appropriately, such that it is reset after each epoch and takes exactly the number of episodes per epoch for each layer.
-        history_len = 50
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
@@ -103,12 +101,14 @@ class RolloutWorker(Rollout):
 
         info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
                        self.info_keys]
+        child_episodes = None
         for t in range(self.this_T):
 
             u = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
+
 
             if self.is_leaf is False:
                 if t == self.this_T-1:
@@ -161,10 +161,6 @@ class RolloutWorker(Rollout):
         successful = np.array(successes)[-1, :]
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
-        # if success_rate > 0:
-        #     print("succ {} level {}".format(success_rate, self.h_level))
-        #     print(episode)
-        #     print()
         self.success_history.append(success_rate)
         if other_histories:
             for history_index in range(len(other_histories[0])):
@@ -229,3 +225,10 @@ class RolloutWorker(Rollout):
 
         return logs
 
+    def clear_history(self):
+        """Clears all histories that are used for statistics
+        """
+        self.success_history.clear()
+        self.custom_histories.clear()
+        if self.is_leaf is False:
+            self.child_rollout.clear_history()
