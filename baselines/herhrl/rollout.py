@@ -4,6 +4,7 @@ import time
 from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
+from collections import deque
 
 class RolloutWorker(Rollout):
 
@@ -28,6 +29,31 @@ class RolloutWorker(Rollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
+        self.is_leaf = policy.child_policy is None
+        dims = policy.input_dims
+        self.T = policy.T
+        # TODO: set history_len appropriately, such that it is reset after each epoch and takes exactly the number of episodes per epoch for each layer.
+        history_len = 50
+        if self.is_leaf is False:
+            self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
+                                               h_level=self.h_level + 1,
+                                               rollout_batch_size=rollout_batch_size,
+                                               render=render, **kwargs)
+
+        # Envs are generated only at the lowest hierarchy level. Otherwise just refer to the child envs.
+        if self.is_leaf is False:
+            make_env = self.make_env_from_child
+        self.tmp_env_ctr = 0
+        Rollout.__init__(self, make_env, policy, dims, logger, self.T,
+                         rollout_batch_size=rollout_batch_size,
+                         history_len=history_len, render=render, **kwargs)
+
+        self.env_name = self.envs[0].env.spec._env_name
+        self.n_objects = self.envs[0].env.n_objects
+        self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
+        self.tower_height = self.envs[0].env.goal_tower_height
+        self.rep_correct_history = deque(maxlen=history_len)
+
         self.is_leaf = True
         self.child_rollout = None
         self.h_level = 0
@@ -52,6 +78,11 @@ class RolloutWorker(Rollout):
     #     updated_policy = self.policy
     #     time_durations = (dur_total, dur_ro, dur_train)
     #     return updated_policy, time_durations
+
+    def make_env_from_child(self):
+        env = self.child_rollout.envs[self.tmp_env_ctr]
+        self.tmp_env_ctr += 1
+        return env
 
     def train_policy(self, n_train_batches):
         for _ in range(n_train_batches):
