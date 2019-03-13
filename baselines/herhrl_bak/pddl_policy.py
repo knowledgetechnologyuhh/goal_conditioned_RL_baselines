@@ -10,8 +10,8 @@ from baselines.util import (
 from baselines.herhrl.normalizer import Normalizer
 from baselines.herhrl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
-from baselines.template.policy import Policy
-# from baselines.herhrl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
+from baselines.herhrl.hrl_policy import HRL_Policy
+from baselines.herhrl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 
 
@@ -20,12 +20,10 @@ def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class HRL_Policy(Policy):
+class PDDL_POLICY(HRL_Policy):
     @store_args
-    def __init__(self, input_dims, T,
-                 rollout_batch_size, child_policy=None, **kwargs):
-        """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
-
+    def __init__(self, input_dims, max_u, scope, T, rollout_batch_size, child_policy=None, **kwargs):
+        """Implementation of PDDL-Planner that generates actions and grounds them to low-level subgoals.
         Args:
             input_dims (dict of ints): dimensions for the observation (o), the goal (g), and the
                 actions (u)
@@ -53,19 +51,46 @@ class HRL_Policy(Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
-        Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
-
+        HRL_Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
         self.child_policy = child_policy
-        self.envs = []
+        self.max_u = max_u
+        self.scope = scope
+        self.buffer = None
+        with tf.variable_scope(self.scope):
+            self.sess = tf.get_default_session()
+            if self.sess is None:
+                self.sess = tf.InteractiveSession()
 
-    def set_envs(self, envs):
-        self.envs = envs
-        if self.child_policy is not None:
-            self.child_policy.set_envs(envs)
+    def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
+                    compute_Q=False, exploit=True):
+        u = []
+        for i in range(self.rollout_batch_size):
+            plan = self.envs[i].env.get_plan()
+            if len(plan[0]) > 0:
+                this_u = self.envs[i].env.action2subgoal(plan[0][0])
+            else:
+                this_u = g[i].copy()
+            u.append(this_u)
+        u = np.array(u)
 
-    def _global_vars(self, scope):
-        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
-        return res
+        if u.shape[0] == 1:
+            u = u[0]
+        u = u.copy()
+
+        return u
+
+    def store_episode(self, episode_batch, update_stats=True):
+        pass
+
+    def train(self, stage=True):
+        pass
+
+    def update_target_net(self):
+        pass
+
+    def logs(self, prefix=''):
+        logs = []
+        return logs
 
     def __getstate__(self):
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
