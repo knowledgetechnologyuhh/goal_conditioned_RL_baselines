@@ -95,6 +95,8 @@ class HierarchicalRollout(Rollout):
             - if testing: get_action
             '''
             u = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
+            if len(u[1]) != 4 or len(u[0]) != 4:
+                print("Not working")
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
@@ -109,6 +111,8 @@ class HierarchicalRollout(Rollout):
             for i in range(self.rollout_batch_size):
                 info = {}
                 if self.is_leaf:
+                    if len(u[i]) != 4:
+                        print("Not working")
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                     o_new[i] = curr_o_new['observation']
                     ag_new[i] = curr_o_new['achieved_goal']

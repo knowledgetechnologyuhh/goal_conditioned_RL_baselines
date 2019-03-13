@@ -173,6 +173,11 @@ def simple_goal_subtract(a, b):
     assert a.shape == b.shape
     return a - b
 
+# TODO:
+#  HER Rollout with HER Policy converges after 94 epochs
+# HER Rollout with HRL Policy converges after 120 epochs
+# HRL Rollout with HRL Policy does not converge after 100 epochs
+# HRL Rollout with HER Policy ???
 
 def configure_policy(dims, params):
     sample_her_transitions = configure_her(params)
@@ -207,9 +212,9 @@ def configure_policy(dims, params):
     }
 
     t_remaining = params['T']
-    policy_types = [DDPG_HRL, DDPG_HRL]
+    # policy_types = [DDPG_HRL, DDPG_HRL]
     # policy_types = [PDDL_POLICY, DDPG_HRL]
-    # policy_types = [DDPG_HER]
+    policy_types = [DDPG_HER]
     policies = []
     last_ns = 1
     n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']

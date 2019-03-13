@@ -142,12 +142,16 @@ class DDPG_HER(HRL_Policy):
         if u.shape[0] == 1:
             u = u[0]
         u = u.copy()
-        ret[0] = u
-
-        if len(ret) == 1:
-            return ret[0]
-        else:
-            return ret
+        if u.shape != (2,4):
+            print("What?")
+        return u
+        # ret[0] = u
+        # if u.shape != (2,4):
+        #     print("What?")
+        # if len(ret) == 1:
+        #     return ret[0]
+        # else:
+        #     return ret
 
     def store_episode(self, episode_batch, update_stats=True):
         """
