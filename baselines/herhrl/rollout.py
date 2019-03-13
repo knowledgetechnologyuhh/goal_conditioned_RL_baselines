@@ -81,6 +81,12 @@ class RolloutWorker(Rollout):
         '''
         if self.h_level == 0:
             self.reset_all_rollouts()
+        for i, env in enumerate(self.envs):
+            if self.is_leaf:
+                self.envs[i].env.goal = self.g[i].copy()
+            if self.h_level == 0:
+                self.envs[i].env.final_goal = self.g[i].copy()
+            self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
 
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
