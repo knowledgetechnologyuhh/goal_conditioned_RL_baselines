@@ -31,6 +31,7 @@ class RolloutWorker(Rollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
+        self.exploit = exploit
         self.is_leaf = policy.child_policy is None
         self.h_level = policy.h_level
         dims = policy.input_dims
@@ -113,8 +114,11 @@ class RolloutWorker(Rollout):
                 if t == self.this_T-1:
                     u = self.g.copy()  # For testing use final goal
                 self.child_rollout.g = u
-                self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
-
+                _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+                                                            store_episode=(self.exploit == False),
+                                                            return_episodes=True)
+                child_successes = np.array(child_episodes[0]['info_is_success'])[:,-1]
+                # print(child_successes)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
                 # We fully ignore the reward here because it will have to be re-computed
@@ -123,7 +127,8 @@ class RolloutWorker(Rollout):
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
                 else:
                     curr_o_new = self.envs[i].env._get_obs()
-                    this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
+                    this_ag = curr_o_new['achieved_goal']
+                    this_success = self.envs[i].env._is_success(this_ag, self.g[i])
                     info = {'is_success': this_success}
                 if 'is_success' in info:
                     success[i] = info['is_success']
@@ -156,6 +161,10 @@ class RolloutWorker(Rollout):
         successful = np.array(successes)[-1, :]
         assert successful.shape == (self.rollout_batch_size,)
         success_rate = np.mean(successful)
+        # if success_rate > 0:
+        #     print("succ {} level {}".format(success_rate, self.h_level))
+        #     print(episode)
+        #     print()
         self.success_history.append(success_rate)
         if other_histories:
             for history_index in range(len(other_histories[0])):
@@ -167,25 +176,34 @@ class RolloutWorker(Rollout):
         return ret
 
 
-    def generate_rollouts_update(self, n_episodes, n_train_batches):
+    def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True, return_episodes=False):
         # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.
         self.policy.set_envs(self.envs)
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
         rep_ce_loss = 0
+        if return_episodes:
+            all_episodes = []
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
             episode = self.generate_rollouts()
-            self.policy.store_episode(episode)
+            if store_episode:
+                self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
             self.train_policy(n_train_batches)
             dur_train += time.time() - train_start
+            if return_episodes:
+                all_episodes.append(episode)
         dur_total = time.time() - dur_start
         updated_policy = self.policy
         time_durations = (dur_total, dur_ro, dur_train)
-        return updated_policy, time_durations
+        if return_episodes:
+            ret = updated_policy, time_durations, all_episodes
+        else:
+            ret = updated_policy, time_durations
+        return ret
 
     def current_mean_Q(self):
         return np.mean(self.custom_histories[0])
