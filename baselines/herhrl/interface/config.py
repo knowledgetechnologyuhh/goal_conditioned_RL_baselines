@@ -231,7 +231,8 @@ def configure_policy(dims, params):
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
                             'T': n_s,
                             'subgoal_scale': subgoal_scale,
-                            'subgoal_offset': subgoal_offset
+                            'subgoal_offset': subgoal_offset,
+                            'h_level': l,
                             })
         t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)

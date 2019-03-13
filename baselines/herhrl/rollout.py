@@ -1,7 +1,8 @@
 import numpy as np
 import time
 
-from baselines.template.util import store_args, logger
+from baselines.template.util import store_args
+from baselines.template.util import logger as log_formater
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from collections import deque
@@ -10,7 +11,7 @@ from baselines.template.util import convert_episode_to_batch_major
 class RolloutWorker(Rollout):
 
     @store_args
-    def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
+    def __init__(self, make_env, policy, dims, logger, rollout_batch_size=1,
                  exploit=False, history_len=100, render=False, **kwargs):
         """Rollout worker generates experience by interacting with one or many environments.
 
@@ -33,7 +34,6 @@ class RolloutWorker(Rollout):
         self.is_leaf = policy.child_policy is None
         self.h_level = policy.h_level
         dims = policy.input_dims
-        self.T = policy.T
         # TODO: set history_len appropriately, such that it is reset after each epoch and takes exactly the number of episodes per epoch for each layer.
         history_len = 50
         if self.is_leaf is False:
@@ -45,10 +45,10 @@ class RolloutWorker(Rollout):
         if self.is_leaf is False:
             make_env = self.make_env_from_child
         self.tmp_env_ctr = 0
-        Rollout.__init__(self, make_env, policy, dims, logger, self.T,
+        Rollout.__init__(self, make_env, policy, dims, logger,
                          rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, **kwargs)
-
+        self.this_T = policy.T
         self.env_name = self.envs[0].env.spec._env_name
         self.n_objects = self.envs[0].env.n_objects
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
@@ -100,9 +100,9 @@ class RolloutWorker(Rollout):
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
 
-        info_values = [np.empty((self.T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
+        info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
                        self.info_keys]
-        for t in range(self.T):
+        for t in range(self.this_T):
 
             u = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
@@ -110,7 +110,7 @@ class RolloutWorker(Rollout):
             success = np.zeros(self.rollout_batch_size)
 
             if self.is_leaf is False:
-                if t == self.T-1:
+                if t == self.this_T-1:
                     u = self.g.copy()  # For testing use final goal
                 self.child_rollout.g = u
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0)
@@ -198,6 +198,16 @@ class RolloutWorker(Rollout):
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
         # logs += [('episode', self.n_episodes)]
+        # if len(self.rep_loss_history) > 0:
+        #     logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
+        # if len(self.rep_correct_history) > 0:
+        #     logs += [('rep_correct', np.mean(self.rep_correct_history))]
+        # logs += [('episode', self.n_episodes)]
+        logs = log_formater(logs, prefix+"_{}".format(self.h_level))
 
-        return logger(logs, prefix)
+        if self.is_leaf is False:
+            child_logs = self.child_rollout.logs(prefix=prefix)
+            logs += child_logs
+
+        return logs
 
