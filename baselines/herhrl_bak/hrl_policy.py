@@ -11,7 +11,7 @@ from baselines.herhrl.normalizer import Normalizer
 from baselines.herhrl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
-# from baselines.herhrl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
+from baselines.herhrl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 
 
