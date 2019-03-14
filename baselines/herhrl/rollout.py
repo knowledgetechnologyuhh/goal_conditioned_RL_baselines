@@ -197,9 +197,9 @@ class RolloutWorker(Rollout):
             all_episodes = []
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
-            episode = self.generate_rollouts().copy()
+            episode = self.generate_rollouts()
             if store_episode:
-                self.policy.store_episode(episode.copy())
+                self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
             self.train_policy(n_train_batches)
