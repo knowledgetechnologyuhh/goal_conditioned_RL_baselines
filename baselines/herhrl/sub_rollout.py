@@ -134,7 +134,7 @@ class RolloutWorker(Rollout):
                     assert self.h_level == 1
 
                 self.child_rollout.g = u
-                _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+                self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                                                             store_episode=(self.exploit == False),
                                                             return_episodes=True)
                 child_successes = np.array(child_episodes[0]['info_is_success'])[:, -1]

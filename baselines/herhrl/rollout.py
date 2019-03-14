@@ -4,7 +4,7 @@ import time
 from baselines.template.util import store_args
 from baselines.template.util import logger as log_formater
 from baselines.template.rollout import Rollout
-from baselines.herhrl.sub_rollout import RolloutWorker as SubRolloutWorker
+# from baselines.herhrl.sub_rollout import RolloutWorker as SubRolloutWorker
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
@@ -41,7 +41,7 @@ class RolloutWorker(Rollout):
         self.pi_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
         if self.is_leaf is False:
-            self.child_rollout = SubRolloutWorker(make_env, policy.child_policy, dims, logger,
+            self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
                                                render=render, **kwargs)
             make_env = self.make_env_from_child
@@ -73,13 +73,6 @@ class RolloutWorker(Rollout):
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
-    # def generate_rollouts(self, return_states=False):
-    #     self.reset_all_rollouts()
-    #     self.child_rollout.g = self.g.copy()
-    #     _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
-    #                                                                        store_episode=(self.exploit == False),
-    #                                                                        return_episodes=True)
-    #     return None
     def generate_rollouts(self, return_states=False):
         '''
         Overwrite generate_rollouts function from Rollout class with hierarchical rollout function that supports subgoals.
@@ -101,15 +94,10 @@ class RolloutWorker(Rollout):
         o[:] = self.initial_o
         ag[:] = self.initial_ag
 
-        # hold custom histories through out the iterations
-        # other_histories = []
-
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
-
         info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
                        self.info_keys]
-        child_episodes = None
         for t in range(self.this_T):
 
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
@@ -122,20 +110,8 @@ class RolloutWorker(Rollout):
                     u = self.g.copy()  # For last step use final goal
 
                 self.child_rollout.g = u
-                _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
-                                                            store_episode=(self.exploit == False),
-                                                            return_episodes=True)
-                # child_successes = np.array(child_episodes[0]['info_is_success'])[:, -1]
-                # child_goal = child_episodes[0]['g'][:,-1,:]
-                # if str(child_goal) != str(self.g):
-                #     print(child_goal)
-                #     print('---')
-                #     print(self.g)
-                #     print('---')
-                #     print(self.child_rollout.g)
-                #     print('Not good!')
-
-                # print(child_successes)
+                self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+                                                            store_episode=(self.exploit==False))
             # compute new states and observations
             for i in range(self.rollout_batch_size):
                 # We fully ignore the reward here because it will have to be re-computed
@@ -184,13 +160,17 @@ class RolloutWorker(Rollout):
         ret = convert_episode_to_batch_major(episode)
         return ret
 
-    def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True, return_episodes=False):
+    def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
+        # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.
+        self.policy.set_envs(self.envs)
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
-            self.generate_rollouts()
+            episode = self.generate_rollouts()
+            if store_episode:
+                self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
             self.train_policy(n_train_batches)
@@ -200,6 +180,7 @@ class RolloutWorker(Rollout):
         time_durations = (dur_total, dur_ro, dur_train)
         ret = updated_policy, time_durations
         return ret
+
 
     def init_rollout(self, obs, i):
         self.initial_o[i] = obs['observation']
@@ -216,20 +197,31 @@ class RolloutWorker(Rollout):
             obs = self.envs[i].reset()
             self.init_rollout(obs, i)
 
-
-
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
         """
         logs = []
+        logs += [('success_rate', np.mean(self.success_history))]
+        if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
+            logs += [('q_loss', np.mean(self.q_loss_history))]
+            logs += [('pi_loss', np.mean(self.pi_loss_history))]
+        logs += [('mean_Q', np.mean(self.q_history))]
         logs = log_formater(logs, prefix+"_{}".format(self.h_level))
+
         if self.is_leaf is False:
             child_logs = self.child_rollout.logs(prefix=prefix)
             logs += child_logs
+
         return logs
 
     def clear_history(self):
         """Clears all histories that are used for statistics
         """
+        self.success_history.clear()
+        self.custom_histories.clear()
+        self.q_history.clear()
+        self.pi_loss_history.clear()
+        self.q_loss_history.clear()
+        self.rep_correct_history.clear()
         if self.is_leaf is False:
             self.child_rollout.clear_history()
