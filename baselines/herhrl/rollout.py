@@ -66,14 +66,17 @@ class RolloutWorker(Rollout):
         return env
 
     def train_policy(self, n_train_batches):
+        q_losses, pi_losses = [], []
         for _ in range(n_train_batches):
             q_loss, pi_loss = self.policy.train()  # train actor-critic
+            q_losses.append(q_loss)
+            pi_losses.append(pi_loss)
         if n_train_batches > 0:
             self.policy.update_target_net()
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
-        self.q_loss_history.append(q_loss)
-        self.pi_loss_history.append(pi_loss)
+            self.q_loss_history.append(np.mean(q_losses))
+            self.pi_loss_history.append(np.mean(pi_losses))
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -225,8 +228,9 @@ class RolloutWorker(Rollout):
         logs += [('success_rate', np.mean(self.success_history))]
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
-        logs += [('q_loss', self.q_loss_history[-1])]
-        logs += [('pi_loss', self.pi_loss_history[-1])]
+        if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
+            logs += [('q_loss', np.mean(self.q_loss_history))]
+            logs += [('pi_loss', np.mean(self.pi_loss_history))]
         # logs += [('episode', self.n_episodes)]
         # if len(self.rep_loss_history) > 0:
         #     logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
