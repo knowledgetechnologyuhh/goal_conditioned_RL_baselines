@@ -67,7 +67,7 @@ class RolloutWorker(Rollout):
 
     def train_policy(self, n_train_batches):
         q_losses, pi_losses = [], []
-        if self.h_level != 10: # TODO: This is just for debugging; it saves time for training and investigating why layer1 does not train.
+        if self.h_level != 0: # TODO: This is just for debugging; it saves time for training and investigating why layer1 does not train.
             for _ in range(n_train_batches):
                 q_loss, pi_loss = self.policy.train()  # train actor-critic
                 q_losses.append(q_loss)
