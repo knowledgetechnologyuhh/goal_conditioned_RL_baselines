@@ -11,7 +11,7 @@ for n_objects in range(-1, 5):
                               'gripper_goal': gripper_goal,
                               'min_tower_height': min_tower_height + 1,
                               'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 10 * (n_objects +1)
+                    max_ep_steps = 50 * (n_objects +1)
 
                     register(
                         id='TowerBuildMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
