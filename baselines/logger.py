@@ -180,6 +180,7 @@ class TensorBoardOutputFormat(KVWriter):
         self.step = 1
         prefix = 'events'
         path = osp.join(osp.abspath(dir), prefix)
+        self.path = path
         import tensorflow as tf
         from tensorflow.python import pywrap_tensorflow
         from tensorflow.core.util import event_pb2
@@ -205,6 +206,9 @@ class TensorBoardOutputFormat(KVWriter):
         self.writer.WriteEvent(event)
         self.writer.Flush()
         self.step += 1
+        graph = self.tf.get_default_graph()
+        writer = self.tf.summary.FileWriter(self.path, graph)
+
 
     def close(self):
         if self.writer:

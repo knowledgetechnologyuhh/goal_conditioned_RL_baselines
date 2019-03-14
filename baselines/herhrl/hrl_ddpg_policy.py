@@ -87,7 +87,7 @@ class DDPG_HRL(HRL_Policy):
             self.create_actor_critic = import_function(self.network_class) # ActorCritic is called here
 
         # Create network.
-        with tf.variable_scope(self.scope):
+        # with tf.variable_scope(self.scope):
             self.staging_tf = StagingArea(
                 dtypes=[tf.float32 for _ in self.stage_shapes.keys()],
                 shapes=list(self.stage_shapes.values()))
@@ -256,6 +256,9 @@ class DDPG_HRL(HRL_Policy):
                 vs.reuse_variables()
             self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
+        # graph = self.sess.graph
+        # writer = tf.summary.FileWriter('./graph', graph)
+
         # mini-batch sampling.
         batch = self.staging_tf.get()
         batch_tf = OrderedDict([(key, batch[i])
@@ -278,6 +281,10 @@ class DDPG_HRL(HRL_Policy):
                 target_batch_tf, net_type='target', **self.__dict__)
             vs.reuse_variables()
         assert len(self._vars("main")) == len(self._vars("target"))
+
+
+        # graph = self.sess.graph
+        # writer = tf.summary.FileWriter('./graph', graph)
 
         # loss functions
         target_Q_pi_tf = self.target.Q_pi_tf
