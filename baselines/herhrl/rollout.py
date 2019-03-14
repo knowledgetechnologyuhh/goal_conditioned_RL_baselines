@@ -53,7 +53,8 @@ class RolloutWorker(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
         self.rep_correct_history = deque(maxlen=history_len)
-
+        self.q_loss_history = deque(maxlen=history_len)
+        self.pi_loss_history = deque(maxlen=history_len)
         # self.is_leaf = True
         # self.child_rollout = None
         # self.h_level = 0
@@ -66,11 +67,13 @@ class RolloutWorker(Rollout):
 
     def train_policy(self, n_train_batches):
         for _ in range(n_train_batches):
-            self.policy.train()  # train actor-critic
+            q_loss, pi_loss = self.policy.train()  # train actor-critic
         if n_train_batches > 0:
             self.policy.update_target_net()
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
+        self.q_loss_history.append(q_loss)
+        self.pi_loss_history.append(pi_loss)
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -112,11 +115,23 @@ class RolloutWorker(Rollout):
             if self.is_leaf is False:
                 if t == self.this_T-1:
                     u = self.g.copy()  # For last step use final goal
+                else:
+                    assert self.h_level == 1
+
                 self.child_rollout.g = u
                 _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                                                             store_episode=(self.exploit == False),
                                                             return_episodes=True)
-                child_successes = np.array(child_episodes[0]['info_is_success'])[:,-1]
+                child_successes = np.array(child_episodes[0]['info_is_success'])[:, -1]
+                child_goal = child_episodes[0]['g'][:,-1,:]
+                if str(child_goal) != str(self.g):
+                    print(child_goal)
+                    print('---')
+                    print(self.g)
+                    print('---')
+                    print(self.child_rollout.g)
+                    print('Not good!')
+
                 # print(child_successes)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
@@ -210,6 +225,8 @@ class RolloutWorker(Rollout):
         logs += [('success_rate', np.mean(self.success_history))]
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
+        logs += [('q_loss', self.q_loss_history[-1])]
+        logs += [('pi_loss', self.pi_loss_history[-1])]
         # logs += [('episode', self.n_episodes)]
         # if len(self.rep_loss_history) > 0:
         #     logs += [('rep_ce_loss', np.mean(self.rep_loss_history))]
