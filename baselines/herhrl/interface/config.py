@@ -214,7 +214,7 @@ def configure_policy(dims, params):
     }
 
     t_remaining = params['T']
-    policy_types = [HRL_Dummy_Policy, DDPG_HRL]
+    policy_types = [DDPG_HRL, DDPG_HRL]
     # policy_types = [PDDL_POLICY, DDPG_HRL]
     # policy_types = [DDPG_HER]
     policies = []
