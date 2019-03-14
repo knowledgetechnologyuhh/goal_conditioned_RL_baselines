@@ -9,7 +9,9 @@ click.option('--replay_k', type=int, default=4,
 click.option('--train_batch_size', type=int, default=256,
              help='The number of state transitions processed during network training.'),
 click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
-click.option('--n_subgoals_layers', type=str, default='[2]', help='The minimal number of subgoals for all layers except the lowest layers. So if you put two values here, you will have three layers.')
+click.option('--n_subgoals_layers', type=str, default='[2]', help='The minimal number of subgoals for all layers except the lowest layers. So if you put two values here, you will have three layers.'),
+click.option('--policies_layers', type=str, default='[DDPG_HER_HRL_POLICY]', help='The policies to use for each layer except for the lowest which must always be DDPG_HER_HRL_POLICY. Possible options include DDPG_HER_HRL_POLICY and PDDL_POLICY.')
+
 ]
 
 def click_main(func):

@@ -3,16 +3,12 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.herhrl.hrl_ddpg_policy import DDPG_HRL
-from baselines.herhrl.ddpg_her import DDPG_HER
-from baselines.herhrl.hrl_policy import HRL_Policy
-from baselines.herhrl.hrl_dummy_policy import HRL_Dummy_Policy
+from baselines.herhrl.ddpg_her_hrl_policy import DDPG_HER_HRL_POLICY
 from baselines.herhrl.pddl_policy import PDDL_POLICY
-from baselines.her.ddpg import DDPG as DDPG
 from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
-from baselines.her.her import make_sample_her_transitions
+# from baselines.her.her import make_sample_her_transitions
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
-
+import importlib
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
         'n_cycles': 20
@@ -93,7 +89,8 @@ random_eps=self.random_eps if not self.exploit else 0.,
 use_target_net=self.use_target_net)
 """
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+# OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
 
@@ -148,7 +145,7 @@ def log_params(params, logger=logger):
         logger.info('{}: {}'.format(key, params[key]))
 
 
-def configure_her(params, hrl=True):
+def configure_her(params):
     env = cached_make_env(params['make_env'])
     env.reset()
 
@@ -163,11 +160,7 @@ def configure_her(params, hrl=True):
         her_params[name] = params[name]
         params['_' + name] = her_params[name]
         del params[name]
-    if hrl:
-        sample_her_transitions = make_sample_her_transitions_hrl(**her_params)
-    else:
-        sample_her_transitions = make_sample_her_transitions(**her_params)
-
+    sample_her_transitions = make_sample_her_transitions_hrl(**her_params)
     return sample_her_transitions
 
 
@@ -175,11 +168,6 @@ def simple_goal_subtract(a, b):
     assert a.shape == b.shape
     return a - b
 
-# TODO:
-#  HER Rollout with HER Policy converges after 94 epochs
-# HER Rollout with HRL Policy converges after 120 epochs
-# HRL Rollout with HRL Policy does not converge after 100 epochs
-# HRL Rollout with HER Policy ???
 
 def configure_policy(dims, params):
     sample_her_transitions = configure_her(params)
@@ -214,12 +202,10 @@ def configure_policy(dims, params):
     }
 
     t_remaining = params['T']
-    policy_types = [DDPG_HRL, DDPG_HRL]
-    # policy_types = [PDDL_POLICY, DDPG_HRL]
-    # policy_types = [DDPG_HER]
-    policies = []
-    last_ns = 1
     n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
+    policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
+                    policy_str in params['policies_layers'][1:-1].split(",") if policy_str != '']
+    policies = []
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()

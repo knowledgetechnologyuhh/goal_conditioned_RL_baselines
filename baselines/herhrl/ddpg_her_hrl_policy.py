@@ -3,29 +3,26 @@ from collections import OrderedDict
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
-from baselines.template.util import logger as log_formater
+
 from baselines import logger
 from baselines.util import (
-    import_function, store_args, flatten_grads, transitions_in_episode_batch, prob_dist2discrete)
+    import_function, store_args, flatten_grads, transitions_in_episode_batch)
 from baselines.herhrl.normalizer import Normalizer
 from baselines.herhrl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
+from baselines.template.policy import Policy
 from baselines.herhrl.hrl_policy import HRL_Policy
-from baselines.herhrl.obs2preds import Obs2PredsModel, Obs2PredsBuffer
-# from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
-
-
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class DDPG_HRL(HRL_Policy):
+class DDPG_HER_HRL_POLICY(HRL_Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
-                 rollout_batch_size, clip_pos_returns, clip_return,
-                 sample_transitions, gamma, n_preds, h_level, child_policy=None, reuse=False, **kwargs):
+                 rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
+                 sample_transitions, gamma, reuse=False, **kwargs):
         """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
 
         Args:
@@ -47,9 +44,11 @@ class DDPG_HRL(HRL_Policy):
             scope (str): the scope used for the TensorFlow graph
             T (int): the time horizon for rollouts
             rollout_batch_size (int): number of parallel rollouts per DDPG agent
+            subtract_goals (function): function that subtracts goals from each other
+            relative_goals (boolean): whether or not relative goals should be fed into the network
             clip_pos_returns (boolean): whether or not positive returns should be clipped
             clip_return (float): clip returns to be in [-clip_return, clip_return]
-            sample_transitions (function) function that samples from the replay buffer, reward function is called here
+            sample_transitions (function) function that samples from the replay buffer
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
@@ -61,6 +60,8 @@ class DDPG_HRL(HRL_Policy):
         self.network_class = network_class
         self.sample_transitions = sample_transitions
         self.scope = scope
+        self.subtract_goals = subtract_goals
+        self.relative_goals = relative_goals
         self.clip_obs = clip_obs
         self.Q_lr = Q_lr
         self.pi_lr = pi_lr
@@ -73,18 +74,11 @@ class DDPG_HRL(HRL_Policy):
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
-        self.n_preds = n_preds
-        self.child_policy = child_policy
-        self.subgoal_scale = kwargs['subgoal_scale']
-        self.subgoal_offset = kwargs['subgoal_offset']
-        self.h_level = h_level
-        self.envs = []
 
         if self.clip_return is None:
             self.clip_return = np.inf
 
-        with tf.variable_scope(self.scope):
-            self.create_actor_critic = import_function(self.network_class) # ActorCritic is called here
+        self.create_actor_critic = import_function(self.network_class)
 
         # Create network.
         with tf.variable_scope(self.scope):
@@ -106,11 +100,16 @@ class DDPG_HRL(HRL_Policy):
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
-
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 
     def _preprocess_og(self, o, ag, g):
+        if self.relative_goals:
+            g_shape = g.shape
+            g = g.reshape(-1, self.dimg)
+            ag = ag.reshape(-1, self.dimg)
+            g = self.subtract_goals(g, ag)
+            g = g.reshape(*g_shape)
         o = np.clip(o, -self.clip_obs, self.clip_obs)
         g = np.clip(g, -self.clip_obs, self.clip_obs)
         return o, g
@@ -123,9 +122,7 @@ class DDPG_HRL(HRL_Policy):
         o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
         # values to compute
-        vals = [policy.pi_tf]
-        if compute_Q:
-            vals += [policy.Q_pi_tf]
+        vals = [policy.pi_tf, policy.Q_pi_tf]
         # feed
         feed = {
             policy.o_tf: o.reshape(-1, self.dimo),
@@ -136,34 +133,31 @@ class DDPG_HRL(HRL_Policy):
         ret = self.sess.run(vals, feed_dict=feed)
         # action postprocessing
         u = ret[0]
+        q = ret[1]
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
-        u = np.clip(u, -1.0, 1.0)
-        u *= self.max_u
-        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (
-                    self._random_action(u.shape[0]) - u)  # eps-greedy
+        u = np.clip(u, -self.max_u, self.max_u)
+        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
         if u.shape[0] == 1:
             u = u[0]
         u = u.copy()
-        u *= self.subgoal_scale
-        u += self.subgoal_offset
-
-        if u.ndim == 1:
-            # The non-batched case should still have a reasonable shape.
-            u = u.reshape(1, -1)
-        return u
-
+        return u, q
+        # ret[0] = u
+        # if u.shape != (2,4):
+        #     print("What?")
+        # if len(ret) == 1:
+        #     return ret[0]
+        # else:
+        #     return ret
 
     def store_episode(self, episode_batch, update_stats=True):
         """
-        Args:
-            episode_batch: array of batch_size x (T or T+1) x dim_key
+        episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
-            update_stats:
-            penalty: boolean value to penalize subgoal
         """
 
         self.buffer.store_episode(episode_batch)
+
         if update_stats:
             # add transitions to normalizer
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
@@ -180,7 +174,6 @@ class DDPG_HRL(HRL_Policy):
 
             self.o_stats.recompute_stats()
             self.g_stats.recompute_stats()
-
 
     def get_current_buffer_size(self):
         return self.buffer.get_current_size()
@@ -240,8 +233,12 @@ class DDPG_HRL(HRL_Policy):
         assert len(res) > 0
         return res
 
+    def _global_vars(self, scope):
+        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
+        return res
+
     def _create_network(self, reuse=False):
-        logger.info("Creating a DDPG_HRL policy with action space %d x %s..." % (self.dimu, self.max_u))
+        logger.info("Creating a DDPG agent with action space %d x %s..." % (self.dimu, self.max_u))
 
         self.sess = tf.get_default_session()
         if self.sess is None:
@@ -314,17 +311,43 @@ class DDPG_HRL(HRL_Policy):
         self._sync_optimizers()
         self._init_target_net()
 
-    def logs(self, prefix='policy'):
+    def logs(self, prefix=''):
         logs = []
-        # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
-        # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
-        # logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
-        # logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
-        logs += [('buffer_size', int(self.buffer.current_size))]
-        logs = log_formater(logs, prefix + "_{}".format(self.h_level))
-        if self.child_policy is not None:
-            child_logs = self.child_policy.logs(prefix=prefix)
-            logs += child_logs
+        logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
+        logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
+        logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
+        logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
 
-        return logs
+        if prefix is not '' and not prefix.endswith('/'):
+            return [(prefix + '/' + key, val) for key, val in logs]
+        else:
+            return logs
 
+    def __getstate__(self):
+        """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
+        """
+        # [print(key, ": ", item) for key,item in self.__dict__.items()]
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
+                             'main', 'target', 'lock', 'env', 'sample_transitions',
+                             'stage_shapes', 'create_actor_critic']
+
+        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
+        state['buffer_size'] = self.buffer_size
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name])
+        return state
+
+    def __setstate__(self, state):
+        if 'sample_transitions' not in state:
+            # We don't need this for playing the policy.
+            state['sample_transitions'] = None
+
+        self.__init__(**state)
+        # set up stats (they are overwritten in __init__)
+        for k, v in state.items():
+            if k[-6:] == '_stats':
+                self.__dict__[k] = v
+        # load TF variables
+        vars = [x for x in self._global_vars('') if 'buffer' not in x.name]
+        assert(len(vars) == len(state["tf"]))
+        node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
+        self.sess.run(node)

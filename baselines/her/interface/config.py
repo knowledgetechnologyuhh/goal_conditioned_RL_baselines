@@ -5,7 +5,6 @@ import pickle
 from baselines import logger
 from baselines.her.ddpg import DDPG
 from baselines.her.her import make_sample_her_transitions
-from baselines.herhrl.hrl_ddpg_policy import DDPG_HRL
 
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
@@ -196,7 +195,7 @@ def configure_policy(dims, params):
         'env_name': params['env_name'],
     }
     policy = DDPG(**ddpg_params)
-    # policy = DDPG_HRL(**ddpg_params)
+
     return policy
 
 def load_policy(restore_policy_file, params):
