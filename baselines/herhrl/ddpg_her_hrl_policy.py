@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
 
 from baselines import logger
+from baselines.template.util import logger as log_formater
 from baselines.util import (
     import_function, store_args, flatten_grads, transitions_in_episode_batch)
 from baselines.herhrl.normalizer import Normalizer
@@ -311,17 +312,20 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         self._sync_optimizers()
         self._init_target_net()
 
-    def logs(self, prefix=''):
+    def logs(self, prefix='policy'):
         logs = []
-        logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
-        logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
-        logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
-        logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
+        # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
+        # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
+        # logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
+        # logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
+        logs += [('buffer_size', int(self.buffer.current_size))]
+        logs = log_formater(logs, prefix + "_{}".format(self.h_level))
+        if self.child_policy is not None:
+            child_logs = self.child_policy.logs(prefix=prefix)
+            logs += child_logs
 
-        if prefix is not '' and not prefix.endswith('/'):
-            return [(prefix + '/' + key, val) for key, val in logs]
-        else:
-            return logs
+        return logs
+
 
     def __getstate__(self):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
