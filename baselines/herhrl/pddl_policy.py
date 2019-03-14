@@ -77,12 +77,13 @@ class PDDL_POLICY(HRL_Policy):
             u = u[0]
         u = u.copy()
 
-        return u
+        return u, np.zeros(u.shape)
 
     def store_episode(self, episode_batch, update_stats=True):
         pass
 
     def train(self, stage=True):
+        return 0, 0
         pass
 
     def update_target_net(self):
