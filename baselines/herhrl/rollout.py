@@ -44,12 +44,16 @@ class RolloutWorker(Rollout):
             self.child_rollout = SubRolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
                                                render=render, **kwargs)
-
-        make_env = self.make_env_from_child
+            make_env = self.make_env_from_child
         self.tmp_env_ctr = 0
         Rollout.__init__(self, make_env, policy, dims, logger,
                          rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, **kwargs)
+        self.this_T = policy.T
+        self.env_name = self.envs[0].env.spec._env_name
+        self.n_objects = self.envs[0].env.n_objects
+        self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
+        self.tower_height = self.envs[0].env.goal_tower_height
 
     def make_env_from_child(self):
         env = self.child_rollout.envs[self.tmp_env_ctr]
@@ -69,13 +73,116 @@ class RolloutWorker(Rollout):
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
+    # def generate_rollouts(self, return_states=False):
+    #     self.reset_all_rollouts()
+    #     self.child_rollout.g = self.g.copy()
+    #     _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+    #                                                                        store_episode=(self.exploit == False),
+    #                                                                        return_episodes=True)
+    #     return None
     def generate_rollouts(self, return_states=False):
-        self.reset_all_rollouts()
-        self.child_rollout.g = self.g.copy()
-        _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
-                                                                           store_episode=(self.exploit == False),
-                                                                           return_episodes=True)
-        return None
+        '''
+        Overwrite generate_rollouts function from Rollout class with hierarchical rollout function that supports subgoals.
+        :param return_states:
+        :return:
+        '''
+        if self.h_level == 0:
+            self.reset_all_rollouts()
+        for i, env in enumerate(self.envs):
+            if self.is_leaf:
+                self.envs[i].env.goal = self.g[i].copy()
+            if self.h_level == 0:
+                self.envs[i].env.final_goal = self.g[i].copy()
+            self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
+
+        # compute observations
+        o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
+        ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
+        o[:] = self.initial_o
+        ag[:] = self.initial_ag
+
+        # hold custom histories through out the iterations
+        # other_histories = []
+
+        # generate episodes
+        obs, achieved_goals, acts, goals, successes = [], [], [], [], []
+
+        info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
+                       self.info_keys]
+        child_episodes = None
+        for t in range(self.this_T):
+
+            u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
+            o_new = np.empty((self.rollout_batch_size, self.dims['o']))
+            ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
+            success = np.zeros(self.rollout_batch_size)
+            self.q_history.append(np.mean(q))
+            if self.is_leaf is False:
+                if t == self.this_T-1:
+                    u = self.g.copy()  # For last step use final goal
+
+                self.child_rollout.g = u
+                _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+                                                            store_episode=(self.exploit == False),
+                                                            return_episodes=True)
+                # child_successes = np.array(child_episodes[0]['info_is_success'])[:, -1]
+                # child_goal = child_episodes[0]['g'][:,-1,:]
+                # if str(child_goal) != str(self.g):
+                #     print(child_goal)
+                #     print('---')
+                #     print(self.g)
+                #     print('---')
+                #     print(self.child_rollout.g)
+                #     print('Not good!')
+
+                # print(child_successes)
+            # compute new states and observations
+            for i in range(self.rollout_batch_size):
+                # We fully ignore the reward here because it will have to be re-computed
+                # for HER.
+                if self.is_leaf:
+                    curr_o_new, _, _, info = self.envs[i].step(u[i])
+                else:
+                    curr_o_new = self.envs[i].env._get_obs()
+                    this_ag = curr_o_new['achieved_goal']
+                    this_success = self.envs[i].env._is_success(this_ag, self.g[i])
+                    info = {'is_success': this_success}
+                if 'is_success' in info:
+                    success[i] = info['is_success']
+                o_new[i] = curr_o_new['observation']
+                ag_new[i] = curr_o_new['achieved_goal']
+                for idx, key in enumerate(self.info_keys):
+                    info_values[idx][t, i] = info[key]
+                if self.render:
+                    self.envs[i].render()
+
+            obs.append(o.copy())
+            achieved_goals.append(ag.copy())
+            successes.append(success.copy())
+            acts.append(u.copy())
+            goals.append(self.g.copy())
+            o[...] = o_new
+            ag[...] = ag_new
+        obs.append(o.copy())
+        achieved_goals.append(ag.copy())
+
+        self.initial_o[:] = o
+        episode = dict(o=obs,
+                       u=acts,
+                       g=goals,
+                       ag=achieved_goals)
+        for key, value in zip(self.info_keys, info_values):
+            episode['info_{}'.format(key)] = value
+
+        # stats
+        successful = np.array(successes)[-1, :]
+        assert successful.shape == (self.rollout_batch_size,)
+        success_rate = np.mean(successful)
+        self.success_history.append(success_rate)
+        self.n_episodes += self.rollout_batch_size
+
+        ret = convert_episode_to_batch_major(episode)
+        return ret
 
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True, return_episodes=False):
         dur_ro = 0
