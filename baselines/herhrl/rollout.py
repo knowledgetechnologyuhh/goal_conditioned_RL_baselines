@@ -109,10 +109,9 @@ class RolloutWorker(Rollout):
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
 
-
             if self.is_leaf is False:
                 if t == self.this_T-1:
-                    u = self.g.copy()  # For testing use final goal
+                    u = self.g.copy()  # For last step use final goal
                 self.child_rollout.g = u
                 _, _, child_episodes = self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                                                             store_episode=(self.exploit == False),
@@ -183,9 +182,9 @@ class RolloutWorker(Rollout):
             all_episodes = []
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
-            episode = self.generate_rollouts()
+            episode = self.generate_rollouts().copy()
             if store_episode:
-                self.policy.store_episode(episode)
+                self.policy.store_episode(episode.copy())
             dur_ro += time.time() - ro_start
             train_start = time.time()
             self.train_policy(n_train_batches)
