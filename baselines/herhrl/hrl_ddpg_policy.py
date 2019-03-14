@@ -122,9 +122,7 @@ class DDPG_HRL(HRL_Policy):
         o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
         # values to compute
-        vals = [policy.pi_tf]
-        if compute_Q:
-            vals += [policy.Q_pi_tf]
+        vals = [policy.pi_tf, policy.Q_pi_tf]
         # feed
         feed = {
             policy.o_tf: o.reshape(-1, self.dimo),
@@ -135,6 +133,7 @@ class DDPG_HRL(HRL_Policy):
         ret = self.sess.run(vals, feed_dict=feed)
         # action postprocessing
         u = ret[0]
+        q = ret[1]
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
         u += noise
         u = np.clip(u, -1.0, 1.0)
@@ -150,7 +149,7 @@ class DDPG_HRL(HRL_Policy):
         if u.ndim == 1:
             # The non-batched case should still have a reasonable shape.
             u = u.reshape(1, -1)
-        return u
+        return [u,q]
 
 
     def store_episode(self, episode_batch, update_stats=True):
@@ -241,10 +240,6 @@ class DDPG_HRL(HRL_Policy):
 
     def _create_network(self, reuse=False):
         logger.info("Creating a DDPG_HRL policy with action space %d x %s..." % (self.dimu, self.max_u))
-
-        self.sess = tf.get_default_session()
-        if self.sess is None:
-            self.sess = tf.InteractiveSession()
 
         # running averages
         with tf.variable_scope('o_stats') as vs:

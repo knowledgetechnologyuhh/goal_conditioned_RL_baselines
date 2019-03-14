@@ -44,7 +44,7 @@ def train(rollout_worker, evaluator,
         # train
         logger.info("Training epoch {}".format(epoch))
         rollout_worker.clear_history()
-        policy, time_durations, episodes = rollout_worker.generate_rollouts_update(n_episodes, n_train_batches, return_episodes=True)
+        policy, time_durations = rollout_worker.generate_rollouts_update(n_episodes, n_train_batches)
         logger.info('Time for epoch {}: {:.2f}. Rollout time: {:.2f}, Training time: {:.2f}'.format(epoch, time_durations[0], time_durations[1], time_durations[2]))
 
         # eval

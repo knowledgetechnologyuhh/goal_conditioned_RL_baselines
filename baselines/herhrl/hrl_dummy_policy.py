@@ -20,7 +20,7 @@ def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class HRL_Policy(Policy):
+class HRL_Dummy_Policy(Policy):
     @store_args
     def __init__(self, input_dims, T,
                  rollout_batch_size, child_policy=None, **kwargs):

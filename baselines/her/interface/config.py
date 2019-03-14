@@ -187,16 +187,16 @@ def configure_policy(dims, params):
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
-                        'n_preds' : 0,
-                        'h_level' : 0,
-                        'subgoal_scale': [1,1,1,1],
-                        'subgoal_offset': [0, 0, 0, 0],
+                        # 'n_preds' : 0,
+                        # 'h_level' : 0,
+                        # 'subgoal_scale': [1,1,1,1],
+                        # 'subgoal_offset': [0, 0, 0, 0],
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
-    # policy = DDPG(**ddpg_params)
-    policy = DDPG_HRL(**ddpg_params)
+    policy = DDPG(**ddpg_params)
+    # policy = DDPG_HRL(**ddpg_params)
     return policy
 
 def load_policy(restore_policy_file, params):

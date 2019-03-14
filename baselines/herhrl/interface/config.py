@@ -5,6 +5,8 @@ import pickle
 from baselines import logger
 from baselines.herhrl.hrl_ddpg_policy import DDPG_HRL
 from baselines.herhrl.ddpg_her import DDPG_HER
+from baselines.herhrl.hrl_policy import HRL_Policy
+from baselines.herhrl.hrl_dummy_policy import HRL_Dummy_Policy
 from baselines.herhrl.pddl_policy import PDDL_POLICY
 from baselines.her.ddpg import DDPG as DDPG
 from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
@@ -212,7 +214,7 @@ def configure_policy(dims, params):
     }
 
     t_remaining = params['T']
-    policy_types = [DDPG_HRL, DDPG_HRL]
+    policy_types = [HRL_Dummy_Policy, DDPG_HRL]
     # policy_types = [PDDL_POLICY, DDPG_HRL]
     # policy_types = [DDPG_HER]
     policies = []
@@ -243,6 +245,7 @@ def configure_policy(dims, params):
         for p, p_child in zip(policies[:-1], policies[1:]):
             p.child_policy = p_child
             p.child_policy.h_level = h_level_ctr
+            p.child_policy.sess = p.sess
             h_level_ctr += 1
 
     return policies[0]
