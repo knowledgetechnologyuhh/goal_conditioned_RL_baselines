@@ -40,6 +40,7 @@ class RolloutWorker(Rollout):
         self.q_loss_history = deque(maxlen=history_len)
         self.pi_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
+        self.success = np.zeros(self.rollout_batch_size)
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
@@ -132,6 +133,7 @@ class RolloutWorker(Rollout):
                 if self.render:
                     self.envs[i].render()
 
+            self.success = success.copy()
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(success.copy())
