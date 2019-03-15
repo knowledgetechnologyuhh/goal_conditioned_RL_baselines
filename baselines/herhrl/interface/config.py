@@ -157,7 +157,7 @@ def configure_her(params):
     her_params = {
         'reward_fun': reward_fun,
     }
-    for name in ['replay_strategy', 'replay_k']:
+    for name in ['replay_strategy', 'replay_k', 'penalty_magnitude']:
         her_params[name] = params[name]
         params['_' + name] = her_params[name]
         del params[name]
