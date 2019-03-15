@@ -189,17 +189,23 @@ class TensorBoardOutputFormat(KVWriter):
         self.event_pb2 = event_pb2
         self.pywrap_tensorflow = pywrap_tensorflow
         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
+        self.tb_launched = False
+        self.tb_port = None
 
-        # Start tensorboard
+        # # Start tensorboard
         self.launchTensorBoard()
 
     def launchTensorBoard(self):
+        # This is nicer but does not show scalars...
         from tensorboard import default
         from tensorboard import program
+        import logging
+        logging.getLogger('werkzeug').setLevel(logging.ERROR)
         tb = program.TensorBoard(default.get_plugins(), default.get_assets_zip_provider())
         port = 6006
         while True:
-            tb.configure(argv=[None, '--logdir', self.path, '--port', str(port)])
+            # tb.configure(argv=[None, '--logdir', self.path, '--port', str(port)])
+            tb.configure(argv=[None, '--logdir', self.dir, '--port', str(port)])
             try:
                 url = tb.launch()
                 break
@@ -209,7 +215,9 @@ class TensorBoardOutputFormat(KVWriter):
             if port > 7000:
                 error("Could not find an open port for tensorboard. Tensorboard has to be launched manually.")
                 break
+
         info("Tensorboard running at {}".format(url))
+        self.tb_launched = True
 
 
 
@@ -229,8 +237,7 @@ class TensorBoardOutputFormat(KVWriter):
         self.writer.Flush()
         self.step += 1
         graph = self.tf.get_default_graph()
-        writer = self.tf.summary.FileWriter(self.path, graph)
-
+        self.tf.summary.FileWriter(self.path, graph)
 
     def close(self):
         if self.writer:
