@@ -91,8 +91,10 @@ class RolloutWorker(Rollout):
         # compute observations
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
-        o[:] = self.initial_o
-        ag[:] = self.initial_ag
+        for i in range(self.rollout_batch_size):
+            obs = self.envs[i].env._get_obs()
+            o[i] = obs['observation']
+            ag[i] = obs['achieved_goal']
 
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
@@ -140,7 +142,7 @@ class RolloutWorker(Rollout):
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
 
-        self.initial_o[:] = o
+        # self.initial_o[:] = o
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
@@ -181,8 +183,9 @@ class RolloutWorker(Rollout):
 
 
     def init_rollout(self, obs, i):
-        self.initial_o[i] = obs['observation']
-        self.initial_ag[i] = obs['achieved_goal']
+        # TODO: Check if we need the initial_o and initial_ag. If these are required, then they should also be set accordingly for the child rollouts.
+        # self.initial_o[i] = obs['observation']
+        # self.initial_ag[i] = obs['achieved_goal']
         self.g[i] = obs['desired_goal']
         if self.is_leaf == False:
             self.child_rollout.init_rollout(obs, i)
