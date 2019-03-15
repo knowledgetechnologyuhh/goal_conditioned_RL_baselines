@@ -98,7 +98,7 @@ class RolloutWorker(Rollout):
             ag[i] = obs['achieved_goal']
 
         # generate episodes
-        obs, achieved_goals, acts, goals, successes = [], [], [], [], []
+        obs, achieved_goals, acts, goals, successes, penalties = [], [], [], [], [], []
         info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
                        self.info_keys]
         for t in range(self.this_T):
@@ -107,6 +107,7 @@ class RolloutWorker(Rollout):
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
+            penalty = np.zeros(self.rollout_batch_size)
             self.q_history.append(np.mean(q))
             if self.is_leaf is False:
                 if t == self.this_T-1:
@@ -133,10 +134,18 @@ class RolloutWorker(Rollout):
                 if self.render:
                     self.envs[i].render()
 
+            if np.random.random_sample() < 0.3 and self.is_leaf is False: # not penalize all the time
+            # if self.is_leaf is False:
+                # Access to child
+                child_success = self.child_rollout.success.copy()
+                for i in range(self.rollout_batch_size):
+                    penalty[i] = True if np.isclose(child_success[i], 0.) else False
+
             self.success = success.copy()
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(success.copy())
+            penalties.append(penalty.copy())
             acts.append(u.copy())
             goals.append(self.g.copy())
             o[...] = o_new
@@ -148,7 +157,8 @@ class RolloutWorker(Rollout):
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
-                       ag=achieved_goals)
+                       ag=achieved_goals,
+                       p=penalties)
         for key, value in zip(self.info_keys, info_values):
             episode['info_{}'.format(key)] = value
 
