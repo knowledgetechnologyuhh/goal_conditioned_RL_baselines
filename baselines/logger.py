@@ -189,16 +189,38 @@ class TensorBoardOutputFormat(KVWriter):
         self.event_pb2 = event_pb2
         self.pywrap_tensorflow = pywrap_tensorflow
         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
-        # from tensorboard import default
-        # from tensorboard import program
-        # tb = program.TensorBoard(default.PLUGIN_LOADERS, default.get_assets_zip_provider())
-        # # tf.flags.FLAGS.logdir = path
-        # tb.configure(argv=['--logdir', path])
-        # tb.main()
+
+        # Start tensorboard
+        self.launchTensorBoard()
+
+    def launchTensorBoard(self):
+        from tensorboard import default
+        from tensorboard import program
+        tb = program.TensorBoard(default.get_plugins(), default.get_assets_zip_provider())
+        port = 6006
+        while True:
+            tb.configure(argv=[None, '--logdir', self.path, '--port', str(port)])
+            try:
+                url = tb.launch()
+                break
+            except Exception as e:
+                print(e)
+            port += 2
+            if port > 7000:
+                error("Could not find an open port for tensorboard. Tensorboard has to be launched manually.")
+                break
+        info("Tensorboard running at {}".format(url))
+
+
 
     def writekvs(self, kvs):
         def summary_val(k, v):
-            kwargs = {'tag': k, 'simple_value': float(v)}
+            float_v = 0
+            try:
+                float_v = float(v)
+            except:
+                debug("Trying to store {} in tensorboard but it cannot be converted to float".format(v))
+            kwargs = {'tag': k, 'simple_value': float_v}
             return self.tf.Summary.Value(**kwargs)
         summary = self.tf.Summary(value=[summary_val(k, v) for k, v in kvs.items()])
         event = self.event_pb2.Event(wall_time=time.time(), summary=summary)
@@ -456,7 +478,7 @@ def _demo():
     dir = "/tmp/testlogging"
     if os.path.exists(dir):
         shutil.rmtree(dir)
-    configure(dir=dir)
+    configure(dir=dir, format_strs=['stdout', 'tensorboard'])
     logkv("a", 3)
     logkv("b", 2.5)
     dumpkvs()
@@ -475,6 +497,14 @@ def _demo():
 
     logkv("a", "longasslongasslongasslongasslongasslongassvalue")
     dumpkvs()
+
+    for i in range(100):
+        logkv("a", i)
+        logkv("b", i*2)
+        info("i={}".format(i))
+        dumpkvs()
+        time.sleep(0.5)
+
 
 
 # ================================================================
