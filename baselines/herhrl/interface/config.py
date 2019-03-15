@@ -110,7 +110,8 @@ def cached_make_env(make_env):
 def prepare_params(kwargs):
     # DDPG params
     ddpg_params = dict()
-
+    # test_subgoal_perc = kwargs['test_subgoal_perc']
+    # print('test_subgoal_perc {}'.format(test_subgoal_perc))
     env_name = kwargs['env_name']
 
     def make_env():

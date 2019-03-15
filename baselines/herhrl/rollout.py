@@ -46,6 +46,7 @@ class RolloutWorker(Rollout):
                                                rollout_batch_size=rollout_batch_size,
                                                render=render, **kwargs)
             make_env = self.make_env_from_child
+            self.test_subgoal_perc = kwargs['test_subgoal_perc']
         self.tmp_env_ctr = 0
         Rollout.__init__(self, make_env, policy, dims, logger,
                          rollout_batch_size=rollout_batch_size,
@@ -134,7 +135,7 @@ class RolloutWorker(Rollout):
                 if self.render:
                     self.envs[i].render()
 
-            if np.random.random_sample() < 0.3 and self.is_leaf is False: # not penalize all the time
+            if np.random.random_sample() < self.test_subgoal_perc and self.is_leaf is False: # not penalize all the time
             # if self.is_leaf is False:
                 # Access to child
                 child_success = self.child_rollout.success.copy()
