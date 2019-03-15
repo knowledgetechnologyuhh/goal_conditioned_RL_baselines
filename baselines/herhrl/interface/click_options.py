@@ -10,8 +10,11 @@ click.option('--train_batch_size', type=int, default=256,
              help='The number of state transitions processed during network training.'),
 click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
 click.option('--n_subgoals_layers', type=str, default='[2]', help='The minimal number of subgoals for all layers except the lowest layers. So if you put two values here, you will have three layers.'),
-click.option('--policies_layers', type=str, default='[DDPG_HER_HRL_POLICY]', help='The policies to use for each layer except for the lowest which must always be DDPG_HER_HRL_POLICY. Possible options include DDPG_HER_HRL_POLICY and PDDL_POLICY.')
-
+click.option('--policies_layers', type=str, default='[DDPG_HER_HRL_POLICY]', help='The policies to use for each layer except for the lowest which must always be DDPG_HER_HRL_POLICY. Possible options include DDPG_HER_HRL_POLICY and PDDL_POLICY.'),
+# TODO: parameterize penalty stuffs
+click.option('--penalty_magnitude', type=int, default=50, help='The magnitude of penalty score when subgoal is missed.'),
+click.option('--test_subgoal_perc', type=float, default=0.3, help='Percentage of event to test subgoal. 0 mean no '
+                                                                  'testing and hence no penalty.')
 ]
 
 def click_main(func):
