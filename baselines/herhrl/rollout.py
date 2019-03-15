@@ -112,19 +112,17 @@ class RolloutWorker(Rollout):
                 self.child_rollout.g = u
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                                                             store_episode=(self.exploit==False))
-            # compute new states and observations
+            else: # In final layer execute physical action
+                for i in range(self.rollout_batch_size):
+                    self.envs[i].step(u[i])
+
             for i in range(self.rollout_batch_size):
-                # We fully ignore the reward here because it will have to be re-computed
-                # for HER.
-                if self.is_leaf:
-                    curr_o_new, _, _, info = self.envs[i].step(u[i])
-                else:
-                    curr_o_new = self.envs[i].env._get_obs()
-                    this_ag = curr_o_new['achieved_goal']
-                    this_success = self.envs[i].env._is_success(this_ag, self.g[i])
-                    info = {'is_success': this_success}
-                if 'is_success' in info:
-                    success[i] = info['is_success']
+                curr_o_new = self.envs[i].env._get_obs()
+                this_ag = curr_o_new['achieved_goal']
+                this_success = self.envs[i].env._is_success(this_ag, self.g[i])
+                info = {'is_success': this_success}
+                # if 'is_success' in info:
+                success[i] = this_success
                 o_new[i] = curr_o_new['observation']
                 ag_new[i] = curr_o_new['achieved_goal']
                 for idx, key in enumerate(self.info_keys):

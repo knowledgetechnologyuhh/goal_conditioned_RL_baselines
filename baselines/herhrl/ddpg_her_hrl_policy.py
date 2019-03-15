@@ -139,17 +139,10 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         u += noise
         u = np.clip(u, -self.max_u, self.max_u)
         u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
-        if u.shape[0] == 1:
-            u = u[0]
         u = u.copy()
+        u *= self.subgoal_scale
+        u += self.subgoal_offset
         return u, q
-        # ret[0] = u
-        # if u.shape != (2,4):
-        #     print("What?")
-        # if len(ret) == 1:
-        #     return ret[0]
-        # else:
-        #     return ret
 
     def store_episode(self, episode_batch, update_stats=True):
         """
