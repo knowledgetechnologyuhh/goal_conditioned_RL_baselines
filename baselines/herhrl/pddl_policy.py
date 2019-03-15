@@ -91,6 +91,9 @@ class PDDL_POLICY(HRL_Policy):
 
     def logs(self, prefix=''):
         logs = []
+        if self.child_policy is not None:
+            child_logs = self.child_policy.logs(prefix=prefix)
+            logs += child_logs
         return logs
 
     def __getstate__(self):
