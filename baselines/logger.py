@@ -189,7 +189,6 @@ class TensorBoardOutputFormat(KVWriter):
         self.event_pb2 = event_pb2
         self.pywrap_tensorflow = pywrap_tensorflow
         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
-        self.tb_launched = False
         self.tb_port = None
 
         # # Start tensorboard
@@ -214,10 +213,9 @@ class TensorBoardOutputFormat(KVWriter):
             port += 2
             if port > 7000:
                 error("Could not find an open port for tensorboard. Tensorboard has to be launched manually.")
-                break
-
+                return
+        self.tb_port = port
         info("Tensorboard running at {}".format(url))
-        self.tb_launched = True
 
 
 
