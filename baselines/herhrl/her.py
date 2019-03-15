@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
+def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_magnitude):
     """Creates a sample function that can be used for HER experience replay.
 
     Args:
@@ -57,7 +57,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
                 # print('transitions[r] before penalty\n{}'.format(transitions['r']))
                 penalties = transitions[k]
                 idx = np.where(np.isclose(penalties, 1.))
-                transitions['r'][idx] *= 50
+                transitions['r'][idx] *= penalty_magnitude
                 # print('penalties \n{}'.format(penalties))
                 # print('idx {}'.format(idx))
                 # print('transitions[r] \n{}'.format(transitions['r']))
