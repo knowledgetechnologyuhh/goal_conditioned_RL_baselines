@@ -35,7 +35,7 @@ def test_objective(space_sample):
 
     penalty_magnitude = int(space_sample['penalty_magnitude'])
     test_subgoal_perc = float(space_sample['test_subgoal_perc'])
-    cmd_arr = ['./run_hyperopt_single_trial.sh', str(penalty_magnitude), str(test_subgoal_perc)]
+    cmd_arr = ['./run_hyperopt_single_trial.sh', str(penalty_magnitude), str(round(test_subgoal_perc,3))]
     print(cmd_arr)
     results = []
     for _ in range(evals_per_run):
