@@ -17,7 +17,7 @@ click.option('--n_episodes', type=int, default=50, help='The number of training 
 click.option('--render', type=int, default=1, help='Whether or not to render the rollout execution.'),
 click.option('--max_try_idx', type=int, default=199, help='Max. number of tries for this training config.'),
 click.option('--try_start_idx', type=int, default=100, help='Index for first try.'),
-click.option('--early_stop_success_rate', type=int, default=99, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping'),
+click.option('--early_stop_success_rate', type=int, default=50, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping'),
 click.option('--info', type=str, default='', help='A command line comment that will be integrated in the folder where the results are stored. Useful for debugging and addressing temporary changes to the code..')
 ]
 
