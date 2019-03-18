@@ -154,7 +154,6 @@ class RolloutWorker(Rollout):
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
 
-        # self.initial_o[:] = o
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
@@ -196,9 +195,6 @@ class RolloutWorker(Rollout):
 
 
     def init_rollout(self, obs, i):
-        # TODO: Check if we need the initial_o and initial_ag. If these are required, then they should also be set accordingly for the child rollouts.
-        # self.initial_o[i] = obs['observation']
-        # self.initial_ag[i] = obs['achieved_goal']
         self.g[i] = obs['desired_goal']
         if self.is_leaf == False:
             self.child_rollout.init_rollout(obs, i)

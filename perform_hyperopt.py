@@ -32,17 +32,10 @@ def exec_comm_args(command_args):
 def test_objective(space_sample):
     print(space_sample)
     evals_per_run = 5
-    # n_train_batches = int(space_sample['n_train_batches'])
-    # model_lr = space_sample['model_lr'] * 0.001 # if space sample value is 1, then the model_lr should be 0.001, which is the default for model training.
-    # model_lr = np.round(model_lr, decimals=4)
-    # action_selection = space_sample['action_selection']
-    # memval_method = space_sample['memval_method']
-    # buff_sampling = space_sample['buff_sampling']
 
     penalty_magnitude = int(space_sample['penalty_magnitude'])
     test_subgoal_perc = float(space_sample['test_subgoal_perc'])
-    # cmd_arr = ['./run_hyperopt_trial.sh', str(n_train_batches), str(model_lr), action_selection, memval_method, buff_sampling]
-    cmd_arr = ['./run_hyperopt_herhrl.sh', str(penalty_magnitude), str(test_subgoal_perc)]
+    cmd_arr = ['./run_hyperopt.sh', str(penalty_magnitude), str(test_subgoal_perc)]
     print(cmd_arr)
     results = []
     for _ in range(evals_per_run):
@@ -51,15 +44,11 @@ def test_objective(space_sample):
         print("Done executing hyperopt run.")
         time.sleep(10)
         res_str = str(result).split("--------------------------------------")[-2]
-        # trial_value = res_str.split("train/variance_div_acc_err")[1]
         trial_value = res_str.split("epoch")[1]
         trial_value = trial_value.split("|")[1]
         trial_value = float(trial_value)
 
         print("New score for {}: {}".format(cmd_arr, trial_value))
-        # except:
-        #     score = 100 + n_epochs
-        #     print("Error executing command!!!! Setting score for {} to max: {}.".format(cmd_arr, score))
         time.sleep(5)
         results.append(trial_value)
 
@@ -73,14 +62,10 @@ if __name__ == '__main__':
 
     space = {}
 
-    # space['n_train_batches'] = hp.quniform('n_train_batches', 10, 100, 10)
     space['penalty_magnitude'] = hp.quniform('penalty_magnitude', 10, 50, 10)
     space['test_subgoal_perc'] = hp.quniform('test_subgoal_perc', 0.1, 1, .1)
     # space['model_lr'] = hp.loguniform('model_lr', np.log2(0.1), np.log2(10))
     # space['action_selection'] = hp.choice('action_selection', ['random', 'max_pred_surprise'])
-    # space['memval_method'] = hp.choice('memval_method', ['uniform', 'mean_obs_loss', 'max_obs_loss'])
-    # space['memval_method'] = hp.choice('memval_method', ['uniform'])
-    # space['buff_sampling'] = hp.choice('buff_sampling', ['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss'])
 
     trials_fname = "hyperopt_herhrl_{}.pkl"
     max_parallel = 10
