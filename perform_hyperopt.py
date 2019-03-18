@@ -6,7 +6,7 @@ import numpy as np
 import time
 
 
-# n_cpu = 4
+n_cpu = 16
 # min_th = 2
 # max_th = 4
 # n_ro = 4
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     # space['memval_method'] = hp.choice('memval_method', ['uniform'])
     # space['buff_sampling'] = hp.choice('buff_sampling', ['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss'])
 
-    trials_fname = "hyperopt_trials_{}.pkl"
+    trials_fname = "hyperopt_herhrl_{}.pkl"
     max_parallel = 10
 
     trials = None

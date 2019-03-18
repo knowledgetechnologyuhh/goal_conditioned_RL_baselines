@@ -3,7 +3,7 @@
 #export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libGLEW.so:/usr/lib/nvidia-384/libGL.so
 source ./set_paths.sh
 
-n_cpu=4
+n_cpu=16
 rollout_batch_size=2
 n_episodes=50
 n_epochs=150
@@ -27,11 +27,13 @@ test_subgoal_perc=$2
 
 env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
 
-cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes} --base_logdir /data/pnguyen/herhrl --render 0 --penalty_magnitude ${penalty_magnitude} --test_subgoal_perc ${test_subgoal_perc}"
+cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
+--rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
+--base_logdir /data/pnguyen/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
+--test_subgoal_perc ${test_subgoal_perc}"
 
 echo ${cmd}
 
 ${cmd}
-
 
 
