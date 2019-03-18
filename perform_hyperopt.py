@@ -31,7 +31,7 @@ def exec_comm_args(command_args):
 
 def test_objective(space_sample):
     print(space_sample)
-    evals_per_run = 5
+    evals_per_run = 1
 
     penalty_magnitude = int(space_sample['penalty_magnitude'])
     test_subgoal_perc = float(space_sample['test_subgoal_perc'])
