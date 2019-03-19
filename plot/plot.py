@@ -454,6 +454,7 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
             best_data[key] = data[key]
     return best_data
 
+
 def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='min', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
@@ -469,6 +470,7 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
         data = get_best_data(data, get_best, n_best=15, avg_last_steps=5)
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
