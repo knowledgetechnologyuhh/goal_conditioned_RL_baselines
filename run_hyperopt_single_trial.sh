@@ -12,12 +12,12 @@ max_th=1
 penalty_magnitude=$1
 test_subgoal_perc=$2
 
-
+krenew -K 60 -b
 env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
 
 cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
---base_logdir /data/$(whoami)/herhrl_data --render 0 --penalty_magnitude ${penalty_magnitude}
+--base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
 --test_subgoal_perc ${test_subgoal_perc}"
 
 echo ${cmd}
