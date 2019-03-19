@@ -466,23 +466,16 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
 
     if get_best != '':
-        data = get_best_data(data, get_best, n_best=5, avg_last_steps=5)
-
-    # draw_var_param_plots(data, var_param_keys, inter_dict, data_dir, y_axis_title=col_to_display)
+        data = get_best_data(data, get_best, n_best=15, avg_last_steps=5)
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
-
-    # draw_all_data_plot_rg_c_conv(data, args.dir)
-    # rate_to_achieve = 0.5
-    # draw_stochastic_surface_plot(data, rate_to_achieve, args.dir)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', type=str)
     parser.add_argument('--smooth', type=int, default=0)
     parser.add_argument('--pad', type=int, default=0)
-    parser.add_argument('--column', type=str, default='test/success_rate')
+    parser.add_argument('--column', type=str, default='test_0/success_rate')
     args = parser.parse_args()
     # data_lastval_threshold = 0.0
     do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)

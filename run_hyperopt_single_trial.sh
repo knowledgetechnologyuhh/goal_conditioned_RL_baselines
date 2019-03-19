@@ -17,7 +17,7 @@ env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th
 
 cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
---base_logdir /data/pnguyen/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
+--base_logdir /data/$(whoami)/herhrl_data --render 0 --penalty_magnitude ${penalty_magnitude}
 --test_subgoal_perc ${test_subgoal_perc}"
 
 echo ${cmd}
