@@ -121,11 +121,9 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
             kappa = label.split("stochastic3_")[1].split("_")[2]
             h = label.split("stochastic3_")[1].split("_")[3].split("+")[0]
             gl_str = "curriculum_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
-            # label = label.replace("stochastic3_{}_0_{}_{}".format(rg,c,h), 'CGM \nrg={} \nc={}'.format(rg,kappa))
             label = label.replace(gl_str, "CGM")
         label = label.replace("model_network_class: ", 'model: ')
         label = label.replace("baselines.model_based.model_rnn:", '')
-        # label = label.replace("+goldilocks_sampling: none", '')
         # End custom modifications of label
 
         xs, ys = zip(*data[config])
@@ -157,7 +155,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # ax.set_xlim([0, 150])
     plt.xlabel('epoch')
     plt.ylabel(y_axis_title)
-    plt.legend(loc='upper right')
+    plt.legend(loc='upper left')
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.png'.format(y_axis_title.replace("/", "_"))))
 
@@ -432,21 +430,30 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
     d_keys = [key for key in sorted(data.keys())]
     if sort_order == 'max':
         best_vals = [0 for _ in range(n_best)]
-    elif sort_order == 'min':
+    elif sort_order in ['min', 'least']:
         best_vals = [np.iinfo(np.int16).max for _ in range(n_best)]
     best_keys = ['' for _ in range(n_best)]
     for key in d_keys:
-        last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if len(data[key][i][1]) > avg_last_steps])
-        last_n_avg = np.mean(last_vals)
-        if sort_order == 'max':
-            if last_n_avg > np.min(best_vals):
-                ri = np.argmin(best_vals)
-                best_vals[ri] = last_n_avg
-                best_keys[ri] = key
-        elif sort_order == 'min':
-            if last_n_avg < np.max(best_vals):
+        if sort_order in ['max', 'min']:
+            last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if
+                                  len(data[key][i][1]) > avg_last_steps])
+            last_n_avg = np.mean(last_vals)
+            if sort_order == 'max':
+                if last_n_avg > np.min(best_vals):
+                    ri = np.argmin(best_vals)
+                    best_vals[ri] = last_n_avg
+                    best_keys[ri] = key
+            elif sort_order == 'min':
+                if last_n_avg < np.max(best_vals):
+                    ri = np.argmax(best_vals)
+                    best_vals[ri] = last_n_avg
+                    best_keys[ri] = key
+        elif sort_order == 'least':
+            all_lens = np.array([max(data[key][i][0]) for i in range(len(data[key]))])
+            last_n = np.mean(all_lens)
+            if last_n < np.max(best_vals):
                 ri = np.argmax(best_vals)
-                best_vals[ri] = last_n_avg
+                best_vals[ri] = last_n
                 best_keys[ri] = key
     best_data = {}
     for key in best_keys:
@@ -455,7 +462,7 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
     return best_data
 
 
-def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='min', lin_log='lin'):
+def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
 
@@ -467,7 +474,7 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
 
     if get_best != '':
-        data = get_best_data(data, get_best, n_best=15, avg_last_steps=5)
+        data = get_best_data(data, get_best, n_best=10, avg_last_steps=5)
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
