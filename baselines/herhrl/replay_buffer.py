@@ -16,6 +16,7 @@ class ReplayBuffer:
         """
 
         # TODO: Add penalty to buffer_shapes, so that penalty values are actually stored in replay buffer.
+        #  ==> Done in ddpg_her_hrl_policy
         self.buffer_shapes = buffer_shapes
         self.size = size_in_transitions // T
         self.T = T
@@ -45,6 +46,7 @@ class ReplayBuffer:
             assert self.current_size > 0
             for key in self.buffers.keys():
                 # TODO: Add penalty to buffer_shapes, so that penalty values are actually stored in replay buffer.
+                #  ==> Done check
                 buffers[key] = self.buffers[key][:self.current_size]
 
         buffers['o_2'] = buffers['o'][:, 1:, :]
@@ -67,7 +69,7 @@ class ReplayBuffer:
         with self.lock:
             idxs = self._get_storage_idx(batch_size)
             # load inputs into buffers
-            # TODO: check whether p is part of the buffer shapes and stored.
+            # TODO: check whether p is part of the buffer shapes and stored. ==> Done check
             for key in self.buffers.keys():
                 self.buffers[key][idxs] = episode_batch[key]
             self.n_transitions_stored += batch_size * self.T

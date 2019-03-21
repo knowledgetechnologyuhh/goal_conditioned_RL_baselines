@@ -55,9 +55,10 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         for k in transitions.keys():
             if k == 'p':
                 # print('transitions[r] before penalty\n{}'.format(transitions['r']))
-                penalties = transitions[k]
+                penalties = np.reshape(transitions[k], transitions['r'].shape)
                 idx = np.where(np.isclose(penalties, 1.))
-                transitions['r'][idx] *= penalty_magnitude
+                if not idx[0].size == 0:
+                    transitions['r'][idx[0]] *= penalty_magnitude
                 # print('penalties \n{}'.format(penalties))
                 # print('idx {}'.format(idx))
                 # print('transitions[r] \n{}'.format(transitions['r']))

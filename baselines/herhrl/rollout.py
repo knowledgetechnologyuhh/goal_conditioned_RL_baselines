@@ -108,7 +108,7 @@ class RolloutWorker(Rollout):
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
-            penalty = np.zeros(self.rollout_batch_size)
+            penalty = np.zeros((self.rollout_batch_size, 1))
             self.q_history.append(np.mean(q))
             if self.is_leaf is False:
                 if t == self.this_T-1:
@@ -140,7 +140,7 @@ class RolloutWorker(Rollout):
                 child_success = self.child_rollout.success.copy()
                 for i in range(self.rollout_batch_size):
                     if np.random.random_sample() < self.test_subgoal_perc:
-                        penalty[i] = True if np.isclose(child_success[i], 0.) else False
+                        penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
                 # if np.mean(penalty) < 1:
                 #     print("Check this.")
 
