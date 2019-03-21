@@ -52,16 +52,15 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         reward_params = {k: transitions[k] for k in ['ag_2', 'g']}
         reward_params['info'] = info
         transitions['r'] = reward_fun(**reward_params)
-        for k in transitions.keys():
-            if k == 'p':
-                # print('transitions[r] before penalty\n{}'.format(transitions['r']))
-                penalties = np.reshape(transitions[k], transitions['r'].shape)
-                idx = np.where(np.isclose(penalties, 1.))
-                if not idx[0].size == 0:
-                    transitions['r'][idx[0]] *= penalty_magnitude
-                # print('penalties \n{}'.format(penalties))
-                # print('idx {}'.format(idx))
-                # print('transitions[r] \n{}'.format(transitions['r']))
+
+        # print('transitions[r] before penalty\n{}'.format(transitions['r']))
+        penalties = np.reshape(transitions['p'], transitions['r'].shape)
+        idx = np.argwhere(np.isclose(penalties, 1.))
+        # assert idx.size == 0, "Penalty index size error."
+        transitions['r'][idx] *= penalty_magnitude
+        # print('penalties \n{}'.format(penalties))
+        # print('idx {}'.format(idx))
+        # print('transitions[r] \n{}'.format(transitions['r']))
 
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:])
                        for k in transitions.keys()}

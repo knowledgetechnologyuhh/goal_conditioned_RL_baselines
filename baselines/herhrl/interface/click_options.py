@@ -13,7 +13,7 @@ click.option('--n_subgoals_layers', type=str, default='[3]', help='The minimal n
 click.option('--policies_layers', type=str, default='[DDPG_HER_HRL_POLICY]', help='The policies to use for each layer except for the lowest which must always be DDPG_HER_HRL_POLICY. Possible options include DDPG_HER_HRL_POLICY and PDDL_POLICY.'),
 # TODO: parameterize penalty stuffs
 click.option('--penalty_magnitude', type=int, default=30, help='The magnitude of penalty score when subgoal is missed.'),
-click.option('--test_subgoal_perc', type=float, default=1.0, help='Percentage of event to test subgoal. 0 mean no '
+click.option('--test_subgoal_perc', type=float, default=0.7, help='Percentage of event to test subgoal. 0 mean no '
                                                                   'testing and hence no penalty.')
 ]
 
