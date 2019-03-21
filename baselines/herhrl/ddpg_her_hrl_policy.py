@@ -97,6 +97,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
                          for key, val in self.input_shapes.items()}
         buffer_shapes['g'] = (buffer_shapes['g'][0], self.dimg)
         buffer_shapes['ag'] = (self.T+1, self.dimg)
+        buffer_shapes['p'] = (buffer_shapes['g'][0], 1)
         # TODO add p to buffer shapes.
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
