@@ -26,7 +26,7 @@ DEFAULT_PARAMS = {
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
     # 'buffer_size': int(1E6),  # for experience replay
-    'buffer_size': int(5E4),  # for experience replay
+    'buffer_size': int(5E3),  # for experience replay
     'polyak': 0.95,  # polyak averaging coefficient
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     'clip_obs': 200.,
@@ -225,7 +225,7 @@ def configure_policy(dims, params):
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset,
                             'h_level': l,
-                            'buffer_size': next_buffer_size,
+                            'buffer_size': next_buffer_size * n_s,
                             })
         next_buffer_size *= n_s
         t_remaining = int(t_remaining / n_s)
