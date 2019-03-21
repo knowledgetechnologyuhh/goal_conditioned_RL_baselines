@@ -97,6 +97,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
                          for key, val in self.input_shapes.items()}
         buffer_shapes['g'] = (buffer_shapes['g'][0], self.dimg)
         buffer_shapes['ag'] = (self.T+1, self.dimg)
+        # TODO add p to buffer shapes.
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
@@ -145,13 +146,12 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         return u, q
 
     def store_episode(self, episode_batch, update_stats=True):
+
         """
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-
         self.buffer.store_episode(episode_batch)
-
         if update_stats:
             # add transitions to normalizer
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
@@ -198,6 +198,8 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         transitions['o_2'], transitions['g_2'] = self._preprocess_og(o_2, ag_2, g)
 
         transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
+
+        # TODO: Make sure that the penalties are actually included in the returned transitions_batch. This will require to add the penalty to the stage_shapes.
         return transitions_batch
 
     def stage_batch(self, batch=None):
@@ -272,6 +274,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # loss functions
+        # TODO: Add penalty to the loss function.
         target_Q_pi_tf = self.target.Q_pi_tf
         clip_range = (-self.clip_return, 0. if self.clip_pos_returns else np.inf)
         target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
@@ -307,10 +310,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
 
     def logs(self, prefix='policy'):
         logs = []
-        # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
-        # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
-        # logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
-        # logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
         logs += [('buffer_size', int(self.buffer.current_size))]
         logs = log_formater(logs, prefix + "_{}".format(self.h_level))
         if self.child_policy is not None:
@@ -323,7 +322,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
     def __getstate__(self):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
-        # [print(key, ": ", item) for key,item in self.__dict__.items()]
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic']

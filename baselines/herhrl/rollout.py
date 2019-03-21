@@ -135,14 +135,16 @@ class RolloutWorker(Rollout):
                 if self.render:
                     self.envs[i].render()
 
-            if np.random.random_sample() < self.test_subgoal_perc and self.is_leaf is False: # not penalize all the time
-            # if self.is_leaf is False:
+            if self.is_leaf is False: # not penalize all the time
                 # Access to child
                 child_success = self.child_rollout.success.copy()
                 for i in range(self.rollout_batch_size):
-                    penalty[i] = True if np.isclose(child_success[i], 0.) else False
+                    if np.random.random_sample() < self.test_subgoal_perc:
+                        penalty[i] = True if np.isclose(child_success[i], 0.) else False
+                if np.mean(penalty) < 1:
+                    print("Check this.")
 
-            self.success = success.copy()
+            # self.success = success.copy()
             obs.append(o.copy())
             achieved_goals.append(ag.copy())
             successes.append(success.copy())
@@ -154,6 +156,9 @@ class RolloutWorker(Rollout):
         obs.append(o.copy())
         achieved_goals.append(ag.copy())
 
+        if self.is_leaf and np.mean(penalties) > 0:
+            assert False, "For lowest layer, penalty should always be zero."
+
         episode = dict(o=obs,
                        u=acts,
                        g=goals,
@@ -163,9 +168,9 @@ class RolloutWorker(Rollout):
             episode['info_{}'.format(key)] = value
 
         # stats
-        successful = np.array(successes)[-1, :]
-        assert successful.shape == (self.rollout_batch_size,)
-        success_rate = np.mean(successful)
+        self.success = np.array(successes)[-1, :]
+        assert self.success.shape == (self.rollout_batch_size,)
+        success_rate = np.mean(self.success)
         self.success_history.append(success_rate)
         self.n_episodes += self.rollout_batch_size
 

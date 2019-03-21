@@ -38,7 +38,6 @@ do
     echo ${cmd}
     ${cmd}
 
-
     penalty_magnitude='20'
     test_subgoal_perc='0.2'
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl

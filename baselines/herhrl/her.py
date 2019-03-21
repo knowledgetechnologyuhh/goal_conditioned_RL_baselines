@@ -53,7 +53,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         reward_params['info'] = info
         transitions['r'] = reward_fun(**reward_params)
         for k in transitions.keys():
-            if k=='p':
+            if k == 'p':
                 # print('transitions[r] before penalty\n{}'.format(transitions['r']))
                 penalties = transitions[k]
                 idx = np.where(np.isclose(penalties, 1.))
