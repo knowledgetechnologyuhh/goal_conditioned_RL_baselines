@@ -103,9 +103,10 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # plt.figure(figsize=(20, 8))
     fig = plt.figure(figsize=(20, 8))
     ax = fig.gca()
-    new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
-                  '#bcbd22', '#17becf']
+    # new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+    #               '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+    #               '#bcbd22', '#17becf']
+    new_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     plt.rc('axes', prop_cycle=(cycler('linestyle', ['-', '--', ':']) * cycler('color', new_colors)))
     for idx, config in enumerate(sorted(data.keys(), reverse=True)):
         label = "+".join(sorted(config.split("-"), reverse=True))
@@ -121,11 +122,9 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
             kappa = label.split("stochastic3_")[1].split("_")[2]
             h = label.split("stochastic3_")[1].split("_")[3].split("+")[0]
             gl_str = "curriculum_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
-            # label = label.replace("stochastic3_{}_0_{}_{}".format(rg,c,h), 'CGM \nrg={} \nc={}'.format(rg,kappa))
             label = label.replace(gl_str, "CGM")
         label = label.replace("model_network_class: ", 'model: ')
         label = label.replace("baselines.model_based.model_rnn:", '')
-        # label = label.replace("+goldilocks_sampling: none", '')
         # End custom modifications of label
 
         xs, ys = zip(*data[config])
@@ -157,7 +156,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # ax.set_xlim([0, 150])
     plt.xlabel('epoch')
     plt.ylabel(y_axis_title)
-    plt.legend(loc='upper right')
+    plt.legend(loc='upper left')
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.png'.format(y_axis_title.replace("/", "_"))))
 
@@ -402,7 +401,6 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
         for k in var_param_keys:
             if k in params.keys():
                 config += k + ": " + str(params[k])+"-"
-
         config = config[:-1]
 
         # Process and smooth data.
@@ -432,21 +430,30 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
     d_keys = [key for key in sorted(data.keys())]
     if sort_order == 'max':
         best_vals = [0 for _ in range(n_best)]
-    elif sort_order == 'min':
+    elif sort_order in ['min', 'least']:
         best_vals = [np.iinfo(np.int16).max for _ in range(n_best)]
     best_keys = ['' for _ in range(n_best)]
     for key in d_keys:
-        last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if len(data[key][i][1]) > avg_last_steps])
-        last_n_avg = np.mean(last_vals)
-        if sort_order == 'max':
-            if last_n_avg > np.min(best_vals):
-                ri = np.argmin(best_vals)
-                best_vals[ri] = last_n_avg
-                best_keys[ri] = key
-        elif sort_order == 'min':
-            if last_n_avg < np.max(best_vals):
+        if sort_order in ['max', 'min']:
+            last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if
+                                  len(data[key][i][1]) > avg_last_steps])
+            last_n_avg = np.mean(last_vals)
+            if sort_order == 'max':
+                if last_n_avg > np.min(best_vals):
+                    ri = np.argmin(best_vals)
+                    best_vals[ri] = last_n_avg
+                    best_keys[ri] = key
+            elif sort_order == 'min':
+                if last_n_avg < np.max(best_vals):
+                    ri = np.argmax(best_vals)
+                    best_vals[ri] = last_n_avg
+                    best_keys[ri] = key
+        elif sort_order == 'least':
+            all_lens = np.array([max(data[key][i][0]) for i in range(len(data[key]))])
+            last_n = np.mean(all_lens)
+            if last_n < np.max(best_vals):
                 ri = np.argmax(best_vals)
-                best_vals[ri] = last_n_avg
+                best_vals[ri] = last_n
                 best_keys[ri] = key
     best_data = {}
     for key in best_keys:
@@ -454,27 +461,16 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
             best_data[key] = data[key]
     return best_data
 
-def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='min', lin_log='lin'):
+
+def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
-
-
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
-
     var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
-
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
-
     if get_best != '':
-        data = get_best_data(data, get_best, n_best=5, avg_last_steps=5)
-
-    # draw_var_param_plots(data, var_param_keys, inter_dict, data_dir, y_axis_title=col_to_display)
-
+        data = get_best_data(data, get_best, n_best=10, avg_last_steps=5)
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
-
-    # draw_all_data_plot_rg_c_conv(data, args.dir)
-    # rate_to_achieve = 0.5
-    # draw_stochastic_surface_plot(data, rate_to_achieve, args.dir)
 
 
 if __name__ == '__main__':
@@ -482,7 +478,7 @@ if __name__ == '__main__':
     parser.add_argument('data_dir', type=str)
     parser.add_argument('--smooth', type=int, default=0)
     parser.add_argument('--pad', type=int, default=0)
-    parser.add_argument('--column', type=str, default='test/success_rate')
+    parser.add_argument('--column', type=str, default='test_0/success_rate')
     args = parser.parse_args()
     # data_lastval_threshold = 0.0
     do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)
