@@ -152,22 +152,22 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
                        'o' is of size T+1, others are of size T
         """
         self.buffer.store_episode(episode_batch)
-        # if update_stats:
-        #     # add transitions to normalizer
-        #     episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
-        #     episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
-        #     num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
-        #     transitions = self.sample_transitions(episode_batch, num_normalizing_transitions)
-        #
-        #     o, o_2, g, ag = transitions['o'], transitions['o_2'], transitions['g'], transitions['ag']
-        #     transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
-        #     # No need to preprocess the o_2 and g_2 since this is only used for stats
-        #
-        #     self.o_stats.update(transitions['o'])
-        #     self.g_stats.update(transitions['g'])
-        #
-        #     self.o_stats.recompute_stats()
-        #     self.g_stats.recompute_stats()
+        if update_stats:
+            # add transitions to normalizer
+            episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
+            episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
+            num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
+            transitions = self.sample_transitions(episode_batch, num_normalizing_transitions)
+
+            o, o_2, g, ag = transitions['o'], transitions['o_2'], transitions['g'], transitions['ag']
+            transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
+            # No need to preprocess the o_2 and g_2 since this is only used for stats
+
+            self.o_stats.update(transitions['o'])
+            self.g_stats.update(transitions['g'])
+
+            self.o_stats.recompute_stats()
+            self.g_stats.recompute_stats()
 
     def get_current_buffer_size(self):
         return self.buffer.get_current_size()
@@ -241,14 +241,14 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             self.sess = tf.InteractiveSession()
 
         # running averages
-        # with tf.variable_scope('o_stats') as vs:
-        #     if reuse:
-        #         vs.reuse_variables()
-        #     self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
-        # with tf.variable_scope('g_stats') as vs:
-        #     if reuse:
-        #         vs.reuse_variables()
-        #     self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
+        with tf.variable_scope('o_stats') as vs:
+            if reuse:
+                vs.reuse_variables()
+            self.o_stats = Normalizer(self.dimo, self.norm_eps, self.norm_clip, sess=self.sess)
+        with tf.variable_scope('g_stats') as vs:
+            if reuse:
+                vs.reuse_variables()
+            self.g_stats = Normalizer(self.dimg, self.norm_eps, self.norm_clip, sess=self.sess)
 
         # mini-batch sampling.
         batch = self.staging_tf.get()
@@ -297,7 +297,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         # polyak averaging
         self.main_vars = self._vars('main/Q') + self._vars('main/pi')
         self.target_vars = self._vars('target/Q') + self._vars('target/pi')
-        # self.stats_vars = self._global_vars('o_stats') + self._global_vars('g_stats')
+        self.stats_vars = self._global_vars('o_stats') + self._global_vars('g_stats')
         self.init_target_net_op = list(
             map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
         self.update_target_net_op = list(
