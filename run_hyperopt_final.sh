@@ -20,8 +20,8 @@ cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm bas
 
 for i in 1 2 3
 do
-    penalty_magnitude='0'
-    test_subgoal_perc='0'
+    penalty_magnitude='20'
+    test_subgoal_perc='1'
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
 --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
