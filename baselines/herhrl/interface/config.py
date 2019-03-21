@@ -17,6 +17,7 @@ DEFAULT_ENV_PARAMS = {
 }
 
 
+
 DEFAULT_PARAMS = {
     # env
     'max_u': 1.,  # max absolute value of actions on different coordinates
@@ -27,7 +28,7 @@ DEFAULT_PARAMS = {
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
     # 'buffer_size': int(1E6),  # for experience replay
-    'buffer_size': int(1E6),  # for experience replay
+    'buffer_size': int(5E3),  # for experience replay
     'polyak': 0.95,  # polyak averaging coefficient
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     'clip_obs': 200.,
@@ -210,6 +211,7 @@ def configure_policy(dims, params):
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
                     policy_str in params['policies_layers'][1:-1].split(",") if policy_str != ''] + [DDPG_HER_HRL_POLICY]
     policies = []
+    next_buffer_size = ddpg_params['buffer_size']
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
@@ -225,7 +227,9 @@ def configure_policy(dims, params):
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset,
                             'h_level': l,
+                            'buffer_size': next_buffer_size * n_s,
                             })
+        next_buffer_size *= n_s
         t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)
         policy = ThisPolicy(**this_params)
