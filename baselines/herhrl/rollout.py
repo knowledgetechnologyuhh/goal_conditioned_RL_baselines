@@ -141,8 +141,8 @@ class RolloutWorker(Rollout):
                 for i in range(self.rollout_batch_size):
                     if np.random.random_sample() < self.test_subgoal_perc:
                         penalty[i] = True if np.isclose(child_success[i], 0.) else False
-                if np.mean(penalty) < 1:
-                    print("Check this.")
+                # if np.mean(penalty) < 1:
+                #     print("Check this.")
 
             # self.success = success.copy()
             obs.append(o.copy())
