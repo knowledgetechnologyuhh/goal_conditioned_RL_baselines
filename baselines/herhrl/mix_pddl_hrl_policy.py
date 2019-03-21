@@ -118,7 +118,7 @@ class MIX_PDDL_HRL_POLICY(HRL_Policy):
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True, success_rate=1.):
         # TODO:
-        if success_rate < 0.2:    # play with sigmoid here
+        if success_rate < 0.4:    # play with sigmoid here
             u = []
             for i in range(self.rollout_batch_size):
                 plan = self.envs[i].env.get_plan()
