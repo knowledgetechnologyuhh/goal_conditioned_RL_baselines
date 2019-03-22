@@ -104,11 +104,15 @@ def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
+        # whoami = mpi_fork(num_cpu)
         try:
             whoami = mpi_fork(num_cpu, ['--bind-to', 'core'])
         except CalledProcessError:
             # fancy version of mpi call failed, try simple version
             whoami = mpi_fork(num_cpu)
+        if whoami == 'parent':
+            whoami = mpi_fork(num_cpu)
+            # sys.exit(0)
 
         if whoami == 'parent':
             sys.exit(0)

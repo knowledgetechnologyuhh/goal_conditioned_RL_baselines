@@ -63,7 +63,7 @@ if __name__ == '__main__':
     space = {}
 
     space['penalty_magnitude'] = hp.quniform('penalty_magnitude', 10, 50, 10)
-    space['test_subgoal_perc'] = hp.quniform('test_subgoal_perc', 0.1, 1, .1)
+    space['test_subgoal_perc'] = hp.quniform('test_subgoal_perc', 0.2, 0.8, 0.2)
     # space['model_lr'] = hp.loguniform('model_lr', np.log2(0.1), np.log2(10))
     # space['action_selection'] = hp.choice('action_selection', ['random', 'max_pred_surprise'])
 

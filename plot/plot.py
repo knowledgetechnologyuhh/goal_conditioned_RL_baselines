@@ -426,7 +426,7 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
     return data
 
 
-def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
+def get_best_data(data, sort_order, n_best=5, avg_last_steps=5, sort_order_least_val=None):
     d_keys = [key for key in sorted(data.keys())]
     if sort_order == 'max':
         best_vals = [0 for _ in range(n_best)]
@@ -450,6 +450,10 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
                     best_keys[ri] = key
         elif sort_order == 'least':
             all_lens = np.array([max(data[key][i][0]) for i in range(len(data[key]))])
+            if sort_order_least_val is not None:
+                all_lens = np.array(
+                    [np.argwhere(data[key][i][1] >= sort_order_least_val) for i in range(len(data[key]))]).squeeze(2)
+                all_lens = [min(lens) for lens in all_lens]
             last_n = np.mean(all_lens)
             if last_n < np.max(best_vals):
                 ri = np.argmax(best_vals)
@@ -468,8 +472,8 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
     var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
-    if get_best != '':
-        data = get_best_data(data, get_best, n_best=10, avg_last_steps=5)
+    # if get_best != '':
+    #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
 
