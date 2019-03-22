@@ -18,7 +18,7 @@ cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm bas
 --test_subgoal_perc ${test_subgoal_perc}"
 
 
-for i in 1 2 3
+for i in 1 2 3 4 5
 do
     penalty_magnitude='20'
     test_subgoal_perc='1'
@@ -28,6 +28,25 @@ do
 --test_subgoal_perc ${test_subgoal_perc}"
     echo ${cmd}
     ${cmd}
+
+    penalty_magnitude='1'
+    test_subgoal_perc='0'
+    cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
+--rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
+--base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
+--test_subgoal_perc ${test_subgoal_perc}"
+    echo ${cmd}
+    ${cmd}
+
+penalty_magnitude='20'
+    test_subgoal_perc='0.3'
+    cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
+--rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
+--base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
+--test_subgoal_perc ${test_subgoal_perc}"
+    echo ${cmd}
+    ${cmd}
+
 
 #    penalty_magnitude='30'
 #    test_subgoal_perc='0.5'
