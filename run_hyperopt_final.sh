@@ -20,7 +20,7 @@ do
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
 --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
---test_subgoal_perc ${test_subgoal_perc}"
+--test_subgoal_perc ${test_subgoal_perc} --info subtractpenalty"
     echo ${cmd}
     ${cmd}
 
@@ -29,7 +29,7 @@ do
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
 --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
---test_subgoal_perc ${test_subgoal_perc}"
+--test_subgoal_perc ${test_subgoal_perc} --info subtractpenalty"
     echo ${cmd}
     ${cmd}
 
@@ -38,7 +38,7 @@ penalty_magnitude='20'
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
 --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
---test_subgoal_perc ${test_subgoal_perc}"
+--test_subgoal_perc ${test_subgoal_perc} --info subtractpenalty"
     echo ${cmd}
     ${cmd}
 
