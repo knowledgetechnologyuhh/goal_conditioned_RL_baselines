@@ -128,6 +128,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         # End custom modifications of label
 
         xs, ys = zip(*data[config])
+        label = label + "|N:{}".format(len(ys))
         xs, ys = pad(xs), pad(ys, value=np.nan)
         median = np.nanmedian(ys, axis=0)
         mean = np.mean(ys, axis=0)
@@ -135,7 +136,6 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         x_vals = range(1,xs.shape[1]+1)
 
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        # plt.xticks(loc=range(170))
 
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
@@ -346,7 +346,6 @@ def draw_stochastic_surface_plot(data, percent_to_achieve, fig_dir):
     # plt.title("Number of epochs to achieve {}% success rate".format(int(percent_to_achieve*100)), loc='center', pad=-20)
     plt.savefig(os.path.join(fig_dir, 'c_rg_.png'))
 
-
 def get_var_param_keys(paths):
     # all_params = []
     inter_dict = {}
@@ -466,14 +465,30 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5, sort_order_least
     return best_data
 
 
+def get_min_len_data(data, min_len):
+    d_keys = [key for key in sorted(data.keys())]
+    new_data = {}
+    for key in d_keys:
+        new_data[key] = []
+        for d in data[key]:
+            if np.max(d[0]) >= min_len:
+                new_data[key].append(d)
+        if len(new_data[key]) == 0:
+            new_data.pop(key)
+    return new_data
+
+
 def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
     var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
+    var_param_keys.remove('base_logdir')
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
+    data = get_min_len_data(data, min_len=150)
     # if get_best != '':
     #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
+
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
 
