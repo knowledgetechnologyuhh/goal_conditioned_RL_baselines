@@ -44,7 +44,7 @@ def test_objective(space_sample):
         print("Done executing hyperopt run.")
         time.sleep(10)
         res_str = str(result).split("--------------------------------------")[-2]
-        trial_value = res_str.split("epoch")[1]
+        trial_value = res_str.split("test_0/success_rate")[1]
         trial_value = trial_value.split("|")[1]
         trial_value = float(trial_value)
 
@@ -53,7 +53,7 @@ def test_objective(space_sample):
         results.append(trial_value)
 
 
-    res_cost = np.mean(results)
+    res_cost = -np.mean(results)
     print("Final average cost for {}: {}".format(cmd_arr, res_cost))
     return res_cost
 
