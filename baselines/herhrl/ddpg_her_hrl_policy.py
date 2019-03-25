@@ -195,10 +195,8 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         ag, ag_2 = transitions['ag'], transitions['ag_2']
         transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
         transitions['o_2'], transitions['g_2'] = self._preprocess_og(o_2, ag_2, g)
-
         transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
 
-        # TODO: Make sure that the penalties are actually included in the returned transitions_batch. This will require to add the penalty to the stage_shapes.
         return transitions_batch
 
     def stage_batch(self, batch=None):
