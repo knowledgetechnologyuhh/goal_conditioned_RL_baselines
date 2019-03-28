@@ -168,13 +168,23 @@ def launch(
         assert loaded_env_name == env
 
     # Rollout and evaluation parameters
+    policy_types = [policy_str for
+                    policy_str in params['policies_layers'][1:-1].split(",") if policy_str != '']
     rollout_params = config.ROLLOUT_PARAMS
     rollout_params['render'] = bool(kwargs['render'])
     rollout_params['test_subgoal_perc'] = kwargs['test_subgoal_perc']
+    if policy_types[0]=='MIX_PDDL_HRL_POLICY':
+        rollout_params['mix'] = True
+    else:
+        rollout_params['mix'] = False
 
     eval_params = config.EVAL_PARAMS
     eval_params['render'] = bool(kwargs['render'])
     eval_params['test_subgoal_perc'] = 0.
+    if policy_types[0]=='MIX_PDDL_HRL_POLICY':
+        eval_params['mix'] = True
+    else:
+        eval_params['mix'] = False
 
     for name in config.ROLLOUT_PARAMS_LIST:
         rollout_params[name] = params[name]
