@@ -40,9 +40,10 @@ class RolloutWorker(Rollout):
         self.q_loss_history = deque(maxlen=history_len)
         self.pi_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
+        self.all_succ_history = deque(maxlen=history_len)
         self.success = np.zeros(self.rollout_batch_size)
-        self.latest_success_rate = 0.
-        self.mix = kwargs['mix']
+        # self.latest_success_rate = 0.
+        # self.mix = kwargs['mix']
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
@@ -105,11 +106,10 @@ class RolloutWorker(Rollout):
         info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
                        self.info_keys]
         for t in range(self.this_T):
-            if self.mix and not self.is_leaf:
-                self.policy_action_params['success_rate'] = self.latest_success_rate
+            self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
-            if 'success_rate' in self.policy_action_params.keys():
-                self.policy_action_params.pop('success_rate')
+            # if 'success_rate' in self.policy_action_params.keys():
+            #     self.policy_action_params.pop('success_rate')
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
@@ -174,9 +174,10 @@ class RolloutWorker(Rollout):
         self.success = np.array(successes)[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
         success_rate = np.mean(self.success)
-        self.latest_success_rate = success_rate
+        # self.latest_success_rate = success_rate
 
         self.success_history.append(success_rate)
+        self.all_succ_history.append(success_rate)
         self.n_episodes += self.rollout_batch_size
 
         ret = convert_episode_to_batch_major(episode)
@@ -222,6 +223,8 @@ class RolloutWorker(Rollout):
         """
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
+        logs += [('rollouts', self.n_episodes)]
+        logs += [('steps', self.n_episodes * self.this_T)]
         if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
             logs += [('q_loss', np.mean(self.q_loss_history))]
             logs += [('pi_loss', np.mean(self.pi_loss_history))]
@@ -233,6 +236,14 @@ class RolloutWorker(Rollout):
             logs += child_logs
 
         return logs
+
+    def get_mean_succ_rate(self, n_past_episodes=50):
+        n_idx = min(n_past_episodes, len(self.all_succ_history))
+        if n_idx == 0:
+            return 0
+        else:
+            last_suc = list(self.all_succ_history)[-n_idx:]
+            return np.mean(last_suc)
 
     def clear_history(self):
         """Clears all histories that are used for statistics
