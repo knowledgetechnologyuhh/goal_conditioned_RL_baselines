@@ -68,8 +68,8 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True, success_rate=1.):
+        # TODO: Make these two parameters parameterizable.
         p_threshold = 0.2
-        # p_threshold = 0.0
         p_steepness = 2.0
 
         def sigmoid(x):

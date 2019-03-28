@@ -13,8 +13,14 @@ def mpi_mean(x, axis=0, comm=None, keepdims=False):
     localsum[:n] = xsum.ravel()
     localsum[n] = x.shape[axis]
     globalsum = np.zeros_like(localsum)
-    comm.Allreduce(localsum, globalsum, op=MPI.SUM)
-    return globalsum[:n].reshape(xsum.shape) / globalsum[n], globalsum[n]
+    try:
+        comm.Allreduce(localsum, globalsum, op=MPI.SUM)
+        ret = globalsum[:n].reshape(xsum.shape) / globalsum[n], globalsum[n]
+    except Exception as e:
+        print("Caught exception : {}".format(e))
+        print("value: {}".format(x))
+        ret = localsum[:n], globalsum[n]
+    return ret
 
 def mpi_moments(x, axis=0, comm=None, keepdims=False):
     x = np.asarray(x)

@@ -106,10 +106,10 @@ class RolloutWorker(Rollout):
         info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in
                        self.info_keys]
         for t in range(self.this_T):
+            # TODO: add binary parameter whether to use mean success rate of this policy or of child policy.
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
-            # if 'success_rate' in self.policy_action_params.keys():
-            #     self.policy_action_params.pop('success_rate')
+
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
             success = np.zeros(self.rollout_batch_size)
