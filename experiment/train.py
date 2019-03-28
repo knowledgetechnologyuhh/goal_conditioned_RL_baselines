@@ -60,23 +60,27 @@ def train(rollout_worker, evaluator,
         # record logs
         logger.record_tabular('epoch', epoch)
         for key, val in evaluator.logs('test'):
-            logger.record_tabular(key, mpi_average(val))
-            # try:
-            #     logger.record_tabular(key, mpi_average(val))
-            # except Exception as e:
-            #     print("Error with kv {}:{} -- {}".format(key,val, e))
+            # logger.record_tabular(key, mpi_average(val))
+            try:
+                logger.record_tabular(key, mpi_average(val))
+            except Exception as e:
+                print("Error with kv {}:{} -- {}".format(key,val, e))
+                logger.record_tabular(key, val)
         for key, val in rollout_worker.logs('train'):
-            logger.record_tabular(key, mpi_average(val))
-            # try:
-            #     logger.record_tabular(key, mpi_average(val))
-            # except Exception as e:
-            #     print("Error with kv {}:{} -- {}".format(key,val, e))
+            # logger.record_tabular(key, mpi_average(val))
+            try:
+                logger.record_tabular(key, mpi_average(val))
+            except Exception as e:
+                print("Error with kv {}:{} -- {}".format(key, val, e))
+                logger.record_tabular(key, val)
         for key, val in policy.logs('policy'):
-            logger.record_tabular(key, mpi_average(val))
-            # try:
-            #     logger.record_tabular(key, mpi_average(val))
-            # except Exception as e:
+            # logger.record_tabular(key, mpi_average(val))
+            try:
+                logger.record_tabular(key, mpi_average(val))
+            except Exception as e:
             #     print("Error with kv {}:{} -- {}".format(key,val, e))
+                print("Error with kv {}:{} -- {}".format(key, val, e))
+                logger.record_tabular(key, val)
         if rank == 0:
             print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
