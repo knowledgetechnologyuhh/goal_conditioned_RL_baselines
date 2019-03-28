@@ -5,7 +5,7 @@ from baselines.common import zipsame
 
 def mpi_mean(x, axis=0, comm=None, keepdims=False):
     x = np.asarray(x)
-    assert x.ndim > 0
+    assert x.ndim > 0, "x.ndim > 0"
     if comm is None: comm = MPI.COMM_WORLD
     xsum = x.sum(axis=axis, keepdims=keepdims)
     n = xsum.size
@@ -18,11 +18,11 @@ def mpi_mean(x, axis=0, comm=None, keepdims=False):
 
 def mpi_moments(x, axis=0, comm=None, keepdims=False):
     x = np.asarray(x)
-    assert x.ndim > 0
+    assert x.ndim > 0, "x.ndim > 0"
     mean, count = mpi_mean(x, axis=axis, comm=comm, keepdims=True)
     sqdiffs = np.square(x - mean)
     meansqdiff, count1 = mpi_mean(sqdiffs, axis=axis, comm=comm, keepdims=True)
-    assert count1 == count
+    assert count1 == count, "count1 != count"
     std = np.sqrt(meansqdiff)
     if not keepdims:
         newshape = mean.shape[:axis] + mean.shape[axis+1:]

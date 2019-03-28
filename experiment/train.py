@@ -18,6 +18,8 @@ from subprocess import CalledProcessError
 import subprocess
 import wtm_envs.register_envs
 
+num_cpu = 0
+
 def mpi_average(value):
     if value == []:
         value = [0.]
@@ -29,6 +31,7 @@ def mpi_average(value):
 def train(rollout_worker, evaluator,
           n_epochs, n_test_rollouts, n_episodes, n_train_batches, policy_save_interval,
           save_policies, **kwargs):
+    global num_cpu
     rank = MPI.COMM_WORLD.Get_rank()
 
     latest_policy_path = os.path.join(logger.get_dir(), 'policy_latest.pkl')
@@ -58,11 +61,22 @@ def train(rollout_worker, evaluator,
         logger.record_tabular('epoch', epoch)
         for key, val in evaluator.logs('test'):
             logger.record_tabular(key, mpi_average(val))
+            # try:
+            #     logger.record_tabular(key, mpi_average(val))
+            # except Exception as e:
+            #     print("Error with kv {}:{} -- {}".format(key,val, e))
         for key, val in rollout_worker.logs('train'):
             logger.record_tabular(key, mpi_average(val))
+            # try:
+            #     logger.record_tabular(key, mpi_average(val))
+            # except Exception as e:
+            #     print("Error with kv {}:{} -- {}".format(key,val, e))
         for key, val in policy.logs('policy'):
             logger.record_tabular(key, mpi_average(val))
-
+            # try:
+            #     logger.record_tabular(key, mpi_average(val))
+            # except Exception as e:
+            #     print("Error with kv {}:{} -- {}".format(key,val, e))
         if rank == 0:
             print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
@@ -103,6 +117,7 @@ def train(rollout_worker, evaluator,
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
     # Fork for multi-CPU MPI implementation.
+
     if num_cpu > 1:
         # whoami = mpi_fork(num_cpu)
         try:
@@ -215,14 +230,14 @@ def launch(
 @main_linker.click_main
 @click.pass_context
 def main(ctx, **kwargs):
-    global config, RolloutWorker, policy_linker
+    global config, RolloutWorker, policy_linker, num_cpu
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
     cmd_line_update_args = {ctx.args[i][2:]: type(policy_args[ctx.args[i][2:]])(ctx.args[i + 1]) for i in
                             range(0, len(ctx.args), 2)}
     policy_args.update(cmd_line_update_args)
     kwargs.update(policy_args)
-
+    num_cpu = kwargs['num_cpu']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
     for op in override_params:

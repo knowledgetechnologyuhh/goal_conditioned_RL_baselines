@@ -116,7 +116,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         return o, g
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
-                    compute_Q=False, exploit=True):
+                    compute_Q=False, exploit=True, **kwargs):
         noise_eps = noise_eps if not exploit else 0.
         random_eps = random_eps if not exploit else 0.
 
@@ -196,7 +196,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
         transitions['o_2'], transitions['g_2'] = self._preprocess_og(o_2, ag_2, g)
         transitions_batch = [transitions[key] for key in self.stage_shapes.keys()]
-
         return transitions_batch
 
     def stage_batch(self, batch=None):

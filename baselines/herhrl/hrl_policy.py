@@ -87,18 +87,12 @@ class HRL_Policy(Policy):
     def update_target_net(self):
         pass
 
+
     def logs(self, prefix='policy'):
         logs = []
-        # logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
-        # logs += [('stats_o/std', np.mean(self.sess.run([self.o_stats.std])))]
-        # logs += [('stats_g/mean', np.mean(self.sess.run([self.g_stats.mean])))]
-        # logs += [('stats_g/std', np.mean(self.sess.run([self.g_stats.std])))]
-        # logs += [('buffer_size', int(self.buffer.current_size))]
-        # logs = log_formater(logs, prefix + "_{}".format(self.h_level))
         if self.child_policy is not None:
             child_logs = self.child_policy.logs(prefix=prefix)
             logs += child_logs
-
         return logs
 
     def __getstate__(self):
