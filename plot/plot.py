@@ -106,10 +106,10 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
     #               '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
     #               '#bcbd22', '#17becf']
-    new_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    new_colors = sorted(plt.rcParams['axes.prop_cycle'].by_key()['color'], reverse=True)
     plt.rc('axes', prop_cycle=(cycler('linestyle', ['-', '--', ':']) * cycler('color', new_colors)))
     for idx, config in enumerate(sorted(data.keys(), reverse=True)):
-        label = "+".join(sorted(config.split("-"), reverse=True))
+        label = "|".join(sorted(config.split("|"), reverse=True))
 
         # Some custom modifications of label:
         label = label.replace("stochastic3_0_0_0_1", 'uniform')
@@ -399,7 +399,7 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
         config = ''
         for k in var_param_keys:
             if k in params.keys():
-                config += k + ": " + str(params[k])+"-"
+                config += k + ": " + str(params[k])+"|"
         config = config[:-1]
 
         # Process and smooth data.
@@ -477,15 +477,28 @@ def get_min_len_data(data, min_len):
             new_data.pop(key)
     return new_data
 
+def get_paths_with_symlinks(data_dir, maxdepth=8):
+    glob_path = data_dir
+    paths = []
+    for _ in range(maxdepth):
+        path_to_use = os.path.join(glob_path, 'progress.csv')
+        paths += [os.path.abspath(os.path.join(path, '..')) for path in
+                  glob2.glob(path_to_use)]
+        glob_path = os.path.join(glob_path, '*')
+    return paths
 
 def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
-    paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
+    paths = get_paths_with_symlinks(data_dir, maxdepth=8)
+    # paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
     var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
-    var_param_keys.remove('base_logdir')
+    try:
+        var_param_keys.remove('base_logdir')
+    except Exception as e:
+        pass
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
-    data = get_min_len_data(data, min_len=150)
+    data = get_min_len_data(data, min_len=20)
     # if get_best != '':
     #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
 
