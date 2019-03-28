@@ -271,7 +271,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         assert len(self._vars("main")) == len(self._vars("target"))
 
         # loss functions
-        # TODO: Add penalty to the loss function.
         target_Q_pi_tf = self.target.Q_pi_tf
         clip_range = (-self.clip_return, 0. if self.clip_pos_returns else np.inf)
         target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
