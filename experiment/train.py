@@ -210,6 +210,7 @@ def launch(
 @main_linker.click_main
 @click.pass_context
 def main(ctx, **kwargs):
+    print("Starting script")
     global config, RolloutWorker, policy_linker, num_cpu
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
