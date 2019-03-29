@@ -18,10 +18,7 @@ click.option('--mix_p_threshold', type=float, default=0.2, help='Switching (betw
 click.option('--mix_p_steepness', type=float, default=2.0, help='Steepness of the sigmoid switching function .')
 ]
 
-print("click herhrl dome")
-
 def click_main(func):
-    print("click main")
     for option in reversed(_her_options):
         func = option(func)
     return func
@@ -29,5 +26,4 @@ def click_main(func):
 @click.command()
 @click_main
 def get_click_option(**kwargs):
-    print("get click options")
     return kwargs

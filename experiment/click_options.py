@@ -35,6 +35,7 @@ def import_creator(library_path):
     config = importlib.import_module(library_path + ".interface.config", package=__package__)
     print(config)
     RolloutWorker = getattr(importlib.import_module(library_path + ".rollout", package=__package__), "RolloutWorker")
+    print("RolloutWorker:")
     print(RolloutWorker)
     # policy_linker = importlib.import_module(library_path + ".interface.click_options", package=__package__)
     # from baselines.her.experiment.plot import load_results

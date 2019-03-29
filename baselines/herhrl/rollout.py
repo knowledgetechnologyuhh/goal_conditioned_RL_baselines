@@ -1,3 +1,4 @@
+print("importing herhrl.rollout")
 import numpy as np
 import time
 
@@ -8,6 +9,8 @@ from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
+
+
 
 class RolloutWorker(Rollout):
 
