@@ -117,6 +117,7 @@ def launch(
         #     whoami = mpi_fork(num_cpu)
             # sys.exit(0)
 
+
         if whoami == 'parent':
             sys.exit(0)
         import baselines.common.tf_util as U
