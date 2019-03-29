@@ -1,7 +1,9 @@
 from collections import deque
 import numpy as np
 import pickle
+print("now importing MijocoException")
 from mujoco_py import MujocoException
+print("done importing MijocoException")
 
 from baselines.template.util import convert_episode_to_batch_major, store_args
 
