@@ -230,7 +230,7 @@ def main(ctx, **kwargs):
         if op in kwargs.keys():
             kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
-    print("Starting script")
+    # print("Starting script")
     try:
         git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
     except:
