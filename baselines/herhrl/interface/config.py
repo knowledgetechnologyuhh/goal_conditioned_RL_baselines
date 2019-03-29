@@ -183,6 +183,8 @@ def configure_policy(dims, params):
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
+    p_threshold = params['mix_p_threshold']
+    p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
@@ -201,6 +203,8 @@ def configure_policy(dims, params):
                         'clip_pos_returns': True,  # clip positive returns for Q-values
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'h_level': 0,
+                        'p_threshold': p_threshold,
+                        'p_steepness': p_steepness
     })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
