@@ -1,7 +1,7 @@
 from collections import deque
 import numpy as np
 import pickle
-print("now importing MijocoException")
+print("now importing MijocoException. This sometimes causes an error.")
 from mujoco_py import MujocoException
 print("done importing MijocoException")
 

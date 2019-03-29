@@ -1,19 +1,11 @@
-print("importing herhrl.rollout")
 import numpy as np
-print("importing herhrl.rollout")
 import time
-print("importing herhrl.rollout")
 from baselines.template.util import store_args
-print("importing herhrl.rollout")
 from baselines.template.util import logger as log_formater
-print("importing herhrl.rollout")
 from baselines.template.rollout import Rollout
-print("importing herhrl.rollout")
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
-
-print("importing herhrl.rollout")
 
 class RolloutWorker(Rollout):
 
