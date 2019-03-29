@@ -21,6 +21,8 @@ import wtm_envs.register_envs
 
 num_cpu = 0
 
+print("Imports done!")
+
 def mpi_average(value):
     if value == []:
         value = [0.]
