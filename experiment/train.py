@@ -214,26 +214,20 @@ def launch(
 def main(ctx, **kwargs):
     print("Starting script")
     global config, RolloutWorker, policy_linker, num_cpu
-    print("Starting script")
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
-    print("Starting script")
     policy_args = ctx.forward(main_linker.get_policy_click)
-    print("Starting script")
     cmd_line_update_args = {ctx.args[i][2:]: type(policy_args[ctx.args[i][2:]])(ctx.args[i + 1]) for i in
                             range(0, len(ctx.args), 2)}
-    print("Starting script")
     policy_args.update(cmd_line_update_args)
     kwargs.update(policy_args)
-    print("Starting script")
     num_cpu = kwargs['num_cpu']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
-    print("Starting script")
     for op in override_params:
         if op in kwargs.keys():
             kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
-    # print("Starting script")
+
     try:
         git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
     except:

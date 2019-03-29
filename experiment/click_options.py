@@ -40,6 +40,9 @@ def import_creator(library_path):
 
 
 def click_main(func):
+    print("click main")
     for option in reversed(_global_options):
+        print(option)
         func = option(func)
+        print(func)
     return func
