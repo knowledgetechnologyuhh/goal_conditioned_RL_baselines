@@ -113,8 +113,8 @@ def launch(
         except CalledProcessError:
             # fancy version of mpi call failed, try simple version
             whoami = mpi_fork(num_cpu)
-        if whoami == 'parent':
-            whoami = mpi_fork(num_cpu)
+        # if whoami == 'parent':
+        #     whoami = mpi_fork(num_cpu)
             # sys.exit(0)
 
         if whoami == 'parent':
