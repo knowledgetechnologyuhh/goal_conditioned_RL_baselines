@@ -8,8 +8,8 @@ n_epochs=200
 n_objects=1
 min_th=1
 max_th=1
-penalty_magnitude=1
-test_subgoal_perc=0
+penalty_magnitude=-2
+test_subgoal_perc=1
 
 
 krenew -K 60 -b
