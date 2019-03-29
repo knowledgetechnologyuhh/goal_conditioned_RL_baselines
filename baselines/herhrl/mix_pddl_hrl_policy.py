@@ -69,7 +69,7 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True, success_rate=1.):
         # TODO: Make these two parameters parameterizable.
-        p_threshold = 0.2
+        p_threshold = 0.0
         p_steepness = 2.0
 
         def sigmoid(x):
@@ -84,17 +84,20 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
 
         p_ddpg = sigm_prob(success_rate, p_threshold, p_steepness)
         rnd = np.random.uniform()
-
+        # rnd = 0
+        u, q = DDPG_HER_HRL_POLICY.get_actions(self, o, ag, g, noise_eps=noise_eps, random_eps=random_eps,
+                                               use_target_net=use_target_net,
+                                               compute_Q=compute_Q, exploit=exploit)
+        # u: [[0.9368822  0.27914315 0.59580815 0.95340914 0.28622973 0.5415887 ]
+        #  [0.94352174 0.28807434 0.6123256  0.9478492  0.24579085 0.5335805 ]]
+        # q: [[-0.16603139] [-0.1392152 ]]
         if rnd > p_ddpg:
-
-            u, q = PDDL_POLICY.get_actions(self, o, ag, g)
+            u, q_pddl = PDDL_POLICY.get_actions(self, o, ag, g)
             self.count_pddl += 1
         else:
-            u, q = DDPG_HER_HRL_POLICY.get_actions(self, o, ag, g, noise_eps=noise_eps, random_eps=random_eps, use_target_net=use_target_net,
-                    compute_Q=compute_Q, exploit=exploit)
             self.count_hrl += 1
 
-        p_ddpg = sigm_prob(success_rate, p_threshold, p_steepness)
+        # p_ddpg = sigm_prob(success_rate, p_threshold, p_steepness)
 
         return u, q
 
