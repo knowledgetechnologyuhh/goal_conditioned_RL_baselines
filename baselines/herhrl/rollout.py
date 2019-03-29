@@ -5,12 +5,12 @@ import time
 from baselines.template.util import store_args
 from baselines.template.util import logger as log_formater
 from baselines.template.rollout import Rollout
-# from baselines.herhrl.sub_rollout import RolloutWorker as SubRolloutWorker
+print("importing herhrl.rollout")
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
 
-
+print("importing herhrl.rollout")
 
 class RolloutWorker(Rollout):
 
