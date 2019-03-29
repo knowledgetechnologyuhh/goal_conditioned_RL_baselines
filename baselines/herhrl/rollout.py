@@ -1,9 +1,12 @@
 print("importing herhrl.rollout")
 import numpy as np
+print("importing herhrl.rollout")
 import time
-
+print("importing herhrl.rollout")
 from baselines.template.util import store_args
+print("importing herhrl.rollout")
 from baselines.template.util import logger as log_formater
+print("importing herhrl.rollout")
 from baselines.template.rollout import Rollout
 print("importing herhrl.rollout")
 from tqdm import tqdm
