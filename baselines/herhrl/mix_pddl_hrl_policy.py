@@ -64,13 +64,12 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
 
         self.count_pddl = 0.0
         self.count_hrl = 0.0
-
+        self.p_threshold = kwargs['p_threshold']
+        self.p_steepness = kwargs['p_steepness']
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True, success_rate=1.):
         # TODO: Make these two parameters parameterizable.
-        p_threshold = 0.2
-        p_steepness = 2.0
 
         def sigmoid(x):
             return 1 / (1 + math.exp(-x))
@@ -82,7 +81,7 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
             p = sigmoid(steepness * scaled_x)
             return p
 
-        p_ddpg = sigm_prob(success_rate, p_threshold, p_steepness)
+        p_ddpg = sigm_prob(success_rate, self.p_threshold, self.p_steepness)
         rnd = np.random.uniform()
         # rnd = 0
         u, q = DDPG_HER_HRL_POLICY.get_actions(self, o, ag, g, noise_eps=noise_eps, random_eps=random_eps,
@@ -93,6 +92,8 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
         # q: [[-0.16603139] [-0.1392152 ]]
         if rnd > p_ddpg:
             u, q_pddl = PDDL_POLICY.get_actions(self, o, ag, g)
+            if u.shape != g.shape:
+                u = np.reshape(u, g.shape)  # this to solve the unbalance issue when rollout_batch_size = 1
             self.count_pddl += 1
         else:
             self.count_hrl += 1
