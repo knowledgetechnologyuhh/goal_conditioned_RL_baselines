@@ -192,7 +192,6 @@ def launch(
     # Rollout and evaluation parameters
     rollout_params = config.ROLLOUT_PARAMS
     rollout_params['render'] = bool(kwargs['render'])
-    rollout_params['test_subgoal_perc'] = kwargs['test_subgoal_perc']
 
     eval_params = config.EVAL_PARAMS
     eval_params['render'] = bool(kwargs['render'])
