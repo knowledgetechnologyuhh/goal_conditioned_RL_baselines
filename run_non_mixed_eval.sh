@@ -20,7 +20,7 @@ env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th
 cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
         --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
         --base_logdir /data/$(whoami)/herhrl --render 0 --policies_layers [] --n_subgoals_layers []"
-#            echo ${cmd}
+            echo ${cmd}
 #            ${cmd}
 
 #for i in 1 2
