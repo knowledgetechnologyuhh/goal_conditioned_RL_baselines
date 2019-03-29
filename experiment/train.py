@@ -214,6 +214,7 @@ def launch(
 def main(ctx, **kwargs):
     print("Starting script")
     global config, RolloutWorker, policy_linker, num_cpu
+    print("Starting script")
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     print("Starting script")
     policy_args = ctx.forward(main_linker.get_policy_click)
