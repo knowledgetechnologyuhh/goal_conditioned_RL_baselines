@@ -1,8 +1,8 @@
-n_episodes = 3
-n_test_rollouts = 2
-n_epochs = 2
-rollout_batch_size = 2
-num_cpu = 2
+n_episodes=3
+n_test_rollouts=2
+n_epochs=2
+rollout_batch_size=2
+num_cpu=2
 
 
 
