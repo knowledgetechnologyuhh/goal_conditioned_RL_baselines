@@ -4,7 +4,7 @@ source ./set_paths.sh
 n_cpu=16
 rollout_batch_size=2
 n_episodes=50
-n_epochs=1000
+n_epochs=200
 n_objects=1
 min_th=1
 max_th=1
