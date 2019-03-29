@@ -12,8 +12,6 @@ n_epochs=2
 n_objects=1
 min_th=1
 max_th=1
-penalty_magnitude=1
-test_subgoal_perc=0
 
 
 krenew -K 60 -b
@@ -24,22 +22,19 @@ for i in 1 2 3 4 5
 do
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
         --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
-        --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
-        --test_subgoal_perc ${test_subgoal_perc} --policies_layers []"
+        --base_logdir /data/$(whoami)/herhrl --render 0 --policies_layers []"
             echo ${cmd}
             ${cmd}
 
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
         --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
-        --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
-        --test_subgoal_perc ${test_subgoal_perc} --policies_layers [PDDL_POLICY]"
+        --base_logdir /data/$(whoami)/herhrl --render 0 --policies_layers [PDDL_POLICY]"
             echo ${cmd}
             ${cmd}
 
     cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
         --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
-        --base_logdir /data/$(whoami)/herhrl --render 0 --penalty_magnitude ${penalty_magnitude}
-        --test_subgoal_perc ${test_subgoal_perc} --policies_layers [DDPG_HER_HRL_POLICY]"
+        --base_logdir /data/$(whoami)/herhrl --render 0 --policies_layers [DDPG_HER_HRL_POLICY]"
             echo ${cmd}
             ${cmd}
 #    for p_steepness in '2.0' '0.5' '1.0' '4.0'
