@@ -39,7 +39,7 @@ DEFAULT_PARAMS = {
     'use_mpi': True,
     # training
     'n_cycles': 50,  # per epoch
-    'rollout_batch_size': 1,  # per mpi thread
+    'rollout_batch_size': 2,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
     'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
@@ -54,7 +54,8 @@ DEFAULT_PARAMS = {
     'replay_k': 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # normalization
     'norm_eps': 0.01,  # epsilon used for observation normalization
-    'norm_clip': 5 # normalized observations are cropped to this values
+    'norm_clip': 5, # normalized observations are cropped to this values
+    # 'test_subgoal_perc' : 1.0
 }
 
 POLICY_ACTION_PARAMS = {

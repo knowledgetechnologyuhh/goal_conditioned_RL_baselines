@@ -42,8 +42,6 @@ class RolloutWorker(Rollout):
         self.q_history = deque(maxlen=history_len)
         self.all_succ_history = deque(maxlen=history_len)
         self.success = np.zeros(self.rollout_batch_size)
-        # self.latest_success_rate = 0.
-        # self.mix = kwargs['mix']
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
