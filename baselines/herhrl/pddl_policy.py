@@ -61,8 +61,7 @@ class PDDL_POLICY(HRL_Policy):
             if self.sess is None:
                 self.sess = tf.InteractiveSession()
 
-    def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
-                    compute_Q=False, exploit=True):
+    def get_actions(self, o, ag, g, **kwargs):
         u = []
         for i in range(self.rollout_batch_size):
             plan = self.envs[i].env.get_plan()
