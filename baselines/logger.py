@@ -202,9 +202,10 @@ class TensorBoardOutputFormat(KVWriter):
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
         tb = program.TensorBoard(default.get_plugins(), default.get_assets_zip_provider())
         port = 6006
+        data_read_dir = "/".join(self.dir.split("/")[:-3])
         while True:
             # tb.configure(argv=[None, '--logdir', self.path, '--port', str(port)])
-            tb.configure(argv=[None, '--logdir', self.dir, '--port', str(port)])
+            tb.configure(argv=[None, '--logdir', data_read_dir, '--port', str(port)])
             try:
                 url = tb.launch()
                 break

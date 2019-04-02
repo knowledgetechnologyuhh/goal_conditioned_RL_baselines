@@ -115,6 +115,7 @@ class RolloutWorker(Rollout):
                 if t == self.this_T-1:
                     u = self.g.copy()  # For last step use final goal
 
+                # TODO: Do not use recursive generate_rollouts_update. Instead, create a new
                 self.child_rollout.g = u
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                                                             store_episode=(self.exploit==False))
@@ -240,6 +241,24 @@ class RolloutWorker(Rollout):
         else:
             last_suc = list(self.all_succ_history)[-n_idx:]
             return np.mean(last_suc)
+
+    # def get_succ_rate_avg_grad(self, n_past_episodes=50):
+    #     n_idx = min(n_past_episodes, len(self.all_succ_history))
+    #     if n_idx <= 2:
+    #         return 0
+    #     last_idxs = int(n_idx/2)
+    #     last_suc = list(self.all_succ_history)[-last_idxs:]
+    #     last_mean = np.mean(last_suc)
+    #     # pre_las_idxs = last_idxs
+    #     prev_suc = list(self.all_succ_history)[-n_idx:last_idxs]
+    #     prev_mean = np.mean(prev_suc)
+    #
+    #     grad = last_mean / prev_mean
+    #
+    #     else:
+    #
+    #         return np.mean(last_suc)
+
 
     def clear_history(self):
         """Clears all histories that are used for statistics
