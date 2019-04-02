@@ -156,7 +156,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # ax.set_xlim([0, 150])
     plt.xlabel('epoch')
     plt.ylabel(y_axis_title)
-    plt.legend(loc='upper left')
+    plt.legend(loc='lower right')
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.png'.format(y_axis_title.replace("/", "_"))))
 
