@@ -57,8 +57,6 @@ do
 --mix_p_steepness ${p_steepness}"
     echo ${cmd}
     ${cmd}
-
-
 done
 
 for i in 1 2 3 4 5
@@ -68,8 +66,6 @@ do
 --base_logdir /data/$(whoami)/herhrl --render 0"
     echo ${cmd}
     ${cmd}
-
-
 done
 
 
