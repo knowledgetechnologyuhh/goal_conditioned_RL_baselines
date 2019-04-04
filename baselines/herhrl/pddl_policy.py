@@ -107,6 +107,9 @@ class PDDL_POLICY(HRL_Policy):
             # We don't need this for playing the policy.
             state['sample_transitions'] = None
 
+        # excluded_keys = []
+        # kwargs = {k: v for k,v in state.items() if k not in excluded_keys}
+
         self.__init__(**state)
         # set up stats (they are overwritten in __init__)
         for k, v in state.items():

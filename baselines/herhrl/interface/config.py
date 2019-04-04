@@ -221,7 +221,7 @@ def configure_policy(dims, params):
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
-            n_s = t_remaining
+            n_s = t_remaining # TODO: This should be n_s = params['T'] for dynamic subgoals.
             subgoal_scale = np.ones(input_dims['u'])
             subgoal_offset = np.zeros(input_dims['u'])
         else:
@@ -255,16 +255,17 @@ def load_policy(restore_policy_file, params):
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
-    policy = set_policy_sample_transitions(policy, params)
+    policy = set_policy_params(policy, params)
     return policy
 
-def set_policy_sample_transitions(policy, params):
+def set_policy_params(policy, params):
     child_params = params.copy()
     policy.sample_transitions = configure_her(params)
+    policy.rollout_batch_size = params['rollout_batch_size']
     if policy.buffer is not None:
         policy.buffer.sample_transitions = policy.sample_transitions
     if policy.child_policy is not None:
-        set_policy_sample_transitions(policy.child_policy, child_params)
+        set_policy_params(policy.child_policy, child_params)
     return policy
 
 def configure_dims(params):
