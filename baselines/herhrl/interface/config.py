@@ -212,7 +212,7 @@ def configure_policy(dims, params):
         'env_name': params['env_name'],
     }
 
-    t_remaining = params['T']
+    # t_remaining = params['T']
     n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
                     policy_str in params['policies_layers'][1:-1].split(",") if policy_str != ''] + [DDPG_HER_HRL_POLICY]
@@ -221,7 +221,7 @@ def configure_policy(dims, params):
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
-            n_s = t_remaining # TODO: This should be n_s = params['T'] for dynamic subgoals.
+            n_s = params['T']
             subgoal_scale = np.ones(input_dims['u'])
             subgoal_offset = np.zeros(input_dims['u'])
         else:
@@ -236,7 +236,7 @@ def configure_policy(dims, params):
                             'buffer_size': next_buffer_size * n_s,
                             })
         next_buffer_size *= n_s
-        t_remaining = int(t_remaining / n_s)
+        # t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)
         policy = ThisPolicy(**this_params)
         policies.append(policy)

@@ -56,6 +56,8 @@ class RolloutWorker(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
 
+        self.current_episodes = None
+
     def make_env_from_child(self):
         env = self.child_rollout.envs[self.tmp_env_ctr]
         self.tmp_env_ctr += 1
@@ -75,6 +77,104 @@ class RolloutWorker(Rollout):
                 self.child_rollout.train_policy(n_train_batches)
 
     def generate_sub_actions_dynamic(self):
+        # For now, run one rollout after the other.
+        for i in range(self.rollout_batch_size):
+            if self.is_leaf:
+                self.envs[i].env.goal = self.g[i].copy()
+            self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
+
+            # o = np.empty((self.dims['o']), np.float32)  # observations
+            # ag = np.empty((self.dims['g']), np.float32)  # achieved goals
+            obs = self.envs[i].env._get_obs()
+            o = obs['observation']
+            ag = obs['achieved_goal']
+
+            # generate episodes
+            obs, achieved_goals, acts, goals, successes, penalties = [], [], [], [], [], []
+            info_values = [np.empty((self.this_T, self.dims['info_' + key]), np.float32) for
+                           key in
+                           self.info_keys]
+            for t in range(self.this_T):
+                # TODO: add binary parameter whether to use mean success rate of this policy or of child policy.
+                self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
+                u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
+
+                o_new = np.empty((self.rollout_batch_size, self.dims['o']))
+                ag_new = np.empty((self.rollout_batch_size, self.dims['g']))
+                success = np.zeros(self.rollout_batch_size)
+                penalty = np.zeros((self.rollout_batch_size, 1))
+                self.q_history.append(np.mean(q))
+                if self.is_leaf is False:
+                    if t == self.this_T - 1:
+                        u = self.g.copy()  # For last step use final goal
+
+                    # TODO: Do not use recursive generate_rollouts_update. Instead, create a new function that performs nested rollouts. In that function, a single episode should not be broken down into smaller episodes, e.g. if T=50 and we have 3 sugboals, then the low-level policy should run 50 steps with 3 different goals during a single episode.
+                    self.child_rollout.g = u
+                    # self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+                    #                                             store_episode=(self.exploit==False))
+
+                    self.child_rollout.generate_sub_actions_dynamic()
+                else:  # In final layer execute physical action
+                    for i in range(self.rollout_batch_size):
+                        self.envs[i].step(u[i])
+
+                for i in range(self.rollout_batch_size):
+                    curr_o_new = self.envs[i].env._get_obs()
+                    this_ag = curr_o_new['achieved_goal']
+                    this_success = self.envs[i].env._is_success(this_ag, self.g[i])
+                    info = {'is_success': this_success}
+                    # if 'is_success' in info:
+                    success[i] = this_success
+                    o_new[i] = curr_o_new['observation']
+                    ag_new[i] = curr_o_new['achieved_goal']
+                    for idx, key in enumerate(self.info_keys):
+                        info_values[idx][t, i] = info[key]
+                    if self.render:
+                        self.envs[i].render()
+
+                if self.is_leaf is False:  # not penalize all the time
+                    # Access to child
+                    child_success = self.child_rollout.success.copy()
+                    for i in range(self.rollout_batch_size):
+                        # TODO: For future work, compare this on-policy subgoal testing with off-policy.
+                        if np.random.random_sample() < self.test_subgoal_perc:
+                            penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
+
+                obs.append(o.copy())
+                achieved_goals.append(ag.copy())
+                successes.append(success.copy())
+                penalties.append(penalty.copy())
+                acts.append(u.copy())
+                goals.append(self.g.copy())
+                o[...] = o_new
+                ag[...] = ag_new
+            obs.append(o.copy())
+            achieved_goals.append(ag.copy())
+
+            if self.is_leaf and np.mean(penalties) > 0:
+                assert False, "For lowest layer, penalty should always be zero."
+
+            episode = dict(o=obs,
+                           u=acts,
+                           g=goals,
+                           ag=achieved_goals,
+                           p=penalties)
+            for key, value in zip(self.info_keys, info_values):
+                episode['info_{}'.format(key)] = value
+
+            # stats
+            self.success = np.array(successes)[-1, :]
+            assert self.success.shape == (self.rollout_batch_size,)
+            success_rate = np.mean(self.success)
+            # self.latest_success_rate = success_rate
+
+            self.success_history.append(success_rate)
+            self.all_succ_history.append(success_rate)
+            self.n_episodes += self.rollout_batch_size
+
+            ret = convert_episode_to_batch_major(episode)
+            return ret
+
         # execute steps until goal is achieved
         # If total number of steps is achieved, store episode.
         # TODO: Check config.py and make sure that the
@@ -100,9 +200,9 @@ class RolloutWorker(Rollout):
         o = np.empty((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.empty((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
         for i in range(self.rollout_batch_size):
-            obs = self.envs[i].env._get_obs()
-            o[i] = obs['observation']
-            ag[i] = obs['achieved_goal']
+            this_obs = self.envs[i].env._get_obs()
+            o[i] = this_obs['observation']
+            ag[i] = this_obs['achieved_goal']
 
         # generate episodes
         obs, achieved_goals, acts, goals, successes, penalties = [], [], [], [], [], []
@@ -124,8 +224,10 @@ class RolloutWorker(Rollout):
 
                 # TODO: Do not use recursive generate_rollouts_update. Instead, create a new function that performs nested rollouts. In that function, a single episode should not be broken down into smaller episodes, e.g. if T=50 and we have 3 sugboals, then the low-level policy should run 50 steps with 3 different goals during a single episode.
                 self.child_rollout.g = u
-                self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
-                                                            store_episode=(self.exploit==False))
+                # self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
+                #                                             store_episode=(self.exploit==False))
+
+                self.child_rollout.generate_sub_actions_dynamic()
             else: # In final layer execute physical action
                 for i in range(self.rollout_batch_size):
                     self.envs[i].step(u[i])
