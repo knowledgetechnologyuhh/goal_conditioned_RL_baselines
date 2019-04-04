@@ -71,12 +71,8 @@ class PDDL_POLICY(HRL_Policy):
                 this_u = g[i].copy()
             u.append(this_u)
         u = np.array(u)
-
-        if u.shape[0] == 1:
-            u = u[0]
         u = u.copy()
-
-        return u, np.zeros(u.shape)
+        return u, np.zeros(u.shape[0])
 
     def store_episode(self, episode_batch, update_stats=True):
         pass

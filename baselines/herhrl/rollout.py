@@ -115,7 +115,7 @@ class RolloutWorker(Rollout):
                 if t == self.this_T-1:
                     u = self.g.copy()  # For last step use final goal
 
-                # TODO: Do not use recursive generate_rollouts_update. Instead, create a new
+                # TODO: Do not use recursive generate_rollouts_update. Instead, create a new function that performs nested rollouts. In that function, a single episode should not be broken down into smaller episodes, e.g. if T=50 and we have 3 sugboals, then the low-level policy should run 50 steps with 3 different goals during a single episode.
                 self.child_rollout.g = u
                 self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                                                             store_episode=(self.exploit==False))

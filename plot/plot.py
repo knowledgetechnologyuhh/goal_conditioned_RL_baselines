@@ -504,13 +504,39 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
+def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer_size']):
+    cols = []
+    paths = get_paths_with_symlinks(data_dir, maxdepth=8)
+    for curr_path in paths:
+        if not os.path.isdir(curr_path):
+            continue
+        # print('loading {}'.format(curr_path))
+        results = load_results(os.path.join(curr_path, 'progress.csv'))
+        cols += results.keys()
+    cols = list(set(cols))
+    ret_cols = []
+    for c in cols:
+        remove = False
+        for ex_c in exclude_cols:
+            if c.find(ex_c) != -1:
+                remove = True
+        if remove == False:
+            ret_cols.append(c)
+
+
+    return ret_cols
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', type=str)
     parser.add_argument('--smooth', type=int, default=0)
     parser.add_argument('--pad', type=int, default=0)
-    parser.add_argument('--column', type=str, default='test_0/success_rate')
+    parser.add_argument('--column', type=str, default='')
     args = parser.parse_args()
+    if args.column == '':
+        cols = get_all_columns(args.data_dir)
+        for c in cols:
+            do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c)
+    else:
     # data_lastval_threshold = 0.0
-    do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)
+        do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)
