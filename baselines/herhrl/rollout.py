@@ -74,6 +74,13 @@ class RolloutWorker(Rollout):
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
+    def generate_sub_actions_dynamic(self):
+        # execute steps until goal is achieved
+        # If total number of steps is achieved, store episode.
+        # TODO: Check config.py and make sure that the
+        return
+
+
     def generate_rollouts(self, return_states=False):
         '''
         Overwrite generate_rollouts function from Rollout class with hierarchical rollout function that supports subgoals.
