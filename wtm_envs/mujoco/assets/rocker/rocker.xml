@@ -17,7 +17,7 @@
 						<inertial pos="0 0 0" mass="1" diaginertia="10 10 10" />
 						<body name="rocker_plate" pos="0 -0.02 0.015">
 							<joint name='rotator' pos="0 0 0" axis="0 1 0" limited="true" range="-1.5 1.5" damping="0.01" margin="0.00001"/>
-							<geom size="0.06 0.018 0.002" condim="6" type="box" mass="1" friction="0.8 0.8 0.8"/>
+							<geom size="0.06 0.018 0.002" condim="6" type="box" mass="1" friction="0.01 0.000001 0.000001"/>
 							<body name="edge" pos="0.06 0 0.015">
 								<geom size="0.002 0.018 0.015" condim="6" type="box" mass="0.01" friction="0.8 0.8 0.8"/>
 							</body>
