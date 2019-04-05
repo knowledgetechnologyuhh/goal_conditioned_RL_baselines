@@ -96,9 +96,8 @@ class RolloutWorker(Rollout):
             ag[i] = this_obs['achieved_goal']
         # generate episodes
         obs, achieved_goals, acts, goals, successes, penalties = [], [], [], [], [], []
-        info_values = [np.empty((self.this_T, self.dims['info_' + key]), np.float32) for
-                       key in
-                       self.info_keys]
+        info_values = [np.empty((self.this_T, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key
+                       in self.info_keys]
         for t in range(self.this_T):
             # TODO: add binary parameter whether to use mean success rate of this policy or of child policy.
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
@@ -162,7 +161,7 @@ class RolloutWorker(Rollout):
                        ag=achieved_goals,
                        p=penalties)
         for key, value in zip(self.info_keys, info_values):
-            episode['info_{}'.format(key)] = value
+            episode['info_{}'.format(key)] = list(value)
 
         # stats
         self.success = np.array(successes)[-1, :]
@@ -175,10 +174,8 @@ class RolloutWorker(Rollout):
         self.n_episodes += self.rollout_batch_size
 
         ret = convert_episode_to_batch_major(episode)
-        print(ret)
-        self.policy.store_episode(ret)
-        self.train_policy(self.n_train_batches)
-        # return ret
+        # self.train_policy(self.n_train_batches)
+        return ret
 
         # execute steps until goal is achieved
         # If total number of steps is achieved, store episode.
@@ -235,7 +232,9 @@ class RolloutWorker(Rollout):
                 # self.child_rollout.generate_rollouts_update(n_episodes=1, n_train_batches=0,
                 #                                             store_episode=(self.exploit==False))
 
-                self.child_rollout.generate_sub_actions_dynamic()
+                child_episode = self.child_rollout.generate_sub_actions_dynamic()
+                self.child_rollout.policy.store_episode(child_episode)
+
             else: # In final layer execute physical action
                 for i in range(self.rollout_batch_size):
                     self.envs[i].step(u[i])
