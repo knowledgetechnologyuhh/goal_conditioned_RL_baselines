@@ -64,9 +64,8 @@
 			<site name="object5" pos="0 0 0" size="0.0002 0.0002 0.0002" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 		<body name="object6" pos="0.728 -0.01 0.69">
-			<joint name="object6:joint" type="free" damping="1"></joint>
-			<inertial pos="0 0 0" mass="3" diaginertia="10.5 10.5 10.5" />
-			<geom size="0.01 0.01 0.01" type="ellipsoid" condim="6" name="object6" material="test_mat" euler="1.5708 0 0" rgba="0 1 1 1" mass="3" friction="1 0.5 0.5"></geom>
+			<joint name="object6:joint" type="free" damping="0.6"></joint>
+			<geom size="0.01 0.01 0.01" type="ellipsoid" condim="6" name="object6" material="test_mat" euler="1.5708 0 0" rgba="0 1 1 1" mass="3" friction="0.01 0.0001 0.0001"></geom>
 			<site name="object6" pos="0 0 0" size="0.0002 0.0002 0.0002" rgba="1 0 0 1" type="sphere"></site>
 		</body>
 		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
