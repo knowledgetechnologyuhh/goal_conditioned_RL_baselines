@@ -133,6 +133,42 @@ class CSVOutputFormat(KVWriter):
     def close(self):
         self.file.close()
 
+# class CometMLOutputFormat(KVWriter):
+#     """
+#     Dumps key/value pairs into TensorBoard's numeric format.
+#     """
+#     def __init__(self, dir):
+#         from comet_ml import Experiment
+#
+#         os.makedirs(dir, exist_ok=True)
+#         self.dir = dir
+#         self.step = 1
+#         prefix = 'events'
+#         path = osp.join(osp.abspath(dir), prefix)
+#         import tensorflow as tf
+#         from tensorflow.python import pywrap_tensorflow
+#         from tensorflow.core.util import event_pb2
+#         from tensorflow.python.util import compat
+#         self.tf = tf
+#         self.event_pb2 = event_pb2
+#         self.pywrap_tensorflow = pywrap_tensorflow
+#         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
+#
+#     def writekvs(self, kvs):
+#         def summary_val(k, v):
+#             kwargs = {'tag': k, 'simple_value': float(v)}
+#             return self.tf.Summary.Value(**kwargs)
+#         summary = self.tf.Summary(value=[summary_val(k, v) for k, v in kvs.items()])
+#         event = self.event_pb2.Event(wall_time=time.time(), summary=summary)
+#         event.step = self.step # is there any reason why you'd want to specify the step?
+#         self.writer.WriteEvent(event)
+#         self.writer.Flush()
+#         self.step += 1
+#
+#     def close(self):
+#         if self.writer:
+#             self.writer.Close()
+#             self.writer = None
 
 class TensorBoardOutputFormat(KVWriter):
     """
@@ -144,6 +180,7 @@ class TensorBoardOutputFormat(KVWriter):
         self.step = 1
         prefix = 'events'
         path = osp.join(osp.abspath(dir), prefix)
+        self.path = path
         import tensorflow as tf
         from tensorflow.python import pywrap_tensorflow
         from tensorflow.core.util import event_pb2
@@ -152,17 +189,55 @@ class TensorBoardOutputFormat(KVWriter):
         self.event_pb2 = event_pb2
         self.pywrap_tensorflow = pywrap_tensorflow
         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
+        self.tb_port = None
+
+        # # Start tensorboard
+        self.launchTensorBoard()
+
+    def launchTensorBoard(self):
+        # This is nicer but does not show scalars...
+        from tensorboard import default
+        from tensorboard import program
+        import logging
+        logging.getLogger('werkzeug').setLevel(logging.ERROR)
+        tb = program.TensorBoard(default.get_plugins(), default.get_assets_zip_provider())
+        port = 6006
+        data_read_dir = "/".join(self.dir.split("/")[:-3])
+        while True:
+            # tb.configure(argv=[None, '--logdir', self.path, '--port', str(port)])
+            tb.configure(argv=[None, '--logdir', data_read_dir, '--port', str(port)])
+            try:
+                url = tb.launch()
+                break
+            except Exception as e:
+                print(e)
+            port += 2
+            if port > 7000:
+                error("Could not find an open port for tensorboard. Tensorboard has to be launched manually.")
+                return
+        self.tb_port = port
+        info("Tensorboard running at {}".format(url))
+
+
 
     def writekvs(self, kvs):
         def summary_val(k, v):
-            kwargs = {'tag': k, 'simple_value': float(v)}
+            float_v = 0
+            try:
+                float_v = float(v)
+            except:
+                debug("Trying to store {} in tensorboard but it cannot be converted to float".format(v))
+            kwargs = {'tag': k, 'simple_value': float_v}
             return self.tf.Summary.Value(**kwargs)
         summary = self.tf.Summary(value=[summary_val(k, v) for k, v in kvs.items()])
         event = self.event_pb2.Event(wall_time=time.time(), summary=summary)
-        event.step = self.step # is there any reason why you'd want to specify the step?
+        # event.step = kvs['epoch']
+        event.step = self.step
         self.writer.WriteEvent(event)
         self.writer.Flush()
         self.step += 1
+        # graph = self.tf.get_default_graph()
+        # self.tf.summary.FileWriter(self.path, graph)
 
     def close(self):
         if self.writer:
@@ -372,7 +447,7 @@ def configure(dir=None, format_strs=None):
     output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
 
     Logger.CURRENT = Logger(dir=dir, output_formats=output_formats)
-    log('Logging to %s'%dir)
+    # log('Logging to %s'%dir)
 
 def _configure_default_logger():
     format_strs = None
@@ -410,7 +485,7 @@ def _demo():
     dir = "/tmp/testlogging"
     if os.path.exists(dir):
         shutil.rmtree(dir)
-    configure(dir=dir)
+    configure(dir=dir, format_strs=['stdout', 'tensorboard'])
     logkv("a", 3)
     logkv("b", 2.5)
     dumpkvs()
@@ -429,6 +504,14 @@ def _demo():
 
     logkv("a", "longasslongasslongasslongasslongasslongassvalue")
     dumpkvs()
+
+    for i in range(100):
+        logkv("a", i)
+        logkv("b", i*2)
+        info("i={}".format(i))
+        dumpkvs()
+        time.sleep(0.5)
+
 
 
 # ================================================================

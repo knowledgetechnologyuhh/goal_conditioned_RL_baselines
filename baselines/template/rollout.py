@@ -1,7 +1,9 @@
 from collections import deque
 import numpy as np
 import pickle
+print("now importing MijocoException. This sometimes causes an error.")
 from mujoco_py import MujocoException
+print("done importing MijocoException")
 
 from baselines.template.util import convert_episode_to_batch_major, store_args
 
@@ -37,7 +39,6 @@ class Rollout:
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
 
-        self.history_len = history_len
         self.success_history = deque(maxlen=history_len)
         self.custom_histories = []
 
