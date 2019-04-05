@@ -6,7 +6,6 @@ from baselines import logger
 from baselines.her.ddpg import DDPG
 from baselines.her.her import make_sample_her_transitions
 
-
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
         'n_cycles': 20
@@ -186,12 +185,17 @@ def configure_policy(dims, params):
                         'sample_transitions': sample_her_transitions,
                         'gamma': gamma,
                         'reuse': reuse,
-                        'use_mpi': use_mpi
+                        'use_mpi': use_mpi,
+                        # 'n_preds' : 0,
+                        # 'h_level' : 0,
+                        # 'subgoal_scale': [1,1,1,1],
+                        # 'subgoal_offset': [0, 0, 0, 0],
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
     policy = DDPG(**ddpg_params)
+
     return policy
 
 def load_policy(restore_policy_file, params):

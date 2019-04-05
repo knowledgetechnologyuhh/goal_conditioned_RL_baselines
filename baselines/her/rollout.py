@@ -3,7 +3,7 @@ import time
 
 from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
-
+from tqdm import tqdm
 
 class RolloutWorker(Rollout):
 
@@ -34,7 +34,7 @@ class RolloutWorker(Rollout):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
-        for cyc in range(n_episodes):
+        for cyc in tqdm(range(n_episodes)):
             # logger.info("Performing ")
             ro_start = time.time()
             episode = self.generate_rollouts()

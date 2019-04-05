@@ -3,15 +3,19 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.her.ddpg import DDPG
-from baselines.her.her import make_sample_her_transitions
-
-
+from baselines.herhrl.ddpg_her_hrl_policy import DDPG_HER_HRL_POLICY
+from baselines.herhrl.mix_pddl_hrl_policy import MIX_PDDL_HRL_POLICY
+from baselines.herhrl.pddl_policy import PDDL_POLICY
+from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
+# from baselines.her.her import make_sample_her_transitions
+# from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
+import importlib
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
         'n_cycles': 20
     },
 }
+
 
 
 DEFAULT_PARAMS = {
@@ -20,21 +24,22 @@ DEFAULT_PARAMS = {
     # ddpg
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden': 256,  # number of neurons in each hidden layers
-    'network_class': 'baselines.her.actor_critic:ActorCritic',
+    'network_class': 'baselines.herhrl.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
-    'buffer_size': int(1E6),  # for experience replay
+    # 'buffer_size': int(1E6),  # for experience replay
+    'buffer_size': int(5E3),  # for experience replay
     'polyak': 0.95,  # polyak averaging coefficient
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     'clip_obs': 200.,
-    'scope': 'ddpg',  # can be tweaked for testing
+    'scope': 'ddpg_hrl',  # can be tweaked for testing
     'relative_goals': False,
     # ddpg get actions
     'reuse': False,
     'use_mpi': True,
     # training
     'n_cycles': 50,  # per epoch
-    'rollout_batch_size': 1,  # per mpi thread
+    'rollout_batch_size': 2,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
     'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
@@ -42,12 +47,15 @@ DEFAULT_PARAMS = {
     # exploration
     'random_eps': 0.3,  # percentage of time a random action is taken
     'noise_eps': 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
+    # 'random_eps': 0.05,  # percentage of time a random action is taken
+    # 'noise_eps': 0.05,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
     # HER
     'replay_strategy': 'future',  # supported modes: future, none
     'replay_k': 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # normalization
     'norm_eps': 0.01,  # epsilon used for observation normalization
-    'norm_clip': 5,  # normalized observations are cropped to this values
+    'norm_clip': 5, # normalized observations are cropped to this values
+    # 'test_subgoal_perc' : 1.0
 }
 
 POLICY_ACTION_PARAMS = {
@@ -84,7 +92,11 @@ random_eps=self.random_eps if not self.exploit else 0.,
 use_target_net=self.use_target_net)
 """
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+# OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+# OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
+OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'test_subgoal_perc', 'n_subgoals_layers', 'policies_layers',
+                        'mix_p_threshold', 'mix_p_steepness']
+
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
 
@@ -104,7 +116,8 @@ def cached_make_env(make_env):
 def prepare_params(kwargs):
     # DDPG params
     ddpg_params = dict()
-
+    # test_subgoal_perc = kwargs['test_subgoal_perc']
+    # print('test_subgoal_perc {}'.format(test_subgoal_perc))
     env_name = kwargs['env_name']
 
     def make_env():
@@ -150,12 +163,11 @@ def configure_her(params):
     her_params = {
         'reward_fun': reward_fun,
     }
-    for name in ['replay_strategy', 'replay_k']:
+    for name in ['replay_strategy', 'replay_k', 'penalty_magnitude']:
         her_params[name] = params[name]
         params['_' + name] = her_params[name]
         del params[name]
-    sample_her_transitions = make_sample_her_transitions(**her_params)
-
+    sample_her_transitions = make_sample_her_transitions_hrl(**her_params)
     return sample_her_transitions
 
 
@@ -173,34 +185,87 @@ def configure_policy(dims, params):
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
-
+    p_threshold = params['mix_p_threshold']
+    p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
-    ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
+    preds = env.env.get_preds()
+    n_preds = len(preds[0])
+    subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
+    ddpg_params.update({
                         'T': params['T'],
-                        'clip_pos_returns': True,  # clip positive returns
-                        'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
-                        'sample_transitions': sample_her_transitions,
                         'gamma': gamma,
                         'reuse': reuse,
-                        'use_mpi': use_mpi
-                        })
+                        'use_mpi': use_mpi,
+                        'n_preds': n_preds,
+                        'sample_transitions': sample_her_transitions,
+                        'clip_pos_returns': True,  # clip positive returns for Q-values
+                        'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
+                        'h_level': 0,
+                        'p_threshold': p_threshold,
+                        'p_steepness': p_steepness
+    })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
-    policy = DDPG(**ddpg_params)
-    return policy
+
+    t_remaining = params['T']
+    n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
+    policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
+                    policy_str in params['policies_layers'][1:-1].split(",") if policy_str != ''] + [DDPG_HER_HRL_POLICY]
+    policies = []
+    next_buffer_size = ddpg_params['buffer_size']
+    for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
+        if n_s is None: # If this is the final lowest layer
+            input_dims = dims.copy()
+            n_s = t_remaining # TODO: This should be n_s = params['T'] for dynamic subgoals.
+            subgoal_scale = np.ones(input_dims['u'])
+            subgoal_offset = np.zeros(input_dims['u'])
+        else:
+            input_dims = dims.copy()
+            input_dims['u'] = input_dims['g']
+        this_params = ddpg_params.copy()
+        this_params.update({'input_dims': input_dims,  # agent takes an input observations
+                            'T': n_s,
+                            'subgoal_scale': subgoal_scale,
+                            'subgoal_offset': subgoal_offset,
+                            'h_level': l,
+                            'buffer_size': next_buffer_size * n_s,
+                            })
+        next_buffer_size *= n_s
+        t_remaining = int(t_remaining / n_s)
+        this_params['scope'] += '_l_{}'.format(l)
+        policy = ThisPolicy(**this_params)
+        policies.append(policy)
+    if len(policies) > 0:
+        h_level_ctr = 1
+        for p, p_child in zip(policies[:-1], policies[1:]):
+            p.child_policy = p_child
+            p.child_policy.h_level = h_level_ctr
+            p.child_policy.sess = p.sess
+            h_level_ctr += 1
+
+    return policies[0]
 
 def load_policy(restore_policy_file, params):
     # Load policy.
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
+    policy = set_policy_params(policy, params)
+    return policy
+
+def set_policy_params(policy, params):
+    child_params = params.copy()
     policy.sample_transitions = configure_her(params)
-    policy.buffer.sample_transitions = policy.sample_transitions
+    policy.rollout_batch_size = params['rollout_batch_size']
+    if policy.buffer is not None:
+        policy.buffer.sample_transitions = policy.sample_transitions
+    if policy.child_policy is not None:
+        set_policy_params(policy.child_policy, child_params)
     return policy
 
 def configure_dims(params):

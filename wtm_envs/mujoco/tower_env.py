@@ -79,7 +79,7 @@ class TowerEnv(robot_env.RobotEnv):
         self.step_ctr = 0
 
         self.plan_cache = {}
-
+        self.goal_hierarchy = {}
         self.goal = []
         self.goal_size = (n_objects * 3)
         self.final_goal = []
@@ -97,7 +97,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     # GoalEnv methods
     # ----------------------------
-
     def compute_reward(self, achieved_goal, goal, info):
         if self.reward_type == 'sparse':
             success = self._is_success(achieved_goal, goal)
@@ -108,7 +107,6 @@ class TowerEnv(robot_env.RobotEnv):
 
     # RobotEnv methods
     # ----------------------------
-
     def _step_callback(self):
         if self.block_gripper:
             self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
@@ -404,13 +402,15 @@ class TowerEnv(robot_env.RobotEnv):
         if self.n_objects > 0:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
-    def get_preds(self):
-        obs = self._get_obs()
+    def get_preds(self, obs=None):
+        # We may want to refer to previous observations, because if we get the observation directly from the simulator they may differ from other relevant observatios.
+        if obs is None:
+            obs = self._get_obs()['observation']
         if self.final_goal == []:
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        preds, one_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
         return preds, one_hots, goal_preds
 
     def get_plan(self):
@@ -434,4 +434,23 @@ class TowerEnv(robot_env.RobotEnv):
         obs = self._get_obs()['observation']
         subg = action2subgoal(action, obs, self.final_goal, self.n_objects)
         return subg
+
+    def get_scale_and_offset_for_normalized_subgoal(self):
+        n_objects = self.n_objects
+        obj_height = self.obj_height
+        scale_xy = self.target_range
+        scale_z = obj_height * n_objects / 2
+        scale = np.array([scale_xy, scale_xy, scale_z] * (n_objects + 1))
+        offset = np.array(list(self.initial_gripper_xpos) * (n_objects + 1))
+        for j, off in enumerate(offset):
+            if j == 2:
+                offset[j] += self.random_gripper_goal_pos_offset[2]
+                if self.gripper_goal == 'gripper_random':
+                    scale[j] = self.target_range
+            elif (j + 1) % 3 == 0:
+                offset[j] += obj_height * n_objects / 2
+        if self.gripper_goal == 'gripper_none':
+            scale = scale[3:]
+            offset = offset[3:]
+        return scale, offset
 

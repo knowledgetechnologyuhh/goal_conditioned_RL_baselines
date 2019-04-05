@@ -103,12 +103,13 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # plt.figure(figsize=(20, 8))
     fig = plt.figure(figsize=(20, 8))
     ax = fig.gca()
-    new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
-                  '#bcbd22', '#17becf']
+    # new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+    #               '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+    #               '#bcbd22', '#17becf']
+    new_colors = sorted(plt.rcParams['axes.prop_cycle'].by_key()['color'], reverse=True)
     plt.rc('axes', prop_cycle=(cycler('linestyle', ['-', '--', ':']) * cycler('color', new_colors)))
     for idx, config in enumerate(sorted(data.keys(), reverse=True)):
-        label = "+".join(sorted(config.split("-"), reverse=True))
+        label = "|".join(sorted(config.split("|"), reverse=True))
 
         # Some custom modifications of label:
         label = label.replace("stochastic3_0_0_0_1", 'uniform')
@@ -121,14 +122,13 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
             kappa = label.split("stochastic3_")[1].split("_")[2]
             h = label.split("stochastic3_")[1].split("_")[3].split("+")[0]
             gl_str = "curriculum_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
-            # label = label.replace("stochastic3_{}_0_{}_{}".format(rg,c,h), 'CGM \nrg={} \nc={}'.format(rg,kappa))
             label = label.replace(gl_str, "CGM")
         label = label.replace("model_network_class: ", 'model: ')
         label = label.replace("baselines.model_based.model_rnn:", '')
-        # label = label.replace("+goldilocks_sampling: none", '')
         # End custom modifications of label
 
         xs, ys = zip(*data[config])
+        label = label + "|N:{}".format(len(ys))
         xs, ys = pad(xs), pad(ys, value=np.nan)
         median = np.nanmedian(ys, axis=0)
         mean = np.mean(ys, axis=0)
@@ -136,7 +136,6 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         x_vals = range(1,xs.shape[1]+1)
 
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        # plt.xticks(loc=range(170))
 
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
@@ -157,7 +156,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # ax.set_xlim([0, 150])
     plt.xlabel('epoch')
     plt.ylabel(y_axis_title)
-    plt.legend(loc='upper right')
+    plt.legend(loc='lower right')
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.png'.format(y_axis_title.replace("/", "_"))))
 
@@ -347,7 +346,6 @@ def draw_stochastic_surface_plot(data, percent_to_achieve, fig_dir):
     # plt.title("Number of epochs to achieve {}% success rate".format(int(percent_to_achieve*100)), loc='center', pad=-20)
     plt.savefig(os.path.join(fig_dir, 'c_rg_.png'))
 
-
 def get_var_param_keys(paths):
     # all_params = []
     inter_dict = {}
@@ -401,8 +399,7 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
         config = ''
         for k in var_param_keys:
             if k in params.keys():
-                config += k + ": " + str(params[k])+"-"
-
+                config += k + ": " + str(params[k])+"|"
         config = config[:-1]
 
         # Process and smooth data.
@@ -428,25 +425,38 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
     return data
 
 
-def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
+def get_best_data(data, sort_order, n_best=5, avg_last_steps=5, sort_order_least_val=None):
     d_keys = [key for key in sorted(data.keys())]
     if sort_order == 'max':
         best_vals = [0 for _ in range(n_best)]
-    elif sort_order == 'min':
+    elif sort_order in ['min', 'least']:
         best_vals = [np.iinfo(np.int16).max for _ in range(n_best)]
     best_keys = ['' for _ in range(n_best)]
     for key in d_keys:
-        last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if len(data[key][i][1]) > avg_last_steps])
-        last_n_avg = np.mean(last_vals)
-        if sort_order == 'max':
-            if last_n_avg > np.min(best_vals):
-                ri = np.argmin(best_vals)
-                best_vals[ri] = last_n_avg
-                best_keys[ri] = key
-        elif sort_order == 'min':
-            if last_n_avg < np.max(best_vals):
+        if sort_order in ['max', 'min']:
+            last_vals = np.array([data[key][i][1][-avg_last_steps:] for i in range(len(data[key])) if
+                                  len(data[key][i][1]) > avg_last_steps])
+            last_n_avg = np.mean(last_vals)
+            if sort_order == 'max':
+                if last_n_avg > np.min(best_vals):
+                    ri = np.argmin(best_vals)
+                    best_vals[ri] = last_n_avg
+                    best_keys[ri] = key
+            elif sort_order == 'min':
+                if last_n_avg < np.max(best_vals):
+                    ri = np.argmax(best_vals)
+                    best_vals[ri] = last_n_avg
+                    best_keys[ri] = key
+        elif sort_order == 'least':
+            all_lens = np.array([max(data[key][i][0]) for i in range(len(data[key]))])
+            if sort_order_least_val is not None:
+                all_lens = np.array(
+                    [np.argwhere(data[key][i][1] >= sort_order_least_val) for i in range(len(data[key]))]).squeeze(2)
+                all_lens = [min(lens) for lens in all_lens]
+            last_n = np.mean(all_lens)
+            if last_n < np.max(best_vals):
                 ri = np.argmax(best_vals)
-                best_vals[ri] = last_n_avg
+                best_vals[ri] = last_n
                 best_keys[ri] = key
     best_data = {}
     for key in best_keys:
@@ -454,35 +464,79 @@ def get_best_data(data, sort_order, n_best=5, avg_last_steps=5):
             best_data[key] = data[key]
     return best_data
 
-def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='min', lin_log='lin'):
+
+def get_min_len_data(data, min_len):
+    d_keys = [key for key in sorted(data.keys())]
+    new_data = {}
+    for key in d_keys:
+        new_data[key] = []
+        for d in data[key]:
+            if np.max(d[0]) >= min_len:
+                new_data[key].append(d)
+        if len(new_data[key]) == 0:
+            new_data.pop(key)
+    return new_data
+
+def get_paths_with_symlinks(data_dir, maxdepth=8):
+    glob_path = data_dir
+    paths = []
+    for _ in range(maxdepth):
+        path_to_use = os.path.join(glob_path, 'progress.csv')
+        paths += [os.path.abspath(os.path.join(path, '..')) for path in
+                  glob2.glob(path_to_use)]
+        glob_path = os.path.join(glob_path, '*')
+    return paths
+
+def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
-
-
-    paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
-
+    paths = get_paths_with_symlinks(data_dir, maxdepth=8)
+    # paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
     var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
-
+    try:
+        var_param_keys.remove('base_logdir')
+    except Exception as e:
+        pass
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
-
-    if get_best != '':
-        data = get_best_data(data, get_best, n_best=5, avg_last_steps=5)
-
-    # draw_var_param_plots(data, var_param_keys, inter_dict, data_dir, y_axis_title=col_to_display)
+    data = get_min_len_data(data, min_len=20)
+    # if get_best != '':
+    #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
-    # draw_all_data_plot_rg_c_conv(data, args.dir)
-    # rate_to_achieve = 0.5
-    # draw_stochastic_surface_plot(data, rate_to_achieve, args.dir)
+def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer_size']):
+    cols = []
+    paths = get_paths_with_symlinks(data_dir, maxdepth=8)
+    for curr_path in paths:
+        if not os.path.isdir(curr_path):
+            continue
+        # print('loading {}'.format(curr_path))
+        results = load_results(os.path.join(curr_path, 'progress.csv'))
+        cols += results.keys()
+    cols = list(set(cols))
+    ret_cols = []
+    for c in cols:
+        remove = False
+        for ex_c in exclude_cols:
+            if c.find(ex_c) != -1:
+                remove = True
+        if remove == False:
+            ret_cols.append(c)
 
+
+    return ret_cols
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_dir', type=str)
     parser.add_argument('--smooth', type=int, default=0)
     parser.add_argument('--pad', type=int, default=0)
-    parser.add_argument('--column', type=str, default='test/success_rate')
+    parser.add_argument('--column', type=str, default='')
     args = parser.parse_args()
+    if args.column == '':
+        cols = get_all_columns(args.data_dir)
+        for c in cols:
+            do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c)
+    else:
     # data_lastval_threshold = 0.0
-    do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)
+        do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)

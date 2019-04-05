@@ -1,16 +1,14 @@
+import tensorflow as tf
 import os
 import sys
 this_path =os.getcwd()
-print(this_path)
 sys.path.append(this_path)
 os.chdir(this_path)
-
 import click
 import numpy as np
 import json
 from mpi4py import MPI
 import time
-
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
@@ -18,11 +16,10 @@ from baselines.util import mpi_fork
 import experiment.click_options as main_linker
 from subprocess import CalledProcessError
 import subprocess
-
-
-# sys.path.append(os.getcwd())
-
+from baselines.util import physical_cpu_core_count
 import wtm_envs.register_envs
+
+num_cpu = 0
 
 def mpi_average(value):
     if value == []:
@@ -35,6 +32,7 @@ def mpi_average(value):
 def train(rollout_worker, evaluator,
           n_epochs, n_test_rollouts, n_episodes, n_train_batches, policy_save_interval,
           save_policies, **kwargs):
+    global num_cpu
     rank = MPI.COMM_WORLD.Get_rank()
 
     latest_policy_path = os.path.join(logger.get_dir(), 'policy_latest.pkl')
@@ -66,9 +64,8 @@ def train(rollout_worker, evaluator,
             logger.record_tabular(key, mpi_average(val))
         for key, val in rollout_worker.logs('train'):
             logger.record_tabular(key, mpi_average(val))
-        for key, val in policy.logs():
+        for key, val in policy.logs('policy'):
             logger.record_tabular(key, mpi_average(val))
-
         if rank == 0:
             print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
@@ -100,7 +97,7 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
-    nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
+    # nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
     # print("PID: {}".format(os.getpid()))
     # print("Rollouts stored: {}".format(nrs))
     # print("Last obs: {}".format(rollout_worker.policy.buffer.buffers['o'][nrs-1][-1][0]))
@@ -110,12 +107,16 @@ def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
-        try:
-            whoami = mpi_fork(num_cpu, ['--bind-to', 'core'])
-        except CalledProcessError:
-            # fancy version of mpi call failed, try simple version
-            whoami = mpi_fork(num_cpu)
-
+        # whoami = mpi_fork(num_cpu)
+        n_cpus_available = physical_cpu_core_count()
+        if n_cpus_available < num_cpu:
+            whoami = mpi_fork(num_cpu) # This significantly reduces performance!
+        else:
+            try:
+                whoami = mpi_fork(num_cpu, ['--bind-to', 'core'])
+            except CalledProcessError:
+                # fancy version of mpi call failed, try simple version
+                whoami = mpi_fork(num_cpu) # This significantly reduces performance!
         if whoami == 'parent':
             sys.exit(0)
         import baselines.common.tf_util as U
@@ -125,7 +126,7 @@ def launch(
     # Configure logging
     if rank == 0:
         if logdir or logger.get_dir() is None:
-            logger.configure(dir=logdir)
+            logger.configure(dir=logdir, format_strs=['stdout', 'log', 'csv', 'tensorboard'])
     else:
         logger.configure()
     logdir = logger.get_dir()
@@ -142,7 +143,7 @@ def launch(
     params['n_episodes'] = kwargs['n_episodes']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
-    params.update(**kwargs) # TODO (fabawi): Remove this ASAP. Just added it to avoid problems for now
+    params.update(**kwargs)
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
@@ -171,10 +172,14 @@ def launch(
 
     # Rollout and evaluation parameters
     rollout_params = config.ROLLOUT_PARAMS
-    rollout_params['render'] = bool(kwargs['render'])
+    rollout_params.update(kwargs)
+    # rollout_params['render'] = bool(kwargs['render'])
 
     eval_params = config.EVAL_PARAMS
-    eval_params['render'] = bool(kwargs['render'])
+    eval_params.update(kwargs)
+    # eval_params['render'] = bool(kwargs['render'])
+
+    # eval_params['test_subgoal_perc'] = 0.
 
     for name in config.ROLLOUT_PARAMS_LIST:
         rollout_params[name] = params[name]
@@ -182,8 +187,8 @@ def launch(
 
     rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
     rollout_worker.seed(rank_seed)
-
     eval_params['training_rollout_worker'] = rollout_worker
+    eval_params['exploit'] = True
 
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
     evaluator.seed(rank_seed)
@@ -205,20 +210,21 @@ def launch(
 @main_linker.click_main
 @click.pass_context
 def main(ctx, **kwargs):
-    global config, RolloutWorker, policy_linker
+    global config, RolloutWorker, policy_linker, num_cpu
     config, RolloutWorker = main_linker.import_creator(kwargs['algorithm'])
     policy_args = ctx.forward(main_linker.get_policy_click)
     cmd_line_update_args = {ctx.args[i][2:]: type(policy_args[ctx.args[i][2:]])(ctx.args[i + 1]) for i in
                             range(0, len(ctx.args), 2)}
     policy_args.update(cmd_line_update_args)
     kwargs.update(policy_args)
-
+    num_cpu = kwargs['num_cpu']
     override_params = config.OVERRIDE_PARAMS_LIST
     kwargs['override_params'] = {}
     for op in override_params:
         if op in kwargs.keys():
             kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
+
     try:
         git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
     except:

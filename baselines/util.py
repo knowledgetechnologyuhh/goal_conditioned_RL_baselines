@@ -4,12 +4,10 @@ import sys
 import importlib
 import inspect
 import functools
-
 import tensorflow as tf
 import numpy as np
-
 from baselines.common import tf_util as U
-
+import re
 
 def store_args(method):
     """Stores provided method args as instance attributes.
@@ -104,7 +102,8 @@ def mpi_fork(n, extra_mpi_args=[]):
             [sys.executable]
 
         args += sys.argv
-        subprocess.check_call(args, env=env)
+        ret = subprocess.check_call(args, env=env)
+        print(ret)
         return "parent"
     else:
         install_mpi_excepthook()
@@ -143,3 +142,20 @@ def prob_dist2discrete(prob_dist):
     discrete = np.argmax(prob_dist, axis=-1)
     # discrete = np.reshape(discrete, newshape=(prob_dist.shape[0],-1))
     return discrete
+
+
+def physical_cpu_core_count():
+    try:
+        res = open('/proc/cpuinfo').read()
+        idx = res.find('cpu cores') + len("cpu cores")
+        idx = res.find(": ", idx) + len(": ")
+        nl_idx = res.find("\n", idx)
+        res = res[idx:nl_idx]
+        res = int(res)
+
+        if res > 0:
+            return res
+    except IOError:
+        return 0
+        pass
+
