@@ -150,7 +150,8 @@ class HierarchicalRollout(Rollout):
             next_subg = []
             for i in range(self.rollout_batch_size):
 
-                if len(new_plans[i][0]) > 0:
+                # if len(new_plans[i][0]) > 0:
+                if len(new_plans[i][0]) > 0 and subgoal_success[i] > 0:
                     subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
                     # Only if the plan has changed, set a new subgoal # Note: This causes impossible subgoals where blocks overlap.
                     # if str(new_plans[i]) != str(plans[i]):
