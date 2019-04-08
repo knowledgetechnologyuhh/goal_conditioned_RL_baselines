@@ -10,8 +10,8 @@ click.option('--rep_network_class',
              default='baselines.her_pddl.obs2preds:Obs2PredsAttnModel',
              help='The Neural network model to use for learning representations.'),
 click.option('--replay_k', type=int, default=4, help='The ratio between HER replays and regular replays. Set to 0 for DDPG only.'),
-click.option('--train_batch_size', type=int, default=256, help='The number of state transitions processed during network training.'),
-click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
+click.option('--train_batch_size', type=int, default=128, help='The number of state transitions processed during network training.'),
+click.option('--n_train_batches', type=int, default=20, help='The number of batches for model training.'),
 ]
 
 def click_main(func):

@@ -45,8 +45,6 @@ class ReplayBuffer:
         with self.lock:
             assert self.current_size > 0
             for key in self.buffers.keys():
-                # TODO: Add penalty to buffer_shapes, so that penalty values are actually stored in replay buffer.
-                #  ==> Done check
                 buffers[key] = self.buffers[key][:self.current_size]
 
         buffers['o_2'] = buffers['o'][:, 1:, :]
