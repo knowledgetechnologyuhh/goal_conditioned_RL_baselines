@@ -8,7 +8,7 @@ class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
             'robot0:slide0': 0.0,
             'robot0:slide1': 0.0,
             'robot0:slide2': 0.0,
-            'object0:joint': [0.1, 0.0, 0.05, 1., 0., 0., 0.]
+            'object0:joint': [0.1, 0.0, 0.05,  -0.9908659, 0, 0, -0.1348509]
         }
         hook_env.HookEnv.__init__(
             self, 'hook/environment.xml', block_gripper=False, n_substeps=20,

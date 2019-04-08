@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mujoco>
-	<compiler angle="radian" coordinate="local" meshdir="../stls/fetch" texturedir="../textures"></compiler>
+	<compiler angle="radian" coordinate="local" meshdir="../stls/fetch" texturedir="../textures" inertiafromgeom="true"></compiler>
 	<option timestep="0.002">
 		<flag warmstart="enable"></flag>
 	</option>
@@ -22,12 +22,15 @@
 			<site name="goal3" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 1 0 0.1" type="ellipsoid"></site>
 			<site name="goal4" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 1 0.1" type="ellipsoid"></site>
 			<site name="final_arm_goal" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0 0 0.1" type="ellipsoid"></site>
+
+            <site name="inner_radius_target" pos="0 0 0.5" size="0.40 0.01" rgba="1 0 0 0.3" type="cylinder"></site>
+            <site name="outer_radius_target" pos="0 0 0.5" size="0.75 0.01" rgba="0 1 0 0.3" type="cylinder"></site>
 		</body>
 
 		<include file="robot.xml"></include>
 
-		<body pos="0.95 0.25 0.25" name="table0">
-			<geom size="0.35 0.35 0.25" type="box" mass="2000" material="table_mat"></geom>
+		<body pos="1.25 0.25 0.25" name="table0">
+			<geom size="0.6 0.45 0.25" type="box" mass="2000" material="table_mat"></geom>
 		</body>
 
 		<include file="hook.xml"></include>
