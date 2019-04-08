@@ -239,7 +239,7 @@ class HookEnv(robot_env.RobotEnv):
             gripper_target_site_id = self.sim.model.site_name2id('final_arm_target')
             gripper_goal_site_id = self.sim.model.site_name2id('final_arm_goal')
             gripper_tgt_size = (np.ones(3) * 0.02)
-            gripper_tgt_size[0] = 0.05
+            gripper_tgt_size[1] = 0.05
             self.sim.model.site_size[gripper_target_site_id] = gripper_tgt_size
             self.sim.model.site_size[gripper_goal_site_id] = gripper_tgt_size
             if self.goal != []:
@@ -254,7 +254,7 @@ class HookEnv(robot_env.RobotEnv):
             o_target_site_id = self.sim.model.site_name2id('target{}'.format(n))
             o_goal_site_id = self.sim.model.site_name2id('goal{}'.format(n))
             o_tgt_size = (np.ones(3) * 0.02)
-            o_tgt_size[0] = 0.05
+            o_tgt_size[1] = 0.05
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
             self.sim.model.site_size[o_goal_site_id] = o_tgt_size
             if self.goal != []:
@@ -272,13 +272,26 @@ class HookEnv(robot_env.RobotEnv):
         self.step_ctr = 0
         self.sim.set_state(self.initial_state)
         # Randomize start position of objects.
+        object_0 = None
         for o in range(self.n_objects):
             oname = 'object{}'.format(o)
             object_xpos = self.initial_gripper_xpos[:2]
             close = True
             while close:
-                object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
-                                                                                     size=2)
+                inner_radius_id = self.sim.model.site_name2id('inner_radius_target')
+                outer_radius_id = self.sim.model.site_name2id('outer_radius_target')
+                # object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(
+                #   self.sim.data.get_site_xpos('inner_radius_target')[:2] + self.sim.model.site_size[inner_radius_id][0] / 2 - 0.95,
+                #     self.sim.data.get_site_xpos('outer_radius_target')[:2] + self.sim.model.site_size[outer_radius_id][0] / 2 - 0.95,
+                #     size=2)
+                r = self.sim.model.site_size[outer_radius_id][0] / 2 * np.sqrt(np.random.uniform(0, 1, 1))
+                theta = np.random.uniform(-0.01, 0.1, 1) * 2 * np.pi
+                x = (self.sim.data.get_site_xpos('outer_radius_target')[0] + \
+                    (self.sim.model.site_size[inner_radius_id][0]) + r) * np.cos(theta)
+                y = (self.sim.data.get_site_xpos('outer_radius_target')[1] + \
+                    (self.sim.model.site_size[inner_radius_id][0]) + r) * np.sin(theta)
+                object_xpos = [x,y]
+
                 close = False
                 dist_to_nearest = np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2])
                 # Iterate through all previously placed boxes and select closest:
@@ -287,6 +300,7 @@ class HookEnv(robot_env.RobotEnv):
                     dist = np.linalg.norm(object_xpos - other_xpos)
                     dist_to_nearest = min(dist, dist_to_nearest)
                 if dist_to_nearest < 0.1:
+                    # TODO (fabawi): the samples are too close. otherwise this should be close=True
                     close = True
 
             object_qpos = self.sim.data.get_joint_qpos('{}:joint'.format(oname))
@@ -340,7 +354,7 @@ class HookEnv(robot_env.RobotEnv):
                             break
 
                     if target_0 is not None:
-                        target_goal[1] = target_0[1] + self.np_random.uniform(0.05, 0.05, size=1)
+                        target_goal[:2] = target_0[:2] + self.np_random.uniform(0.01, 0.01, size=2)
                     else:
                         target_0 = target_goal
 
