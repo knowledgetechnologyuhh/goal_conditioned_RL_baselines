@@ -71,7 +71,11 @@ class ReplayBuffer:
             # load inputs into buffers
             # TODO: check whether p is part of the buffer shapes and stored. ==> Done check
             for key in self.buffers.keys():
-                self.buffers[key][idxs] = episode_batch[key]
+                try:
+                    self.buffers[key][idxs] = episode_batch[key]
+                except Exception as e:
+                    print("This did not work")
+                    print(e)
             self.n_transitions_stored += batch_size * self.T
 
     def get_current_episode_size(self):
