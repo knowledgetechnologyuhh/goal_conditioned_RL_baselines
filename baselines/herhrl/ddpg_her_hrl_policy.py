@@ -154,6 +154,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         self.buffer.store_episode(episode_batch)
         if update_stats:
             # add transitions to normalizer
+
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
             episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
             num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
@@ -163,17 +164,21 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
             # No need to preprocess the o_2 and g_2 since this is only used for stats
 
-            print("Update obs:")
-            print(transitions['o'].shape)
-            print("Update g:")
-            print(transitions['g'].shape)
-
+            # print("Update obs:")
+            # print(transitions['o'].shape)
+            # if str(transitions['o'].shape) != "(50, 25)":
+            #     print("This is wrong!!!")
             self.o_stats.update(transitions['o'])
-            self.g_stats.update(transitions['g'])
-
             self.o_stats.recompute_stats()
+
+            # print("Update g:")
+            # print(transitions['g'].shape)
+            # if str(transitions['g'].shape) != "(50, 6)":
+            #     print("This is wrong!!!")
+            self.g_stats.update(transitions['g'])
             self.g_stats.recompute_stats()
-        print("Done storing Episode")
+
+        # print("Done storing Episode")
 
     def get_current_buffer_size(self):
         return self.buffer.get_current_size()

@@ -193,7 +193,8 @@ class RolloutWorker(Rollout):
             success_rate = float(self.subgoals_achieved[0]) / len(self.subgoals_given[0])
             self.success_history.append(success_rate)
             self.all_succ_history.append(success_rate)
-            self.policy.store_episode(ret)
+            if self.exploit == False:
+                self.policy.store_episode(ret)
             self.n_episodes += self.rollout_batch_size
             self.subgoals_achieved_history.append(self.subgoals_achieved[0])
             self.subgoals_given_history.append(len(self.subgoals_given[0]))
