@@ -88,22 +88,27 @@ class Normalizer:
         return buf
 
     def synchronize(self, local_sum, local_sumsq, local_count, root=None):
-        try:
-            local_sum[...] = self._mpi_average(local_sum)
-        except Exception as e:
-            print("Error computing MPI avg for local_sum: {}. Using local value.".format(e))
-        try:
-            local_sumsq[...] = self._mpi_average(local_sumsq)
-        except Exception as e:
-            print("Error computing MPI avg for local_sumq: {}. Using local value.".format(e))
-        try:
-            local_count[...] = self._mpi_average(local_count)
-        except Exception as e:
-            print("Error computing MPI avg for local_count: {}. Using local value.".format(e))
+        local_sum[...] = self._mpi_average(local_sum)
+        local_sumsq[...] = self._mpi_average(local_sumsq)
+        local_count[...] = self._mpi_average(local_count)
+        # try:
+        #     local_sum[...] = self._mpi_average(local_sum)
+        # except Exception as e:
+        #     print("Error computing MPI avg for local_sum: {}. Using local value.".format(e))
+        # try:
+        #     local_sumsq[...] = self._mpi_average(local_sumsq)
+        # except Exception as e:
+        #     print("Error computing MPI avg for local_sumq: {}. Using local value.".format(e))
+        # try:
+        #     local_count[...] = self._mpi_average(local_count)
+        # except Exception as e:
+        #     print("Error computing MPI avg for local_count: {}. Using local value.".format(e))
         return local_sum, local_sumsq, local_count
 
     def recompute_stats(self):
+        print("Recomputing stats")
         with self.lock:
+            print("Got lock")
             # Copy over results.
             local_count = self.local_count.copy()
             local_sum = self.local_sum.copy()
@@ -114,17 +119,20 @@ class Normalizer:
             self.local_sum[...] = 0
             self.local_sumsq[...] = 0
 
+        print("Done copying over. Now syncing.")
         # We perform the synchronization outside of the lock to keep the critical section as short
         # as possible.
+        print(local_sum.shape, local_sumsq.shape, local_count.shape)
         synced_sum, synced_sumsq, synced_count = self.synchronize(
             local_sum=local_sum, local_sumsq=local_sumsq, local_count=local_count)
-
+        print("Done syncing")
         self.sess.run(self.update_op, feed_dict={
             self.count_pl: synced_count,
             self.sum_pl: synced_sum,
             self.sumsq_pl: synced_sumsq,
         })
         self.sess.run(self.recompute_op)
+        print("Done recomputing stats")
 
 
 class IdentityNormalizer:
