@@ -88,9 +88,18 @@ class Normalizer:
         return buf
 
     def synchronize(self, local_sum, local_sumsq, local_count, root=None):
-        local_sum[...] = self._mpi_average(local_sum)
-        local_sumsq[...] = self._mpi_average(local_sumsq)
-        local_count[...] = self._mpi_average(local_count)
+        try:
+            local_sum[...] = self._mpi_average(local_sum)
+        except Exception as e:
+            print("Error computing MPI avg for local_sum: {}. Using local value.".format(e))
+        try:
+            local_sumsq[...] = self._mpi_average(local_sumsq)
+        except Exception as e:
+            print("Error computing MPI avg for local_sumq: {}. Using local value.".format(e))
+        try:
+            local_count[...] = self._mpi_average(local_count)
+        except Exception as e:
+            print("Error computing MPI avg for local_count: {}. Using local value.".format(e))
         return local_sum, local_sumsq, local_count
 
     def recompute_stats(self):
