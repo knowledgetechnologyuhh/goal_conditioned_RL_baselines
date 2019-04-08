@@ -81,16 +81,24 @@ class Normalizer:
         std = reshape_for_broadcasting(self.std,  v)
         return mean + v * std
 
-    def _mpi_average(self, x):
+    def _mpi_average(self, x, verbose=False):
         buf = np.zeros_like(x)
+        if verbose:
+            print(verbose)
+            print("exec allreduce")
+            print(x)
         MPI.COMM_WORLD.Allreduce(x, buf, op=MPI.SUM)
+        if verbose:
+            print("exec div")
         buf /= MPI.COMM_WORLD.Get_size()
+        if verbose:
+            print("ret buf")
         return buf
 
     def synchronize(self, local_sum, local_sumsq, local_count, root=None):
         # print("ls: ")
         # print(local_sum)
-        local_sum[...] = self._mpi_average(local_sum)
+        local_sum[...] = self._mpi_average(local_sum, verbose="localsum")
         # print("lsq: ")
         # print(local_sumsq)
         local_sumsq[...] = self._mpi_average(local_sumsq)
