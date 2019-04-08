@@ -66,7 +66,6 @@ class RolloutWorker(Rollout):
         self.n_train_batches = 0
         assert self.rollout_batch_size == 1, "For hierarchical rollouts, only rollout_batch_size=1 is allowed."
 
-
     def make_env_from_child(self):
         env = self.child_rollout.envs[self.tmp_env_ctr]
         self.tmp_env_ctr += 1
