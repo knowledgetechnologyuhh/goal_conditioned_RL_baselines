@@ -108,10 +108,6 @@ class RolloutWorker(Rollout):
         o = np.zeros((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.zeros((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
 
-        # generate episodes
-        # obs, achieved_goals, acts, goals, successes, penalties = [], [], [], [], [], []
-
-
         for t in range(self.current_t[0], self.this_T):
             # At the first step add the current observation.
             if t == 0:
@@ -134,8 +130,6 @@ class RolloutWorker(Rollout):
             g = self.g
             # If the child rollout is already finished, zero all data.
             if self.is_leaf is False and self.child_rollout.finished():
-                    # o = np.zeros_like(o)
-                    # ag = np.zeros_like(ag)
                     u = np.zeros_like(u)
                     g = np.zeros_like(g)
             else:
@@ -157,11 +151,7 @@ class RolloutWorker(Rollout):
                     o_new[i] = new_obs['observation']
                     ag_new[i] = new_obs['achieved_goal']
                     this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
-                    # info = {'is_success': this_success}
                     success[i] = this_success
-                    # self.current_episode['info_is_success']
-                    # for idx, key in enumerate(self.info_keys):
-                    #     self.current_episode['info_values'][idx][t, i] = info[key]
                     if self.render:
                         self.envs[i].render()
 
@@ -172,7 +162,6 @@ class RolloutWorker(Rollout):
                         # TODO: For future work, compare this on-policy subgoal testing with off-policy.
                         if np.random.random_sample() < self.test_subgoal_perc:
                             penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
-
 
 
             self.current_episode['obs'].append(o_new.copy())
@@ -197,9 +186,6 @@ class RolloutWorker(Rollout):
                        ag=self.current_episode['achieved_goals'],
                        p=self.current_episode['penalties'],
                        info_is_success=self.current_episode['info_is_success'])
-        # for key, value in zip(self.info_keys, self.current_episode['info_values']):
-        #     episode['info_{}'.format(key)] = value
-
         # stats
         self.success = np.array(self.current_episode['successes'])[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
@@ -224,8 +210,6 @@ class RolloutWorker(Rollout):
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
             episode = self.generate_rollouts()
-            # if store_episode:
-            #     self.policy.store_episode(episode)
             dur_ro += time.time() - ro_start
             train_start = time.time()
             self.train_policy(n_train_batches)
@@ -254,9 +238,6 @@ class RolloutWorker(Rollout):
         self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
         for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']:
             self.current_episode[key] = []
-        # self.current_episode['info_values'] = [np.empty((self.this_T, self.rollout_batch_size,
-        #                                                  self.dims['info_' + key]),
-        #                                                 np.float32) for key in self.info_keys]
         if not self.is_leaf:
             self.child_rollout.reset_rollout(i)
 
