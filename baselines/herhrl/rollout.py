@@ -82,7 +82,7 @@ class RolloutWorker(Rollout):
                 self.child_rollout.train_policy(n_train_batches)
 
     def finished(self):
-        return self.current_t[0] == self.T
+        return self.current_t[0] == self.this_T
 
     def generate_rollouts(self, return_states=False):
         '''
