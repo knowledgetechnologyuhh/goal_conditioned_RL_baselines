@@ -117,7 +117,6 @@ class RolloutWorker(Rollout):
                 self.current_episode['obs'].append(o.copy())
                 self.current_episode['achieved_goals'].append(ag.copy())
 
-            # TODO: add binary parameter whether to use mean success rate of this policy or of child policy.
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
 
@@ -129,15 +128,15 @@ class RolloutWorker(Rollout):
             g = self.g
             # If the child rollout is already finished, zero all data.
             if self.is_leaf is False and self.child_rollout.finished():
-                    u = np.zeros_like(u)
-                    g = np.zeros_like(g)
+                u = np.zeros_like(u)
+                g = np.zeros_like(g)
             else:
 
                 # Action execution
                 if self.is_leaf is False:
                     if t == self.this_T-1:
                         u = self.g.copy()  # For last step use final goal
-                    self.child_rollout.g = u
+                    self.child_rollout.g = u.copy()
                     self.child_rollout.subgoals_given[0].append(u.copy())
                     if not self.child_rollout.finished():
                         self.child_rollout.generate_rollouts()
@@ -162,7 +161,8 @@ class RolloutWorker(Rollout):
                         if np.random.random_sample() < self.test_subgoal_perc:
                             penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
 
-
+            o = o_new
+            ag = ag_new
             self.current_episode['obs'].append(o_new.copy())
             self.current_episode['achieved_goals'].append(ag_new.copy())
             self.current_episode['successes'].append(success.copy())
