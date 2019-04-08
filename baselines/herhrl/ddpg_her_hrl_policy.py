@@ -150,7 +150,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
-        print("Storing Episode h-level = {}".format(self.h_level))
+        # print("Storing Episode h-level = {}".format(self.h_level))
         self.buffer.store_episode(episode_batch)
         if update_stats:
             # add transitions to normalizer
