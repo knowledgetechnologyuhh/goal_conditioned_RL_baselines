@@ -39,10 +39,14 @@ class RolloutWorker(Rollout):
         self.pi_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
         self.all_succ_history = deque(maxlen=history_len)
+        self.subgoals_achieved_history = deque(maxlen=history_len)
+        self.subgoals_given_history = deque(maxlen=history_len)
         self.success = np.zeros(self.rollout_batch_size)
         self.this_T = policy.T
         self.current_t = [0 for _ in range(self.rollout_batch_size)]
         self.current_episode = {}
+        self.subgoals_achieved = [0 for _ in range(self.rollout_batch_size)]
+        self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
@@ -92,6 +96,7 @@ class RolloutWorker(Rollout):
         '''
         if self.h_level == 0:
             self.reset_all_rollouts()
+            self.subgoals_given[0].append(self.g.copy())
         for i, env in enumerate(self.envs):
             if self.is_leaf:
                 self.envs[i].env.goal = self.g[i].copy()
@@ -140,6 +145,7 @@ class RolloutWorker(Rollout):
                     if t == self.this_T-1:
                         u = self.g.copy()  # For last step use final goal
                     self.child_rollout.g = u
+                    self.child_rollout.subgoals_given[0].append(u.copy())
                     if not self.child_rollout.finished():
                         self.child_rollout.generate_rollouts()
                 else: # In final layer execute physical action
@@ -167,6 +173,8 @@ class RolloutWorker(Rollout):
                         if np.random.random_sample() < self.test_subgoal_perc:
                             penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
 
+
+
             self.current_episode['obs'].append(o_new.copy())
             self.current_episode['achieved_goals'].append(ag_new.copy())
             self.current_episode['successes'].append(success.copy())
@@ -174,11 +182,10 @@ class RolloutWorker(Rollout):
             self.current_episode['penalties'].append(penalty.copy())
             self.current_episode['acts'].append(u.copy())
             self.current_episode['goals'].append(g.copy())
-            # o[...] = o_new
-            # ag[...] = ag_new
 
             self.current_t[0] = t + 1
             if success[0] == 1:
+                self.subgoals_achieved[0] += 1
                 break
 
         if self.is_leaf and np.mean(self.current_episode['penalties']) > 0:
@@ -196,15 +203,15 @@ class RolloutWorker(Rollout):
         # stats
         self.success = np.array(self.current_episode['successes'])[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
-        success_rate = np.mean(self.success)
-        # self.latest_success_rate = success_rate
-
-        self.success_history.append(success_rate)
-        self.all_succ_history.append(success_rate)
         ret = convert_episode_to_batch_major(episode)
         if self.finished():
+            success_rate = float(self.subgoals_achieved[0]) / len(self.subgoals_given[0])
+            self.success_history.append(success_rate)
+            self.all_succ_history.append(success_rate)
             self.policy.store_episode(ret)
             self.n_episodes += self.rollout_batch_size
+            self.subgoals_achieved_history.append(self.subgoals_achieved[0])
+            self.subgoals_given_history.append(len(self.subgoals_given[0]))
         return ret
 
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
@@ -243,6 +250,8 @@ class RolloutWorker(Rollout):
             obs = self.envs[i].reset()
             self.init_rollout(obs, i)
         self.current_t[i] = 0
+        self.subgoals_achieved = [0 for _ in range(self.rollout_batch_size)]
+        self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
         for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']:
             self.current_episode[key] = []
         # self.current_episode['info_values'] = [np.empty((self.this_T, self.rollout_batch_size,
@@ -256,6 +265,8 @@ class RolloutWorker(Rollout):
         """
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
+        logs += [('subgoals_achieved', np.mean(self.subgoals_achieved_history))]
+        logs += [('subgoals_given', np.mean(self.subgoals_given_history))]
         logs += [('rollouts', self.n_episodes)]
         logs += [('steps', self.n_episodes * self.this_T)]
         if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
@@ -301,6 +312,8 @@ class RolloutWorker(Rollout):
         """
         self.success_history.clear()
         self.custom_histories.clear()
+        self.subgoals_achieved_history.clear()
+        self.subgoals_given_history.clear()
         self.q_history.clear()
         self.pi_loss_history.clear()
         self.q_loss_history.clear()
