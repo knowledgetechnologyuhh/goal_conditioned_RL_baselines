@@ -164,17 +164,9 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             transitions['o'], transitions['g'] = self._preprocess_og(o, ag, g)
             # No need to preprocess the o_2 and g_2 since this is only used for stats
 
-            # print("Update obs:")
-            # print(transitions['o'].shape)
-            # if str(transitions['o'].shape) != "(50, 25)":
-            #     print("This is wrong!!!")
             self.o_stats.update(transitions['o'])
             self.o_stats.recompute_stats()
 
-            # print("Update g:")
-            # print(transitions['g'].shape)
-            # if str(transitions['g'].shape) != "(50, 6)":
-            #     print("This is wrong!!!")
             self.g_stats.update(transitions['g'])
             self.g_stats.recompute_stats()
 
