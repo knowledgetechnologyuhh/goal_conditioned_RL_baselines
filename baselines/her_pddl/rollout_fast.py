@@ -143,26 +143,23 @@ class HierarchicalRollout(Rollout):
                 new_plans.append(new_p)
                 last_n_hots = n_hots
             # if going backwards, i.e., if plans are getting longer again, stay with the previous plans.
-            # for i, (newp,p) in enumerate(zip(new_plans, plans)):
-            #     if len(newp[0]) > 0:
-            #         if p[0] == newp[0][1:]:
-            #             new_plans[i] = p
+            for i, (newp,p) in enumerate(zip(new_plans, plans)):
+                if len(newp[0]) > 0:
+                    if p[0] == newp[0][1:]:
+                        new_plans[i] = p
             next_subg = []
             for i in range(self.rollout_batch_size):
 
-                # if len(new_plans[i][0]) > 0:
-                if subgoal_success[i] == 0:
-                   subg = self.subg[i]
+                if len(new_plans[i][0]) > 0:
+                # if len(new_plans[i][0]) > 0 and subgoal_success[i] > 0:
+                    subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
+                    # Only if the plan has changed, set a new subgoal # Note: This causes impossible subgoals where blocks overlap.
+                    # if str(new_plans[i]) != str(plans[i]):
+                    #     subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
+                    # else:
+                    #     subg = self.envs[i].env.goal
                 else:
-                    if len(new_plans[i][0]) > 0 :
-                        subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
-                        # Only if the plan has changed, set a new subgoal # Note: This causes impossible subgoals where blocks overlap.
-                        # if str(new_plans[i]) != str(plans[i]):
-                        #     subg = self.envs[i].env.action2subgoal(new_plans[i][0][0])
-                        # else:
-                        #     subg = self.envs[i].env.goal
-                    else:
-                        subg = self.g[i]
+                    subg = self.g[i]
                 next_subg.append(subg)
                 self.envs[i].env.goal = next_subg[i]
                 if subgoal_success[i] > 0 and plan_lens[i] > len(new_plans[i][0]):
