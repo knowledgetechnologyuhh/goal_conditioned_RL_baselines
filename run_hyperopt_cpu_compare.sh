@@ -35,7 +35,8 @@ do
             --test_subgoal_perc ${test_subgoal_perc}
             --policies_layers [PDDL_POLICY]
             --n_subgoals_layers [${n_subgoals_layers}]
-            --info cpu${n_cpu}"
+	    --early_stop_success_rate ${early_stop_threshold} 
+            --info cpu2-${n_cpu}"
                 echo ${cmd}
                 ${cmd}
     done
