@@ -14,9 +14,6 @@ class ReplayBuffer:
             T (int): the time horizon for episodes
             sample_transitions (function): a function that samples from the replay buffer
         """
-
-        # TODO: Add penalty to buffer_shapes, so that penalty values are actually stored in replay buffer.
-        #  ==> Done in ddpg_her_hrl_policy
         self.buffer_shapes = buffer_shapes
         self.size = size_in_transitions // T
         self.T = T
