@@ -13,7 +13,7 @@ min_th=1
 
 krenew -K 60 -b
 
-for i in 1 2
+for i in 1 2 3
 do
     for n_objects in 1
     do
