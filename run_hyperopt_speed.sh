@@ -42,7 +42,8 @@ do
                     --test_subgoal_perc ${test_subgoal_perc}
                     --policies_layers [PDDL_POLICY]
                     --n_subgoals_layers [${n_subgoals_layers}]
-                    --early_stop_success_rate ${early_stop_threshold}"
+                    --early_stop_success_rate ${early_stop_threshold}
+                    --info nep${n_episodes}-tb${n_train_batches}"
                 echo ${cmd}
                 for instance in $(seq 1 $n_instances)
                 do
