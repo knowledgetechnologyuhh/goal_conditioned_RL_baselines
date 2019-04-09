@@ -250,6 +250,7 @@ def main(ctx, **kwargs):
 
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
+    os.makedirs(logdir, exist_ok=False)
 
     do_train = True
     trial_no = ctr - 1

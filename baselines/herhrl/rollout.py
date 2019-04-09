@@ -317,7 +317,7 @@ class RolloutWorker(Rollout):
         logs += [('mean_Q', np.mean(self.q_history))]
         this_prefix = prefix
         if self.h_level > 0:
-            this_prefix + "_{}".format(self.h_level)
+            this_prefix += "_{}".format(self.h_level)
         logs = log_formater(logs, this_prefix)
 
         if self.is_leaf is False:
