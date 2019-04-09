@@ -47,10 +47,12 @@ class RolloutWorker(Rollout):
         self.current_episode = {}
         self.subgoals_achieved = [0 for _ in range(self.rollout_batch_size)]
         self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
+        self.total_rollouts = 0
+        self.total_steps = 0
         if self.is_leaf is False:
             self.child_rollout = RolloutWorker(make_env, policy.child_policy, dims, logger,
                                                rollout_batch_size=rollout_batch_size,
-                                               render=render, **kwargs)
+                                               render=render, exploit=exploit, **kwargs)
             make_env = self.make_env_from_child
             self.test_subgoal_perc = kwargs['test_subgoal_perc']
         self.tmp_env_ctr = 0
@@ -87,7 +89,7 @@ class RolloutWorker(Rollout):
     def finished(self):
         return self.current_t[0] == self.this_T
 
-    def generate_rollouts(self, return_states=False):
+    def generate_rollouts(self, return_states=False, stop_when_achieved=True):
         '''
         Overwrite generate_rollouts function from Rollout class with hierarchical rollout function that supports subgoals.
         :param return_states:
@@ -106,8 +108,9 @@ class RolloutWorker(Rollout):
         # compute observations
         o = np.zeros((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.zeros((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
-
+        last_subgoals_achieved = self.subgoals_achieved[0]
         for t in range(self.current_t[0], self.this_T):
+            self.total_steps += self.rollout_batch_size
             # At the first step add the current observation.
             if t == 0:
                 for i in range(self.rollout_batch_size):
@@ -139,7 +142,7 @@ class RolloutWorker(Rollout):
                     self.child_rollout.g = u.copy()
                     self.child_rollout.subgoals_given[0].append(u.copy())
                     if not self.child_rollout.finished():
-                        self.child_rollout.generate_rollouts()
+                        self.child_rollout.generate_rollouts(stop_when_achieved=stop_when_achieved)
                 else: # In final layer execute physical action
                     for i in range(self.rollout_batch_size):
                         self.envs[i].step(u[i])
@@ -173,8 +176,11 @@ class RolloutWorker(Rollout):
 
             self.current_t[0] = t + 1
             if success[0] == 1:
-                self.subgoals_achieved[0] += 1
-                break
+                if self.h_level == 0:
+                    stop_when_achieved = False
+                self.subgoals_achieved[0] = last_subgoals_achieved + 1
+                if stop_when_achieved:
+                    break
 
         if self.is_leaf and np.mean(self.current_episode['penalties']) > 0:
             assert False, "For lowest layer, penalty should always be zero."
@@ -185,11 +191,12 @@ class RolloutWorker(Rollout):
                        ag=self.current_episode['achieved_goals'],
                        p=self.current_episode['penalties'],
                        info_is_success=self.current_episode['info_is_success'])
-        # stats
+
         self.success = np.array(self.current_episode['successes'])[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
         ret = convert_episode_to_batch_major(episode)
         if self.finished():
+            self.total_rollouts += self.rollout_batch_size
             success_rate = float(self.subgoals_achieved[0]) / len(self.subgoals_given[0])
             self.success_history.append(success_rate)
             self.all_succ_history.append(success_rate)
@@ -203,13 +210,13 @@ class RolloutWorker(Rollout):
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
         # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.
         self.n_train_batches = n_train_batches
-        self.policy.set_envs(self.envs)
+        # self.policy.set_envs(self.envs)
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
         for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
             ro_start = time.time()
-            episode = self.generate_rollouts()
+            self.generate_rollouts()
             dur_ro += time.time() - ro_start
             train_start = time.time()
             self.train_policy(n_train_batches)
@@ -225,6 +232,13 @@ class RolloutWorker(Rollout):
         self.g[i] = obs['desired_goal']
         if self.is_leaf == False:
             self.child_rollout.init_rollout(obs, i)
+
+    def reset_all_rollouts(self):
+        """Resets all `rollout_batch_size` rollout workers.
+        """
+        self.policy.set_envs(self.envs)
+        for i in range(self.rollout_batch_size):
+            self.reset_rollout(i)
 
     def reset_rollout(self, i):
         """Resets the `i`-th rollout environment, re-samples a new goal, and updates the `initial_o`
@@ -248,8 +262,8 @@ class RolloutWorker(Rollout):
         logs += [('success_rate', np.mean(self.success_history))]
         logs += [('subgoals_achieved', np.mean(self.subgoals_achieved_history))]
         logs += [('subgoals_given', np.mean(self.subgoals_given_history))]
-        logs += [('rollouts', self.n_episodes)]
-        logs += [('steps', self.n_episodes * self.this_T)]
+        logs += [('rollouts', self.total_rollouts)]
+        logs += [('steps', self.total_steps)]
         if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
             logs += [('q_loss', np.mean(self.q_loss_history))]
             logs += [('pi_loss', np.mean(self.pi_loss_history))]
