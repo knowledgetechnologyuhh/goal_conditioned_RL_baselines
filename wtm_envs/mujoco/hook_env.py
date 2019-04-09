@@ -58,9 +58,12 @@ class HookEnv(robot_env.RobotEnv):
             reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
             gripper_goal ('gripper_none', 'gripper_above', 'gripper_random'): the gripper's goal location
             n_objects (int): no of objects in the environment. If none, then no_of_objects=0
-            min_tower_height (int): the minimum height of the tower.
-            max_tower_height (int): the maximum height of the tower.
+            min_tower_height (int): the minimum height of the tower. (not required)
+            max_tower_height (int): the maximum height of the tower. (not required)
         """
+
+        # assert n_objects == 2, "Cannot have more than 2 objects for this environment at the time being!"
+
         self.gripper_extra_height = gripper_extra_height
         self.block_gripper = block_gripper
         self.target_in_the_air = target_in_the_air
@@ -251,10 +254,14 @@ class HookEnv(robot_env.RobotEnv):
             obj_goal_start_idx += 3
 
         for n in range(self.n_objects):
+            if n == 0:
+                o_tgt_y = 0.08
+            else:
+                o_tgt_y = 0.02
             o_target_site_id = self.sim.model.site_name2id('target{}'.format(n))
             o_goal_site_id = self.sim.model.site_name2id('goal{}'.format(n))
             o_tgt_size = (np.ones(3) * 0.02)
-            o_tgt_size[1] = 0.05
+            o_tgt_size[1] = o_tgt_y
             self.sim.model.site_size[o_target_site_id] = o_tgt_size
             self.sim.model.site_size[o_goal_site_id] = o_tgt_size
             if self.goal != []:
@@ -280,16 +287,11 @@ class HookEnv(robot_env.RobotEnv):
             while close:
                 inner_radius_id = self.sim.model.site_name2id('inner_radius_target')
                 outer_radius_id = self.sim.model.site_name2id('outer_radius_target')
-                # object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(
-                #   self.sim.data.get_site_xpos('inner_radius_target')[:2] + self.sim.model.site_size[inner_radius_id][0] / 2 - 0.95,
-                #     self.sim.data.get_site_xpos('outer_radius_target')[:2] + self.sim.model.site_size[outer_radius_id][0] / 2 - 0.95,
-                #     size=2)
-                r = self.sim.model.site_size[outer_radius_id][0] / 2 * np.sqrt(np.random.uniform(0, 1, 1))
-                theta = np.random.uniform(-0.01, 0.1, 1) * 2 * np.pi
-                x = (self.sim.data.get_site_xpos('outer_radius_target')[0] + \
-                    (self.sim.model.site_size[inner_radius_id][0]) + r) * np.cos(theta)
-                y = (self.sim.data.get_site_xpos('outer_radius_target')[1] + \
-                    (self.sim.model.site_size[inner_radius_id][0]) + r) * np.sin(theta)
+                inner_outer_ratio = self.sim.model.site_size[inner_radius_id][0] / self.sim.model.site_size[outer_radius_id][0]
+                r = (self.sim.model.site_size[outer_radius_id][0]) * np.sqrt(np.random.uniform(inner_outer_ratio, 0.7, 1))
+                theta = np.random.uniform(-0.1, 0.1, 1) * 2 * np.pi
+                x = self.sim.data.get_site_xpos('outer_radius_target')[0] + r * np.cos(theta)
+                y = self.sim.data.get_site_xpos('outer_radius_target')[1] + r * np.sin(theta)
                 object_xpos = [x,y]
 
                 close = False
@@ -300,7 +302,6 @@ class HookEnv(robot_env.RobotEnv):
                     dist = np.linalg.norm(object_xpos - other_xpos)
                     dist_to_nearest = min(dist, dist_to_nearest)
                 if dist_to_nearest < 0.1:
-                    # TODO (fabawi): the samples are too close. otherwise this should be close=True
                     close = True
 
             object_qpos = self.sim.data.get_joint_qpos('{}:joint'.format(oname))
@@ -325,55 +326,50 @@ class HookEnv(robot_env.RobotEnv):
             else:
                 target_goal_start_idx = 0
 
-            stack_tower = (self.max_tower_height - self.min_tower_height + 1) == self.n_objects
-
-            if not stack_tower:
-                if self.n_objects > 0:
-                    target_range = self.n_objects
-                else:
-                    target_range = 1
-                target_0 = None
-                for n_o in range(target_range):
-                    # too_close = True
-                    while True:
-                        target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range,
-                                                                                             self.target_range,
-                                                                                             size=3)
-
-                        target_goal += self.target_offset
-                        rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
-                        self.goal_tower_height = rnd_height
-                        target_goal[2] = self.table_height + (self.obj_height) - (self.obj_height / 2)
-                        too_close = False
-                        for i in range(0, target_goal_start_idx, 3):
-                            other_loc = goal[i:i + 3]
-                            dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
-                            if dist < 0.1:
-                                too_close = True
-                        if too_close is False:
-                            break
-
-                    if target_0 is not None:
-                        target_goal[:2] = target_0[:2] + self.np_random.uniform(0.01, 0.01, size=2)
-                    else:
-                        target_0 = target_goal
-
-                    goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
-                    target_goal_start_idx += 3
+            if self.n_objects > 0:
+                target_range = self.n_objects
             else:
-                target_goal_xy = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.target_range,
-                                                                                        self.target_range,
-                                                                                        size=2)
-                self.goal_tower_height = self.n_objects
+                target_range = 1
+            target_0 = None
+            for n_o in range(target_range):
+                # too_close = True
+                while True:
+                    target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(0,
+                                                                                         self.target_range,
+                                                                                         size=3)
+                    if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
+                        target_goal[1]  = self.sim.data.get_joint_qpos('object0:joint')[1] - self.np_random.uniform(0,
+                                                                                         self.target_range,
+                                                                                         size=1)
+                    else:
+                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] + self.np_random.uniform(0,
+                                                                                         self.target_range,
+                                                                                         size=1)
 
-                height_list = list(range(self.n_objects))
-                random.shuffle(height_list)
-                for n_o in height_list:
-                    height = n_o + 1
-                    target_z = self.table_height + (height * self.obj_height) - (self.obj_height / 2)
-                    target_goal = np.concatenate((target_goal_xy, [target_z]))
-                    goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
-                    target_goal_start_idx += 3
+                    target_goal += self.target_offset
+                    rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
+                    self.goal_tower_height = rnd_height
+                    target_goal[2] = self.table_height + (self.obj_height) - (self.obj_height / 2)
+                    too_close = False
+                    for i in range(0, target_goal_start_idx, 3):
+                        other_loc = goal[i:i + 3]
+                        dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
+                        if dist < 0.1:
+                            too_close = True
+                    if too_close is False:
+                        break
+
+                if target_0 is not None:
+                    target_goal[0] = target_0[0] - self.np_random.uniform(0.03, 0.04, size=1)
+                    if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
+                        target_goal[1] = target_0[1] - self.np_random.uniform(0.03, 0.04, size=1)
+                    else:
+                        target_goal[1] = target_0[1] + self.np_random.uniform(0.03, 0.04, size=1)
+                else:
+                    target_0 = target_goal
+
+                goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
+                target_goal_start_idx += 3
 
             # Final gripper position
             if self.gripper_goal != 'gripper_none':
