@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
 
-n_cpu=16
+n_cpu=4
 rollout_batch_size=1
 #n_episodes=100
 n_epochs=500
@@ -17,7 +17,7 @@ max_th=$n_objects
 
 krenew -K 60 -b
 
-for n_episodes in 100 125 75 150 50
+for n_episodes in 100 150 200 75
 do
     for n_train_batches in 20 10 30 15 25
     do
@@ -39,9 +39,16 @@ do
                 --penalty_magnitude ${penalty_magnitude}
                 --test_subgoal_perc ${test_subgoal_perc}
                 --policies_layers [PDDL_POLICY]
-                --n_subgoals_layers [${n_subgoals_layers}]"
+                --n_subgoals_layers [${n_subgoals_layers}]
+                --early_stop_success_rate ${early_stop_threshold}"
                     echo ${cmd}
-                    ${cmd}
+            for instance in $(seq 1 $n_instances)
+            do
+                ${cmd} &
+                sleep 30
+            done
+            wait
+
          done
     done
 done
