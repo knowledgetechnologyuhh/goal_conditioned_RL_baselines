@@ -125,6 +125,7 @@ def launch(
 
     # Configure logging
     if rank == 0:
+        os.makedirs(logdir, exist_ok=False)
         if logdir or logger.get_dir() is None:
             logger.configure(dir=logdir, format_strs=['stdout', 'log', 'csv', 'tensorboard'])
     else:
@@ -250,7 +251,7 @@ def main(ctx, **kwargs):
 
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
-    os.makedirs(logdir, exist_ok=False)
+    # os.makedirs(logdir, exist_ok=False)
 
     do_train = True
     trial_no = ctr - 1
