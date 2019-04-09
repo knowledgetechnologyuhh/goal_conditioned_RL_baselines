@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
 
-n_cpu=4
+n_cpu=8
 rollout_batch_size=1
 #n_episodes=100
 n_epochs=500
