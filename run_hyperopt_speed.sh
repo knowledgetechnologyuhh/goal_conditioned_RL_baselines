@@ -14,6 +14,7 @@ min_th=1
 n_objects=1
 n_subgoals_layers=$(( n_objects*6 ))
 max_th=$n_objects
+n_instances=2
 
 krenew -K 60 -b
 
