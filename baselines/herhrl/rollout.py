@@ -315,7 +315,10 @@ class RolloutWorker(Rollout):
             logs += [('q_loss', np.mean(self.q_loss_history))]
             logs += [('pi_loss', np.mean(self.pi_loss_history))]
         logs += [('mean_Q', np.mean(self.q_history))]
-        logs = log_formater(logs, prefix+"_{}".format(self.h_level))
+        this_prefix = prefix
+        if self.h_level > 0:
+            this_prefix + "_{}".format(self.h_level)
+        logs = log_formater(logs, this_prefix)
 
         if self.is_leaf is False:
             child_logs = self.child_rollout.logs(prefix=prefix)
