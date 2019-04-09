@@ -11,7 +11,7 @@ early_stop_threshold=80
 #n_train_batches=20
 min_th=1
 
-n_instances=2
+n_instances=1
 
 krenew -K 60 -b
 
@@ -23,7 +23,7 @@ do
     do
         for n_train_batches in 20 10 30 15 25
         do
-            for i in 1
+            for i in 1 2
             do
 
                 env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
