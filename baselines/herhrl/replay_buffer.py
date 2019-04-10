@@ -64,7 +64,6 @@ class ReplayBuffer:
         with self.lock:
             idxs = self._get_storage_idx(batch_size)
             # load inputs into buffers
-            # TODO: check whether p is part of the buffer shapes and stored. ==> Done check
             for key in self.buffers.keys():
                 try:
                     self.buffers[key][idxs] = episode_batch[key]
