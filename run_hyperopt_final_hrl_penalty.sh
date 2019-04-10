@@ -37,8 +37,8 @@ do
         --render 0
         --penalty_magnitude ${penalty_magnitude}
         --test_subgoal_perc ${test_subgoal_perc}
-        --policies_layers []
-        --n_subgoals_layers []
+        --policies_layers [DDPG_HER_HRL_POLICY]
+        --n_subgoals_layers [${n_subgoals_layers}]
         --early_stop_success_rate ${early_stop_threshold}
         --bind_core ${bind_core}
         "
@@ -67,8 +67,8 @@ do
                 --render 0
                 --penalty_magnitude ${penalty_magnitude}
                 --test_subgoal_perc ${test_subgoal_perc}
-                --policies_layers []
-                --n_subgoals_layers []
+                --policies_layers [DDPG_HER_HRL_POLICY]
+                --n_subgoals_layers [${n_subgoals_layers}]
                 --early_stop_success_rate ${early_stop_threshold}
                 --bind_core ${bind_core}
                 "
