@@ -1,9 +1,10 @@
 from collections import deque
 import numpy as np
 import pickle
-print("now importing MijocoException. This sometimes causes an error.")
+print("Now importing MujocoException. This sometimes causes an error. If system is stuck here, try to delete the following file:")
+print("venv/lib/python3.5/site-packages/mujoco_py/generated/mujocopy-buildlock.lock")
 from mujoco_py import MujocoException
-print("done importing MijocoException")
+print("done importing MujocoException")
 
 from baselines.template.util import convert_episode_to_batch_major, store_args
 
