@@ -12,7 +12,7 @@ n_epochs=500
 #test_subgoal_perc=0
 penalty_magnitude=-2
 test_subgoal_perc=1
-early_stop_threshold=98
+early_stop_threshold=80
 n_train_batches=15
 min_th=1
 
