@@ -111,7 +111,7 @@ def launch(
         n_cpus_available = physical_cpu_core_count()
         if n_cpus_available < num_cpu:
             whoami = mpi_fork(num_cpu) # This significantly reduces performance!
-            assert kwargs['bind_core'] == 0, "Too high CPU count when trying to bind MPI workers to core."
+            assert kwargs['bind_core'] == 0, "Too high CPU count when trying to bind MPI workers to core. You require {} CPUs but have only {}".format(num_cpu, n_cpus_available)
 
         else:
             if kwargs['bind_core']:
