@@ -14,8 +14,8 @@ click.option('--policies_layers', type=str, default='[MIX_PDDL_HRL_POLICY]', hel
 click.option('--penalty_magnitude', type=int, default=-2, help='The magnitude of penalty score when subgoal is missed.'),
 click.option('--test_subgoal_perc', type=float, default=1.0, help='Percentage of event to test subgoal. 0 mean no '
                                                                   'testing and hence no penalty.'),
-click.option('--mix_p_threshold', type=float, default=0.2, help='Switching (between pddl and ddpg) threshold of mix policy'),
-click.option('--mix_p_steepness', type=float, default=2.0, help='Steepness of the sigmoid switching function .')
+click.option('--mix_p_threshold', type=float, default=0.15, help='Switching (between pddl and ddpg) threshold of mix policy'),
+click.option('--mix_p_steepness', type=float, default=4.0, help='Steepness of the sigmoid switching function .')
 ]
 
 def click_main(func):
