@@ -45,8 +45,9 @@ do
                         --policies_layers [PDDL_POLICY]
                         --n_subgoals_layers [${n_subgoals_layers}]
                         --early_stop_success_rate ${early_stop_threshold}
-                        --info nep${n_episodes}-tb${n_train_batches}
-                        --train_batch_size ${train_batch_size}"
+                        --train_batch_size ${train_batch_size}
+                        --info tbs${train_batch_size}
+                        "
                     echo ${cmd}
                     for instance in $(seq 1 $n_instances)
                     do
