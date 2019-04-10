@@ -24,25 +24,25 @@ do
         do
             for n_instances in 1 2 4 8
             do
+                cmd="python3 experiment/train.py
+                --num_cpu ${n_cpu}
+                --env ${env}
+                --algorithm baselines.herhrl
+                --rollout_batch_size ${rollout_batch_size}
+                --n_epochs ${n_epochs}
+                --n_episodes ${n_episodes}
+                --n_train_batches ${n_train_batches}
+                --base_logdir /data/$(whoami)/herhrl
+                --render 0
+                --penalty_magnitude ${penalty_magnitude}
+                --test_subgoal_perc ${test_subgoal_perc}
+                --policies_layers [PDDL_POLICY]
+                --n_subgoals_layers [${n_subgoals_layers}]
+                --early_stop_success_rate ${early_stop_threshold}
+                --info cpu${n_instances}x${n_cpu}"
+                echo ${cmd}
                 for instance in $(seq 1 $n_instances)
                 do
-                    cmd="python3 experiment/train.py
-                            --num_cpu ${n_cpu}
-                            --env ${env}
-                            --algorithm baselines.herhrl
-                        --rollout_batch_size ${rollout_batch_size}
-                        --n_epochs ${n_epochs}
-                        --n_episodes ${n_episodes}
-                        --n_train_batches ${n_train_batches}
-                        --base_logdir /data/$(whoami)/herhrl
-                        --render 0
-                        --penalty_magnitude ${penalty_magnitude}
-                        --test_subgoal_perc ${test_subgoal_perc}
-                        --policies_layers [PDDL_POLICY]
-                        --n_subgoals_layers [${n_subgoals_layers}]
-                    --early_stop_success_rate ${early_stop_threshold}
-                        --info cpu${n_instances}x${n_cpu}"
-                    echo ${cmd}
                     ${cmd} &
                     sleep 30
                 done
