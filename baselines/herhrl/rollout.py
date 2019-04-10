@@ -127,6 +127,7 @@ class RolloutWorker(Rollout):
 
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
+            scaled_u = self.policy.scale_and_offset_action(u)
 
             o_new = np.zeros((self.rollout_batch_size, self.dims['o']))
             ag_new = np.zeros((self.rollout_batch_size, self.dims['g']))
@@ -138,14 +139,15 @@ class RolloutWorker(Rollout):
             # Action execution
             if self.is_leaf is False:
                 if t == self.this_T-1:
-                    u = self.g.copy()  # For last step use final goal
-                self.child_rollout.g = u.copy()
-                self.child_rollout.subgoals_given[0].append(u.copy())
+                    scaled_u = self.g.copy()  # For last step use final goal
+                    u = self.policy.inverse_scale_and_offset_action(scaled_u)
+                self.child_rollout.g = scaled_u.copy()
+                self.child_rollout.subgoals_given[0].append(scaled_u.copy())
                 if not self.child_rollout.finished():
                     self.child_rollout.generate_rollouts()
             else: # In final layer execute physical action
                 for i in range(self.rollout_batch_size):
-                    self.envs[i].step(u[i])
+                    self.envs[i].step(scaled_u[i])
 
             for i in range(self.rollout_batch_size):
                 new_obs = self.envs[i].env._get_obs()

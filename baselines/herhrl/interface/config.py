@@ -233,7 +233,7 @@ def configure_policy(dims, params):
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset,
                             'h_level': l,
-                            'buffer_size': ddpg_params['buffer_size']
+                            'buffer_size': ddpg_params['buffer_size'] * n_s
                             # 'buffer_size': next_buffer_size * n_s,
                             })
         # next_buffer_size *= n_s

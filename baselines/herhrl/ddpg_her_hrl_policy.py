@@ -141,9 +141,19 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         u = np.clip(u, -self.max_u, self.max_u)
         u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
         u = u.copy()
-        u *= self.subgoal_scale
-        u += self.subgoal_offset
         return u, q
+
+    def scale_and_offset_action(self, u):
+        scaled_u = u.copy()
+        scaled_u *= self.subgoal_scale
+        scaled_u += self.subgoal_offset
+        return scaled_u
+
+    def inverse_scale_and_offset_action(self, scaled_u):
+        u = scaled_u.copy()
+        u -= self.subgoal_offset
+        u /= self.subgoal_scale
+        return u
 
     def store_episode(self, episode_batch, update_stats=True):
 
