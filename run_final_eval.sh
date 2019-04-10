@@ -2,7 +2,7 @@
 source ./set_paths.sh
 
 n_cpu=8
-n_instances=4
+n_instances=3
 bind_core=0
 
 rollout_batch_size=1
