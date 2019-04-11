@@ -123,10 +123,10 @@ class RolloutWorker(Rollout):
             # At the first step add the current observation.
             if t == 0:
                 for i in range(self.rollout_batch_size):
-                    this_obs = self.envs[i].env._get_obs()
-                    this_obs['observation'] = self.add_noise(this_obs['observation'], self.obs_limits, self.obs_noise_coefficient)
-                    o[i] = this_obs['observation']
-                    ag[i] = this_obs['achieved_goal']
+                    this_obs = self.envs[i].env._get_obs()['observation']
+                    this_obs = self.add_noise(this_obs, self.obs_limits, self.obs_noise_coefficient)
+                    o[i] = this_obs
+                    ag[i] = self.envs[i].env._obs2goal(o[i])
                 self.current_episode['obs'].append(o.copy())
                 self.current_episode['achieved_goals'].append(ag.copy())
 
@@ -155,11 +155,16 @@ class RolloutWorker(Rollout):
                     self.envs[i].step(scaled_u[i])
 
             for i in range(self.rollout_batch_size):
-                new_obs = self.envs[i].env._get_obs()
-                new_obs['observation'] = self.add_noise(new_obs['observation'], self.obs_limits, self.obs_noise_coefficient)
-                o_new[i] = new_obs['observation']
-                ag_new[i] = new_obs['achieved_goal']
-                this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
+                obs_dict = self.envs[i].env._get_obs()
+                new_obs = obs_dict['observation']
+                non_noisy_ag = obs_dict['achieved_goal']
+                new_obs = self.add_noise(new_obs, self.obs_limits, self.obs_noise_coefficient)
+                o_new[i] = new_obs
+                ag_new[i] = self.envs[i].env._obs2goal(o_new[i])
+                if self.h_level > 0:
+                    this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
+                else: # On the top level, i.e., for the final goal, assess success by objective non-noisy comparison. On other levels, success is subjective.
+                    this_success = self.envs[i].env._is_success(non_noisy_ag, self.g[i])
                 success[i] = this_success
                 if self.render:
                     self.envs[i].render()
