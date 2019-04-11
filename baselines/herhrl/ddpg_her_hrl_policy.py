@@ -143,6 +143,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         u = u.copy()
         return u, q
 
+
     def scale_and_offset_action(self, u):
         scaled_u = u.copy()
         scaled_u *= self.subgoal_scale
