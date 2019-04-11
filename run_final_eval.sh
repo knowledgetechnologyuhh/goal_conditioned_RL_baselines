@@ -22,10 +22,10 @@ krenew -K 60 -b
 
 for i in 1 2 3 4 5 
 do
-    for obs_noise_coeff in '0.01'
+    for obs_noise_coeff in '0.0' '0.01' '0.015'
     do
         n_subgoals_layers=$(( n_objects*6 ))
-        max_th=$n_objects
+        max_th=1
         env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
 
         cmd="python3 experiment/train.py
@@ -57,7 +57,7 @@ do
 
         for p_steepness in '4.0'
         do
-            for p_threshold in '0.35'
+            for p_threshold in '0.2'
             do
                 cmd="python3 experiment/train.py
                 --num_cpu ${n_cpu}
