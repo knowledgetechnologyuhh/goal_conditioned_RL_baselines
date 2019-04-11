@@ -94,6 +94,7 @@ class RolloutWorker(Rollout):
         else:
             return self.child_rollout.finished()
 
+
     def generate_rollouts(self, return_states=False):
         '''
         Overwrite generate_rollouts function from Rollout class with hierarchical rollout function that supports subgoals.
