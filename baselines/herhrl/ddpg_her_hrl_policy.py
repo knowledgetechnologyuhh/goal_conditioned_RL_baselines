@@ -75,7 +75,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
-
         if self.clip_return is None:
             self.clip_return = np.inf
 
@@ -137,9 +136,10 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         u = ret[0]
         q = ret[1]
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
-        u += noise
-        u = np.clip(u, -self.max_u, self.max_u)
-        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
+        noisy_u = u + noise
+        u = np.clip(noisy_u, -self.max_u, self.max_u)
+        random_u = np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - noisy_u)  # eps-greedy
+        u += random_u
         u = u.copy()
         return u, q
 
