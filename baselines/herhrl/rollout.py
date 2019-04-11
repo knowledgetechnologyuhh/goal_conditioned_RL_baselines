@@ -191,27 +191,6 @@ class RolloutWorker(Rollout):
         if self.h_level == 0:
             if self.finished() or self.final_goal_achieved:
                 self.finalize_episode()
-        # episode = dict(o=self.current_episode['obs'],
-        #                u=self.current_episode['acts'],
-        #                g=self.current_episode['goals'],
-        #                ag=self.current_episode['achieved_goals'],
-        #                p=self.current_episode['penalties'],
-        #                info_is_success=self.current_episode['info_is_success'])
-        #
-        # self.success = np.array(self.current_episode['successes'])[-1, :]
-        # assert self.success.shape == (self.rollout_batch_size,)
-        # ret = convert_episode_to_batch_major(episode)
-        # if self.finished() or self.final_goal_achieved[0]:
-        #     self.total_rollouts += self.rollout_batch_size
-        #     success_rate = float(self.subgoals_achieved[0]) / len(self.subgoals_given[0])
-        #     self.success_history.append(success_rate)
-        #     self.all_succ_history.append(success_rate)
-        #     if self.exploit == False:
-        #         self.policy.store_episode(ret)
-        #     self.n_episodes += self.rollout_batch_size
-        #     self.subgoals_achieved_history.append(self.subgoals_achieved[0])
-        #     self.subgoals_given_history.append(len(self.subgoals_given[0]))
-        # return ret
 
     def finalize_episode(self):
         episode = dict(o=self.current_episode['obs'],
