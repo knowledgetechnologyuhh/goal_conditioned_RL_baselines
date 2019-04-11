@@ -447,7 +447,7 @@ class TowerEnv(robot_env.RobotEnv):
                 offset[j] += self.random_gripper_goal_pos_offset[2]
                 if self.gripper_goal == 'gripper_random':
                     scale[j] = self.target_range
-            elif (j + 1) % 3 == 0:
+            elif (j + 1) % 3 == 0 and j > 0:
                 offset[j] += obj_height * n_objects / 2
         if self.gripper_goal == 'gripper_none':
             scale = scale[3:]
