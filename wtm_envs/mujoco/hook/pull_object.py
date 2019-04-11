@@ -15,8 +15,8 @@ class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
             obj_range=0.15, target_range=0.15,
             # distance_threshold=0.02,
-            distance_threshold=0.02,
+            distance_threshold=0.02,    # TODO: check this. Should be ROT (rake object threshold)?!
             initial_qpos=initial_qpos, reward_type=reward_type,
-            gripper_goal=gripper_goal, n_objects=2, table_height=0.5, obj_height=0.05,
+            gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height)
         utils.EzPickle.__init__(self)
