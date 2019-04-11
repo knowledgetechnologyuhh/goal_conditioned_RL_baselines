@@ -7,12 +7,12 @@ bind_core=0
 
 rollout_batch_size=1
 n_episodes=100
-n_epochs=100
+n_epochs=150
 #penalty_magnitude=1
 #test_subgoal_perc=0
 penalty_magnitude=-2
 test_subgoal_perc=1
-early_stop_threshold=75
+early_stop_threshold=90
 n_train_batches=15
 min_th=1
 
@@ -139,33 +139,7 @@ do
 #            sleep 30
 #        done
 #        wait
-#    done
-
-#    for p_steepness in '4.0'
-#    do
-#        for p_threshold in '0.15'
-#        do
-#            cmd="python3 experiment/train.py
-#            --num_cpu ${n_cpu}
-#            --env ${env}
-#            --algorithm baselines.herhrl
-#        --rollout_batch_size ${rollout_batch_size}
-#        --n_epochs ${n_epochs}
-#        --n_episodes ${n_episodes}
-#        --n_train_batches ${n_train_batches}
-#        --base_logdir /data/$(whoami)/herhrl
-#        --render 0
-#        --penalty_magnitude ${penalty_magnitude}
-#        --test_subgoal_perc ${test_subgoal_perc}
-#        --policies_layers [MIX_PDDL_HRL_POLICY]
-#        --n_subgoals_layers [${n_subgoals_layers}]
-#        --mix_p_threshold ${p_threshold}
-#        --mix_p_steepness ${p_steepness}"
-#            echo ${cmd}
-#            ${cmd}
-#
-#        done
-#    done
+     done
 done
 
 
