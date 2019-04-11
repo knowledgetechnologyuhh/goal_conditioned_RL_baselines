@@ -12,17 +12,17 @@ n_epochs=150
 #test_subgoal_perc=0
 penalty_magnitude=-2
 test_subgoal_perc=1
-early_stop_threshold=90
+early_stop_threshold=95
 n_train_batches=15
 min_th=1
 
-n_objects=1
+n_objects=2
 
 krenew -K 60 -b
 
 for i in 1 2 3 4 5 
 do
-    for obs_noise_coeff in '0.0' '0.01' '0.012'
+    for obs_noise_coeff in '0.01'
     do
         n_subgoals_layers=$(( n_objects*6 ))
         max_th=$n_objects
@@ -57,7 +57,7 @@ do
 
         for p_steepness in '4.0'
         do
-            for p_threshold in '0.35' '0.45'
+            for p_threshold in '0.35'
             do
                 cmd="python3 experiment/train.py
                 --num_cpu ${n_cpu}
