@@ -76,6 +76,11 @@ class HRL_Policy(Policy):
         return self._random_action(len(o))
 
     def scale_and_offset_action(self, u):
+        scaled_u = u.copy()
+        return scaled_u
+
+    def inverse_scale_and_offset_action(self, scaled_u):
+        u = scaled_u.copy()
         return u
 
     def _random_action(self, n):
