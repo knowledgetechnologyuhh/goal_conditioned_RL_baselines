@@ -65,6 +65,9 @@ class RolloutWorker(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
 
+        self.obs_limits = [None, None]
+        self.obs_noise_coefficient = kwargs['obs_noise_coeff']
+
         # self.current_episodes = None
         self.n_train_batches = 0
 
@@ -121,6 +124,7 @@ class RolloutWorker(Rollout):
             if t == 0:
                 for i in range(self.rollout_batch_size):
                     this_obs = self.envs[i].env._get_obs()
+                    this_obs['observation'] = self.add_noise(this_obs['observation'], self.obs_limits, self.obs_noise_coefficient)
                     o[i] = this_obs['observation']
                     ag[i] = this_obs['achieved_goal']
                 self.current_episode['obs'].append(o.copy())
@@ -152,6 +156,7 @@ class RolloutWorker(Rollout):
 
             for i in range(self.rollout_batch_size):
                 new_obs = self.envs[i].env._get_obs()
+                new_obs['observation'] = self.add_noise(new_obs['observation'], self.obs_limits, self.obs_noise_coefficient)
                 o_new[i] = new_obs['observation']
                 ag_new[i] = new_obs['achieved_goal']
                 this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
@@ -228,7 +233,17 @@ class RolloutWorker(Rollout):
         return episode
 
 
-
+    def add_noise(self, vec, limits, noise_coeff):
+        if limits[1] is None or limits[0] is None:
+            limits[1] = vec
+            limits[0] = vec
+        limits[0] = np.minimum(vec, limits[0])
+        limits[1] = np.maximum(vec, limits[1])
+        range = limits[1] - limits[0]
+        coeff_range = noise_coeff * range
+        noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
+        vec = vec.copy() + noise
+        return vec
 
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
         # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.

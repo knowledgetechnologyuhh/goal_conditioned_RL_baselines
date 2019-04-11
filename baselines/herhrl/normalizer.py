@@ -120,7 +120,6 @@ class Normalizer:
         self.sess.run(self.recompute_op)
         # print("Done recomputing stats")
 
-
 class IdentityNormalizer:
     def __init__(self, size, std=1.):
         self.size = size
