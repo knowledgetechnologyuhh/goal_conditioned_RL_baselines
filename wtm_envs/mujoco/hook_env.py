@@ -338,7 +338,7 @@ class HookEnv(robot_env.RobotEnv):
                                                                                          self.target_range,
                                                                                          size=3)
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1]  = self.sim.data.get_joint_qpos('object0:joint')[1] - self.np_random.uniform(0,
+                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] - self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=1)
                     else:
@@ -373,7 +373,9 @@ class HookEnv(robot_env.RobotEnv):
 
             # Final gripper position
             if self.gripper_goal != 'gripper_none':
-                gripper_goal_pos = goal.copy()[-3:]
+                gripper_goal_pos = goal.copy()[-6:-3]
+                # gripper_goal_pos[0] -= self.sim.data.get_geom_xpos('object0/geom')[0]
+                gripper_goal_pos[0] -= 0.38  # TODO: hardcoded for now
                 if self.gripper_goal == 'gripper_above':
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
@@ -405,7 +407,8 @@ class HookEnv(robot_env.RobotEnv):
         self.sim.forward()
 
         # Move end effector into position.
-        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_site_xpos('robot0:grip')
+        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) \
+                         + self.sim.data.get_site_xpos('robot0:grip')
         gripper_rotation = np.array([1., 0., 1., 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
@@ -429,7 +432,7 @@ class HookEnv(robot_env.RobotEnv):
         else:
             g = self.final_goal
         preds, one_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
-        print('preds: {}'.format(preds))
+        # print('preds: {}'.format(preds))
         return preds, one_hots, goal_preds
 
     def get_plan(self):
@@ -447,7 +450,7 @@ class HookEnv(robot_env.RobotEnv):
             self.plan_cache[cache_key] = plan
             if len(self.plan_cache) % 50 == 0:
                 print("Number of cached plans: {}".format(len(self.plan_cache)))
-        print('plan: {}'.format(plan))
+        # print('plan: {}'.format(plan))
         return plan
 
     def action2subgoal(self, action):
