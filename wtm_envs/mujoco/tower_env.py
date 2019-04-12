@@ -78,6 +78,11 @@ class TowerEnv(robot_env.RobotEnv):
         self.max_tower_height = max_tower_height
         self.step_ctr = 0
 
+        assert min_tower_height == 1 and max_tower_height == n_objects, "PDDL planner currently does not support multiple objects if they are not stacked to a tower. I.e.: max_tower_heigth must be equal to n_objects."
+
+        self.obs_limits = [None, None]
+        self.obs_noise_coefficient = 0.0
+
         self.plan_cache = {}
         self.goal_hierarchy = {}
         self.goal = []
@@ -197,12 +202,26 @@ class TowerEnv(robot_env.RobotEnv):
         #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
         # ])
 
-        achieved_goal = self._obs2goal(obs)
+        noisy_obs = self.add_noise(obs.copy(), self.obs_limits, self.obs_noise_coefficient)
+        achieved_goal = self._obs2goal(noisy_obs)
 
-        obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy()}
-        obs['achieved_goal'] = self._obs2goal(obs['observation'])
+        obs = {'observation': noisy_obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy(), 'non_noisy_obs': obs.copy()}
+        # obs['achieved_goal'] = self._obs2goal(obs['observation'])
 
         return obs
+
+    def add_noise(self, vec, limits, noise_coeff):
+        if limits[1] is None or limits[0] is None:
+            limits[1] = vec
+            limits[0] = vec
+        limits[0] = np.minimum(vec, limits[0])
+        limits[1] = np.maximum(vec, limits[1])
+        range = limits[1] - limits[0]
+        coeff_range = noise_coeff * range
+        noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
+        vec = vec.copy() + noise
+        return vec
+
 
     def _get_viewer(self, mode='human'):
         viewer = self._viewers.get(mode)
