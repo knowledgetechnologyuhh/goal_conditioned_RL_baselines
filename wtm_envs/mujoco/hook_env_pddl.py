@@ -320,7 +320,7 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
 
         for o2_idx in range(n_objects):
             o2_pos = get_o_pos(obs, o2_idx)
-            if action == 'move__o{}_on__o{}'.format(o_idx, o2_idx):
+            if action == 'move__o{}_at__o{}'.format(o_idx, o2_idx):
                 # First three elements of goal represent target gripper pos.
                 # subgoal[:3] = o2_pos.copy()  # Gripper should be above (at) object
                 # subgoal[2] += np.mean(BTT.grasp_z_offset)
@@ -340,7 +340,7 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
         subgoal = goal.copy()
     return subgoal
 
-
+# Seem to be used only in plans2subgoal TODO: check
 def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []): # TODO: check
     for action in plan[0]:
         if action in actions_to_skip:
