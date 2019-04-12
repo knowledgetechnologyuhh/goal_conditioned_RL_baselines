@@ -91,7 +91,9 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
         #  [0.94352174 0.28807434 0.6123256  0.9478492  0.24579085 0.5335805 ]]
         # q: [[-0.16603139] [-0.1392152 ]]
         if rnd > p_ddpg:
-            u, q_pddl = PDDL_POLICY.get_actions(self, o, ag, g)
+            scaled_u, q_pddl = PDDL_POLICY.get_actions(self, o, ag, g)
+            # This u comes already in scale and with offsets, i.e., not in [-1,1]. So we have to descale it.
+            u = self.inverse_scale_and_offset_action(scaled_u)
             if u.shape != g.shape:
                 u = np.reshape(u, g.shape)  # this to solve the unbalance issue when rollout_batch_size = 1
             self.count_pddl += 1
