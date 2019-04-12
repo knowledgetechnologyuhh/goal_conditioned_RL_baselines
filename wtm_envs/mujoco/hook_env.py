@@ -4,7 +4,7 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
-from wtm_envs.mujoco.tower_env_pddl import *
+from wtm_envs.mujoco.hook_env_pddl import *
 import mujoco_py
 
 
@@ -33,7 +33,7 @@ def goal_distance(goal_a, goal_b):
 
 
 class HookEnv(robot_env.RobotEnv):
-    """Superclass for all Tower environments.
+    """Superclass for all Hook environments.
     """
 
     def __init__(
@@ -421,13 +421,15 @@ class HookEnv(robot_env.RobotEnv):
         if self.n_objects > 0:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
-    def get_preds(self):
-        obs = self._get_obs()
+    def get_preds(self, obs=None):
+        if obs is None:
+            obs = self._get_obs()['observation']
         if self.final_goal == []:
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        preds, one_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
+        print('preds: {}'.format(preds))
         return preds, one_hots, goal_preds
 
     def get_plan(self):
@@ -445,10 +447,30 @@ class HookEnv(robot_env.RobotEnv):
             self.plan_cache[cache_key] = plan
             if len(self.plan_cache) % 50 == 0:
                 print("Number of cached plans: {}".format(len(self.plan_cache)))
+        print('plan: {}'.format(plan))
         return plan
 
     def action2subgoal(self, action):
         obs = self._get_obs()['observation']
         subg = action2subgoal(action, obs, self.final_goal, self.n_objects)
         return subg
+
+    def get_scale_and_offset_for_normalized_subgoal(self):
+        n_objects = self.n_objects
+        obj_height = self.obj_height
+        scale_xy = self.target_range
+        scale_z = obj_height * n_objects / 2
+        scale = np.array([scale_xy, scale_xy, scale_z] * (n_objects + 1))
+        offset = np.array(list(self.initial_gripper_xpos) * (n_objects + 1))
+        for j, off in enumerate(offset):
+            if j == 2:
+                offset[j] += self.random_gripper_goal_pos_offset[2]
+                if self.gripper_goal == 'gripper_random':
+                    scale[j] = self.target_range
+            elif (j + 1) % 3 == 0:
+                offset[j] += obj_height * n_objects / 2
+        if self.gripper_goal == 'gripper_none':
+            scale = scale[3:]
+            offset = offset[3:]
+        return scale, offset
 
