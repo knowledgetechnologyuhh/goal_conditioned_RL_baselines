@@ -15,6 +15,7 @@ test_subgoal_perc=1
 early_stop_threshold=75
 n_train_batches=15
 min_th=1
+obs_noise_coeff=0.0
 
 krenew -K 60 -b
 
@@ -45,7 +46,7 @@ do
                 --policies_layers []
                 --n_subgoals_layers []
                 --early_stop_success_rate ${early_stop_threshold}
-                --bind_core ${bind_core}
+                --obs_noise_coeff ${obs_noise_coeff}
                 --mix_p_threshold ${p_threshold}
                 --mix_p_steepness ${p_steepness}
                 "
