@@ -108,7 +108,6 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
 
         # If last 4/4 of history is not 5% better than last 3/4 of history after at least self.min_mix_entries entries, set switch point.
         # The switch point sets the threshold for sigmoidal policy sampling.
-        use_pddl = False
         if len(self.succ_rate_history['train']) > self.train_min_mix_entries and self.p_threshold[mode] == 1.0 and len(self.succ_rate_history['test']) > 4:
             frac_n = len(self.succ_rate_history[mode]) // 4
             prev = list(self.succ_rate_history[mode])[-(2*frac_n):-(frac_n)]
