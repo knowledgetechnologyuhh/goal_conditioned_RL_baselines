@@ -192,6 +192,8 @@ def configure_policy(dims, params):
     preds = env.env.get_preds()
     n_preds = len(preds[0])
     subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
+    units_per_obs_len = 12
+    n_obs = len(env.env._get_obs()['observation'])
     ddpg_params.update({
                         'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
@@ -205,7 +207,8 @@ def configure_policy(dims, params):
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'h_level': 0,
                         # 'p_threshold': p_threshold,
-                        'p_steepness': p_steepness
+                        'p_steepness': p_steepness,
+                        'hidden': units_per_obs_len * n_obs
     })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
