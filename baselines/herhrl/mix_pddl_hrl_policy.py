@@ -83,7 +83,7 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
         self.p_threshold = {'train': 1.0, 'test': 1.0}
         self.p_steepness = kwargs['p_steepness']
         self.train_min_mix_entries = self.buffer_size // 8
-        self.train_min_mix_entries = 1000
+        self.train_min_mix_entries = 2004
         # self.min_mix_entries = 20
         self.succ_rate_history = {'train': deque(maxlen=self.buffer_size // 2),
                                   'test': deque(maxlen=self.buffer_size // 2)}
@@ -111,9 +111,11 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
         use_pddl = False
         if len(self.succ_rate_history['train']) > self.train_min_mix_entries and self.p_threshold[mode] == 1.0 and len(self.succ_rate_history['test']) > 4:
             frac_n = len(self.succ_rate_history[mode]) // 4
-            avg_prev = np.mean(list(self.succ_rate_history[mode])[-(2*frac_n):-(frac_n)])
-            avg_last = np.mean(list(self.succ_rate_history[mode])[-frac_n:])
-            if avg_prev * 1.05 > avg_last:
+            prev = list(self.succ_rate_history[mode])[-(2*frac_n):-(frac_n)]
+            last = list(self.succ_rate_history[mode])[-frac_n:]
+            avg_prev = np.mean(prev)
+            avg_last = np.mean(last)
+            if avg_prev * 1.02 > avg_last:
                 self.p_threshold[mode] = avg_last
 
 
