@@ -10,7 +10,7 @@ class RakeObjectThresholds: #TODO: fix this
     grip_closed_threshold = [0.0, 0.025]
     distance_threshold = 0.025
     grasp_z_offset = 0.02
-    rake_handle_x_offset = 0.18
+    rake_handle_x_offset = 0.38
     on_z_offset = 0.05
 
 
@@ -72,6 +72,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
     # --> environment is defined in such a way that the rake end-effector is always front of the cube wrt the robot
     for o1 in range(n_objects):
         o1_pos = get_o_pos(obs, o1)
+        # o1_pos[0] += ROT.rake_handle_x_offset   # use the tip of the hook to find the distance to the cube
         for o2 in range(n_objects):
             if o1 == o2:
                 continue
@@ -329,6 +330,7 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
                 # subgoal[2] += np.mean(BTT.grasp_z_offset)
                 # Object should be on top of o2
                 o_goal = o2_pos
+                # o_goal[0] += ROT.rake_handle_x_offset
                 o_goal[2] += (ROT.on_z_offset * 1.0)
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
