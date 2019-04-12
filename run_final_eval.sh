@@ -43,7 +43,6 @@ do
         --policies_layers [PDDL_POLICY]
         --n_subgoals_layers [${n_subgoals_layers}]
         --early_stop_success_rate ${early_stop_threshold}
-        --bind_core ${bind_core}
         --obs_noise_coeff ${obs_noise_coeff}
         "
 #        --info bc${bind_core}|cpu${n_instances}x${n_cpu}
