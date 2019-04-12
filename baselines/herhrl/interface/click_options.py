@@ -16,7 +16,7 @@ click.option('--test_subgoal_perc', type=float, default=1.0, help='Percentage of
                                                                   'testing and hence no penalty.'),
 click.option('--mix_p_threshold', type=float, default=0.15, help='Switching (between pddl and ddpg) threshold of mix policy'),
 click.option('--mix_p_steepness', type=float, default=4.0, help='Steepness of the sigmoid switching function .'),
-click.option('--obs_noise_coeff', type=float, default=0.0, help='Fraction of element-wise range of observation to sample from to generate observation noise.')
+click.option('--obs_noise_coeff', type=float, default=0.01, help='Fraction of element-wise range of observation to sample from to generate observation noise.')
 ]
 
 def click_main(func):

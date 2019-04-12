@@ -48,6 +48,7 @@ class RolloutWorker(Rollout):
         self.subgoals_achieved = [0 for _ in range(self.rollout_batch_size)]
         self.final_goal_achieved = False
         self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
+
         # self.total_rollouts = 0
         self.total_steps = 0
         if self.is_leaf is False:
@@ -65,12 +66,12 @@ class RolloutWorker(Rollout):
         self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
         self.tower_height = self.envs[0].env.goal_tower_height
 
-        self.obs_limits = [None, None]
+        # Set Noise coefficient for environments
         self.obs_noise_coefficient = kwargs['obs_noise_coeff']
+        for i in range(self.rollout_batch_size):
+            self.envs[i].env.obs_noise_coefficient = self.obs_noise_coefficient
 
-        # self.current_episodes = None
         self.n_train_batches = 0
-
         assert self.rollout_batch_size == 1, "For hierarchical rollouts, only rollout_batch_size=1 is allowed."
 
     def make_env_from_child(self):
@@ -123,10 +124,9 @@ class RolloutWorker(Rollout):
             # At the first step add the current observation.
             if t == 0:
                 for i in range(self.rollout_batch_size):
-                    this_obs = self.envs[i].env._get_obs()['observation']
-                    this_obs = self.add_noise(this_obs, self.obs_limits, self.obs_noise_coefficient)
-                    o[i] = this_obs
-                    ag[i] = self.envs[i].env._obs2goal(o[i])
+                    this_obs = self.envs[i].env._get_obs()
+                    o[i] = this_obs['observation']
+                    ag[i] = this_obs['achieved_goal']
                 self.current_episode['obs'].append(o.copy())
                 self.current_episode['achieved_goals'].append(ag.copy())
 
@@ -156,15 +156,15 @@ class RolloutWorker(Rollout):
 
             for i in range(self.rollout_batch_size):
                 obs_dict = self.envs[i].env._get_obs()
-                new_obs = obs_dict['observation']
-                non_noisy_ag = obs_dict['achieved_goal']
-                new_obs = self.add_noise(new_obs, self.obs_limits, self.obs_noise_coefficient)
-                o_new[i] = new_obs
-                ag_new[i] = self.envs[i].env._obs2goal(o_new[i])
-                if self.h_level > 0:
-                    this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
-                else: # On the top level, i.e., for the final goal, assess success by objective non-noisy comparison. On other levels, success is subjective.
+                non_noisy_ag = self.envs[i].env._obs2goal(obs_dict['non_noisy_obs'])
+                o_new[i] = obs_dict['observation']
+                ag_new[i] = obs_dict['achieved_goal']
+                # On the top level, i.e., for the final goal, assess success by objective non-noisy comparison. On other levels, success is subjective.
+                if self.h_level == 0:
                     this_success = self.envs[i].env._is_success(non_noisy_ag, self.g[i])
+                else:
+                    this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
+
                 success[i] = this_success
                 if self.render:
                     self.envs[i].render()
@@ -237,19 +237,6 @@ class RolloutWorker(Rollout):
                 episode[key].append(np.zeros_like(episode[key][0]))
         return episode
 
-
-    def add_noise(self, vec, limits, noise_coeff):
-        if limits[1] is None or limits[0] is None:
-            limits[1] = vec
-            limits[0] = vec
-        limits[0] = np.minimum(vec, limits[0])
-        limits[1] = np.maximum(vec, limits[1])
-        range = limits[1] - limits[0]
-        coeff_range = noise_coeff * range
-        noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
-        vec = vec.copy() + noise
-        return vec
-
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
         # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.
         self.n_train_batches = n_train_batches
@@ -269,7 +256,6 @@ class RolloutWorker(Rollout):
         time_durations = (dur_total, dur_ro, dur_train)
         ret = updated_policy, time_durations
         return ret
-
 
     def init_rollout(self, obs, i):
         self.g[i] = obs['desired_goal']
