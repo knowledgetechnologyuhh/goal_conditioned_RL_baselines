@@ -10,6 +10,7 @@ class RakeObjectThresholds: #TODO: fix this
     grip_closed_threshold = [0.0, 0.025]
     distance_threshold = 0.025
     grasp_z_offset = 0.02
+    rake_handle_x_offset = 0.18
     on_z_offset = 0.05
 
 
@@ -49,7 +50,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
         o_pos = get_o_pos(obs, o)
         gripper_tgt_pos = o_pos.copy()
         if o == 0: # if the hook, assuming that the hook position returned from the environment is at the tip
-            gripper_tgt_pos[0] -= 0.18  # the hook is 0.2 m long in x-axis
+            gripper_tgt_pos[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
         gripper_tgt_pos[2] += ROT.grasp_z_offset
         distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
         preds[pred_name] = distance < ROT.distance_threshold
@@ -307,8 +308,10 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
         if action == 'move_gripper_to__o{}'.format(o_idx):
             # First three elements of goal represent target gripper pos.
             subgoal[:3] = o_pos.copy()  # Gripper should be above (at) object
+            if o_idx == 0:  # if the hook, assuming that the hook position returned from the environment is at the tip
+                subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
             subgoal[2] += np.mean(ROT.grasp_z_offset)
-        if action == 'move__o{}_to_target'.format(o_idx):
+        if action == 'move__o{}_to_target_by__o{}'.format(o_idx, o_idx-1) and o_idx == 1:
             start_idx = (o_idx + 1) * 3
             end_idx = start_idx + 3
             o_goal = goal[start_idx:end_idx]
@@ -355,8 +358,8 @@ def gen_plan_single(preds, gripper_has_target, goal_preds, ignore_actions=[]):
     # hl_obs = [preds[k] for k in sorted(preds.keys())]
 
     domain, problem = gen_pddl_domain_problem(preds, goal_preds, gripper_has_target=gripper_has_target)
-    print('domain {}'.format(domain))
-    print('problem {}'.format(problem))
+    # print('domain {}'.format(domain))
+    # print('problem {}'.format(problem))
 
     planner = Propositional_Planner()
     plan_start = time.time()
