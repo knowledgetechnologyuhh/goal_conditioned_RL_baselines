@@ -29,7 +29,7 @@ do
 
         for p_steepness in '4.0'
         do
-            for p_threshold in '1.0'
+            for p_threshold in '1.0' '0.35' '0.45'
             do
                 cmd="python3 experiment/train.py
                 --num_cpu ${n_cpu}

@@ -45,7 +45,6 @@ do
         --early_stop_success_rate ${early_stop_threshold}
         --obs_noise_coeff ${obs_noise_coeff}
         "
-#        --info bc${bind_core}|cpu${n_instances}x${n_cpu}
         echo ${cmd}
         for instance in $(seq 1 $n_instances)
         do
