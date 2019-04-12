@@ -2,7 +2,7 @@
 source ./set_paths.sh
 
 n_cpu=8
-n_instances=1
+n_instances=3
 bind_core=0
 
 rollout_batch_size=1
@@ -12,7 +12,7 @@ n_epochs=150
 #test_subgoal_perc=0
 penalty_magnitude=-2
 test_subgoal_perc=1
-early_stop_threshold=95
+early_stop_threshold=75
 n_train_batches=15
 min_th=1
 
