@@ -25,7 +25,7 @@ krenew -K 60 -b
 
 for i in 1 2 3 4 5 
 do
-    for obs_noise_coeff in '0.01'
+    for obs_noise_coeff in '0.0' '0.01'
     do
 #
 #        cmd="python3 experiment/train.py
