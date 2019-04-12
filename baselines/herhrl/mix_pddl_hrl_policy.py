@@ -114,7 +114,7 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
             last = list(self.succ_rate_history[mode])[-frac_n:]
             avg_prev = np.mean(prev)
             avg_last = np.mean(last)
-            if avg_prev * 1.02 > avg_last:
+            if avg_prev * 1.02 > avg_last and avg_last > 0.01:
                 self.p_threshold[mode] = avg_last
 
         p_ddpg = sigm_prob(success_rate, self.p_threshold[mode], self.p_steepness)
