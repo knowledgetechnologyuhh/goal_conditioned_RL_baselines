@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
 
+from queue import deque
 from baselines import logger
 from baselines.template.util import logger as log_formater
 from baselines.util import (
@@ -19,6 +20,20 @@ import math
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
+
+# class FlexiAvgList:
+#     def __init__(self, maxlen=1000, n_chunks=4):
+#         self.counter = 0
+#         self.buffer = []
+#         self.this_counter = 0
+#         self.maxlen = maxlen
+#
+#     def add(self, item):
+#         self.buffer.append(item)
+#         self.counter += 1
+#         self.this_counter += 1
+#         if self.this_counter > self.maxlen:
+
 
 
 class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
@@ -64,12 +79,17 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
 
         self.count_pddl = 0.0
         self.count_hrl = 0.0
-        self.p_threshold = kwargs['p_threshold']
+        # self.p_threshold = kwargs['p_threshold']
+        self.p_threshold = {'train': 1.0, 'test': 1.0}
         self.p_steepness = kwargs['p_steepness']
+        self.train_min_mix_entries = self.buffer_size // 8
+        self.train_min_mix_entries = 1000
+        # self.min_mix_entries = 20
+        self.succ_rate_history = {'train': deque(maxlen=self.buffer_size // 2),
+                                  'test': deque(maxlen=self.buffer_size // 2)}
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True, success_rate=1.):
-
 
         def sigmoid(x):
             return 1 / (1 + math.exp(-x))
@@ -80,8 +100,26 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
             scaled_x = offset_x * 12
             p = sigmoid(steepness * scaled_x)
             return p
+        mode = 'train'
+        if exploit:
+            mode = 'test'
 
-        p_ddpg = sigm_prob(success_rate, self.p_threshold, self.p_steepness)
+        self.succ_rate_history[mode].append(np.mean(success_rate))
+
+        # If last 4/4 of history is not 5% better than last 3/4 of history after at least self.min_mix_entries entries, set switch point.
+        # The switch point sets the threshold for sigmoidal policy sampling.
+        use_pddl = False
+        if len(self.succ_rate_history['train']) > self.train_min_mix_entries and self.p_threshold[mode] == 1.0 and len(self.succ_rate_history['test']) > 4:
+            frac_n = len(self.succ_rate_history[mode]) // 4
+            avg_prev = np.mean(list(self.succ_rate_history[mode])[-(2*frac_n):-(frac_n)])
+            avg_last = np.mean(list(self.succ_rate_history[mode])[-frac_n:])
+            if avg_prev * 1.05 > avg_last:
+                self.p_threshold[mode] = avg_last
+
+
+
+        # If switch point
+        p_ddpg = sigm_prob(success_rate, self.p_threshold[mode], self.p_steepness)
         rnd = np.random.uniform()
         # rnd = 0
         u, q = DDPG_HER_HRL_POLICY.get_actions(self, o, ag, g, noise_eps=noise_eps, random_eps=random_eps,

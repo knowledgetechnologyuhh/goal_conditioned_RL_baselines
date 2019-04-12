@@ -94,8 +94,7 @@ use_target_net=self.use_target_net)
 
 # OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 # OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
-OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers',
-                        'mix_p_threshold', 'mix_p_steepness', 'obs_noise_coeff']
+OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
 
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
@@ -185,7 +184,7 @@ def configure_policy(dims, params):
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
-    p_threshold = params['mix_p_threshold']
+    # p_threshold = params['mix_p_threshold']
     p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
@@ -205,7 +204,7 @@ def configure_policy(dims, params):
                         'clip_pos_returns': True,  # clip positive returns for Q-values
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'h_level': 0,
-                        'p_threshold': p_threshold,
+                        # 'p_threshold': p_threshold,
                         'p_steepness': p_steepness
     })
     ddpg_params['info'] = {

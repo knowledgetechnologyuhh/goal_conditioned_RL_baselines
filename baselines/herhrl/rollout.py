@@ -38,7 +38,7 @@ class RolloutWorker(Rollout):
         self.q_loss_history = deque(maxlen=history_len)
         self.pi_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
-        self.all_succ_history = deque(maxlen=history_len)
+        # self.all_succ_history = deque(maxlen=history_len)
         self.subgoals_achieved_history = deque(maxlen=history_len)
         self.subgoals_given_history = deque(maxlen=history_len)
         self.success = np.zeros(self.rollout_batch_size)
@@ -218,7 +218,7 @@ class RolloutWorker(Rollout):
         ret = convert_episode_to_batch_major(episode)
         success_rate = float(self.subgoals_achieved[0]) / len(self.subgoals_given[0])
         self.success_history.append(success_rate)
-        self.all_succ_history.append(success_rate)
+        # self.all_succ_history.append(success_rate)
         if self.exploit == False:
             self.policy.store_episode(ret)
         self.n_episodes += self.rollout_batch_size
@@ -314,12 +314,12 @@ class RolloutWorker(Rollout):
 
         return logs
 
-    def get_mean_succ_rate(self, n_past_episodes=50):
-        n_idx = min(n_past_episodes, len(self.all_succ_history))
+    def get_mean_succ_rate(self, n_past_entries=10):
+        n_idx = min(n_past_entries, len(self.success_history))
         if n_idx == 0:
             return 0
         else:
-            last_suc = list(self.all_succ_history)[-n_idx:]
+            last_suc = list(self.success_history)[-n_idx:]
             return np.mean(last_suc)
 
     # def get_succ_rate_avg_grad(self, n_past_episodes=50):
