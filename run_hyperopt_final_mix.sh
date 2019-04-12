@@ -12,7 +12,7 @@ n_epochs=500
 #test_subgoal_perc=0
 penalty_magnitude=-2
 test_subgoal_perc=1
-early_stop_threshold=80
+early_stop_threshold=75
 n_train_batches=15
 min_th=1
 
@@ -20,15 +20,15 @@ krenew -K 60 -b
 
 for i in 1 2 3 4 5
 do
-    for n_objects in 1 2 3
+    for n_objects in 1
     do
         n_subgoals_layers=$(( n_objects*6 ))
         max_th=$n_objects
         env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
 
-        for p_steepness in '4.0' '2.0'
+        for p_steepness in '4.0'
         do
-            for p_threshold in '0.4' '0.3' '0.5'
+            for p_threshold in '1.0'
             do
                 cmd="python3 experiment/train.py
                 --num_cpu ${n_cpu}
