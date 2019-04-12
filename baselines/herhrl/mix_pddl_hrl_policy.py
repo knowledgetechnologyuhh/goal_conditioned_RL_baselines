@@ -118,18 +118,11 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
             if avg_prev * 1.02 > avg_last:
                 self.p_threshold[mode] = avg_last
 
-
-
-        # If switch point
         p_ddpg = sigm_prob(success_rate, self.p_threshold[mode], self.p_steepness)
         rnd = np.random.uniform()
-        # rnd = 0
         u, q = DDPG_HER_HRL_POLICY.get_actions(self, o, ag, g, noise_eps=noise_eps, random_eps=random_eps,
                                                use_target_net=use_target_net,
                                                compute_Q=compute_Q, exploit=exploit)
-        # u: [[0.9368822  0.27914315 0.59580815 0.95340914 0.28622973 0.5415887 ]
-        #  [0.94352174 0.28807434 0.6123256  0.9478492  0.24579085 0.5335805 ]]
-        # q: [[-0.16603139] [-0.1392152 ]]
         if rnd > p_ddpg:
             scaled_u, q_pddl = PDDL_POLICY.get_actions(self, o, ag, g)
             # This u comes already in scale and with offsets, i.e., not in [-1,1]. So we have to descale it.
@@ -140,14 +133,15 @@ class MIX_PDDL_HRL_POLICY(DDPG_HER_HRL_POLICY, PDDL_POLICY):
         else:
             self.count_hrl += 1
 
-        # p_ddpg = sigm_prob(success_rate, p_threshold, p_steepness)
-
         return u, q
 
     def logs(self, prefix='policy'):
         logs = []
-        logs += [('ddpg/total', float(self.count_hrl / (self.count_hrl + self.count_pddl)))]
-        logs += [('pddl/total', float(self.count_pddl / (self.count_hrl + self.count_pddl)))]
+        logs += [('ddpg_per_total', float(self.count_hrl / (self.count_hrl + self.count_pddl)))]
+        logs += [('pddl_per_total', float(self.count_pddl / (self.count_hrl + self.count_pddl)))]
+        logs += [('p_threshold_train', float(self.p_threshold['train']))]
+        logs += [('p_threshold_test', float(self.p_threshold['test']))]
+
         logs = log_formater(logs, prefix + "_{}".format(self.h_level))
         logs += DDPG_HER_HRL_POLICY.logs(self, prefix=prefix)
         self.reset_counters()
