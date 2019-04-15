@@ -30,8 +30,6 @@ def goal_distance(goal_a, goal_b):
         return norm_dist
 
 
-
-
 class HookEnv(robot_env.RobotEnv):
     """Superclass for all Hook environments.
     """
@@ -338,11 +336,11 @@ class HookEnv(robot_env.RobotEnv):
                                                                                          self.target_range,
                                                                                          size=3)
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] - self.np_random.uniform(0,
+                        target_goal[1] = self.sim.data.get_joint_qpos('object1:joint')[1] - self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=1)
                     else:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] + self.np_random.uniform(0,
+                        target_goal[1] = self.sim.data.get_joint_qpos('object1:joint')[1] + self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=1)
 
@@ -359,7 +357,7 @@ class HookEnv(robot_env.RobotEnv):
                     if too_close is False:
                         break
 
-                if target_0 is not None:
+                if target_0 is not None:    # target_0 is None when n_o = 0: the hook case
                     target_goal[0] = target_0[0] - self.np_random.uniform(0.03, 0.04, size=1)
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
                         target_goal[1] = target_0[1] - self.np_random.uniform(0.03, 0.04, size=1)
@@ -376,7 +374,7 @@ class HookEnv(robot_env.RobotEnv):
                 gripper_goal_pos = goal.copy()[-6:-3]
                 # gripper_goal_pos[0] -= self.sim.data.get_geom_xpos('object0/geom')[0]
                 geom_id = self.sim.model.geom_name2id('object0:geom')
-                gripper_goal_pos[0] -= 2*(self.sim.model.geom_size[geom_id][0] - 0.01)  # 0.38 TODO: hardcoded for now
+                gripper_goal_pos[0] -= 2*(self.sim.model.geom_size[geom_id][0] - 0.01)  # 0.38
                 if self.gripper_goal == 'gripper_above':
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
