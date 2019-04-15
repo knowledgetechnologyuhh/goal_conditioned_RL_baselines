@@ -375,7 +375,8 @@ class HookEnv(robot_env.RobotEnv):
             if self.gripper_goal != 'gripper_none':
                 gripper_goal_pos = goal.copy()[-6:-3]
                 # gripper_goal_pos[0] -= self.sim.data.get_geom_xpos('object0/geom')[0]
-                gripper_goal_pos[0] -= 0.38  # TODO: hardcoded for now
+                geom_id = self.sim.model.geom_name2id('object0:geom')
+                gripper_goal_pos[0] -= 2*(self.sim.model.geom_size[geom_id][0] - 0.01)  # 0.38 TODO: hardcoded for now
                 if self.gripper_goal == 'gripper_above':
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
