@@ -75,6 +75,14 @@ class HRL_Policy(Policy):
                     compute_Q=False, exploit=True):
         return self._random_action(len(o))
 
+    def scale_and_offset_action(self, u):
+        scaled_u = u.copy()
+        return scaled_u
+
+    def inverse_scale_and_offset_action(self, scaled_u):
+        u = scaled_u.copy()
+        return u
+
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
 

@@ -533,8 +533,8 @@ if __name__ == '__main__':
     parser.add_argument('--pad', type=int, default=0)
     parser.add_argument('--column', type=str, default='')
     args = parser.parse_args()
+    cols = get_all_columns(args.data_dir)
     if args.column == '':
-        cols = get_all_columns(args.data_dir)
         for c in cols:
             do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c)
     else:

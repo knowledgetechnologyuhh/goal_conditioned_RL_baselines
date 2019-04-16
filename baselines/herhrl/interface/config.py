@@ -94,8 +94,7 @@ use_target_net=self.use_target_net)
 
 # OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 # OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
-OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'test_subgoal_perc', 'n_subgoals_layers', 'policies_layers',
-                        'mix_p_threshold', 'mix_p_steepness']
+OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
 
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
@@ -185,7 +184,7 @@ def configure_policy(dims, params):
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
-    p_threshold = params['mix_p_threshold']
+    # p_threshold = params['mix_p_threshold']
     p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
@@ -193,6 +192,8 @@ def configure_policy(dims, params):
     preds = env.env.get_preds()
     n_preds = len(preds[0])
     subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
+    units_per_obs_len = 12
+    n_obs = len(env.env._get_obs()['observation'])
     ddpg_params.update({
                         'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
@@ -205,23 +206,24 @@ def configure_policy(dims, params):
                         'clip_pos_returns': True,  # clip positive returns for Q-values
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'h_level': 0,
-                        'p_threshold': p_threshold,
-                        'p_steepness': p_steepness
+                        # 'p_threshold': p_threshold,
+                        'p_steepness': p_steepness,
+                        'hidden': units_per_obs_len * n_obs
     })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
     }
 
-    t_remaining = params['T']
+    # t_remaining = params['T']
     n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
                     policy_str in params['policies_layers'][1:-1].split(",") if policy_str != ''] + [DDPG_HER_HRL_POLICY]
     policies = []
-    next_buffer_size = ddpg_params['buffer_size']
+    # next_buffer_size = ddpg_params['buffer_size']
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
         if n_s is None: # If this is the final lowest layer
             input_dims = dims.copy()
-            n_s = t_remaining # TODO: This should be n_s = params['T'] for dynamic subgoals.
+            n_s = params['T']
             subgoal_scale = np.ones(input_dims['u'])
             subgoal_offset = np.zeros(input_dims['u'])
         else:
@@ -233,10 +235,11 @@ def configure_policy(dims, params):
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset,
                             'h_level': l,
-                            'buffer_size': next_buffer_size * n_s,
+                            'buffer_size': ddpg_params['buffer_size'] * n_s
+                            # 'buffer_size': next_buffer_size * n_s,
                             })
-        next_buffer_size *= n_s
-        t_remaining = int(t_remaining / n_s)
+        # next_buffer_size *= n_s
+        # t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)
         policy = ThisPolicy(**this_params)
         policies.append(policy)

@@ -71,7 +71,6 @@ class Obs2PredsEmbeddingModel(Obs2PredsModel):
         self.pred_embeddings = tf.Variable(expected_shape=dim_emb, initial_value=(tf.zeros(dim_emb) + 0.5))
         super().__init__(n_preds, dim_o, dim_g, rep_model_layer_sizes=rep_model_layer_sizes)
 
-
     def embedding_prob_out(self):
         dim_in = self.input.shape[1]
 

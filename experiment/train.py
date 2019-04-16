@@ -111,12 +111,18 @@ def launch(
         n_cpus_available = physical_cpu_core_count()
         if n_cpus_available < num_cpu:
             whoami = mpi_fork(num_cpu) # This significantly reduces performance!
+            assert kwargs['bind_core'] == 0, "Too high CPU count when trying to bind MPI workers to core. You require {} CPUs but have only {}".format(num_cpu, n_cpus_available)
+
         else:
-            try:
+            if kwargs['bind_core']:
                 whoami = mpi_fork(num_cpu, ['--bind-to', 'core'])
-            except CalledProcessError:
-                # fancy version of mpi call failed, try simple version
-                whoami = mpi_fork(num_cpu) # This significantly reduces performance!
+            else:
+                whoami = mpi_fork(num_cpu)  # This significantly reduces performance!
+            # try:
+            #
+            # except CalledProcessError:
+            #     # fancy version of mpi call failed, try simple version
+            #     whoami = mpi_fork(num_cpu) # This significantly reduces performance!
         if whoami == 'parent':
             sys.exit(0)
         import baselines.common.tf_util as U
@@ -125,13 +131,14 @@ def launch(
 
     # Configure logging
     if rank == 0:
+        os.makedirs(logdir, exist_ok=False)
         if logdir or logger.get_dir() is None:
             logger.configure(dir=logdir, format_strs=['stdout', 'log', 'csv', 'tensorboard'])
     else:
         logger.configure()
     logdir = logger.get_dir()
     assert logdir is not None
-    os.makedirs(logdir, exist_ok=True)
+
 
     # Seed everything.
     rank_seed = seed + 1000000 * rank
@@ -250,6 +257,7 @@ def main(ctx, **kwargs):
 
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
+    # os.makedirs(logdir, exist_ok=False)
 
     do_train = True
     trial_no = ctr - 1
