@@ -75,7 +75,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         self.norm_eps = norm_eps
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
-
         if self.clip_return is None:
             self.clip_return = np.inf
 
@@ -98,6 +97,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         buffer_shapes['g'] = (buffer_shapes['g'][0], self.dimg)
         buffer_shapes['ag'] = (self.T+1, self.dimg)
         buffer_shapes['p'] = (buffer_shapes['g'][0], 1)
+        buffer_shapes['steps'] = buffer_shapes['p']
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
@@ -136,13 +136,25 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         u = ret[0]
         q = ret[1]
         noise = noise_eps * self.max_u * np.random.randn(*u.shape)  # gaussian noise
-        u += noise
-        u = np.clip(u, -self.max_u, self.max_u)
-        u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
+        noisy_u = u + noise
+        u = np.clip(noisy_u, -self.max_u, self.max_u)
+        random_u = np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - noisy_u)  # eps-greedy
+        u += random_u
         u = u.copy()
-        u *= self.subgoal_scale
-        u += self.subgoal_offset
         return u, q
+
+
+    def scale_and_offset_action(self, u):
+        scaled_u = u.copy()
+        scaled_u *= self.subgoal_scale
+        scaled_u += self.subgoal_offset
+        return scaled_u
+
+    def inverse_scale_and_offset_action(self, scaled_u):
+        u = scaled_u.copy()
+        u -= self.subgoal_offset
+        u /= self.subgoal_scale
+        return u
 
     def store_episode(self, episode_batch, update_stats=True):
 
@@ -150,9 +162,11 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         episode_batch: array of batch_size x (T or T+1) x dim_key
                        'o' is of size T+1, others are of size T
         """
+        # print("Storing Episode h-level = {}".format(self.h_level))
         self.buffer.store_episode(episode_batch)
         if update_stats:
             # add transitions to normalizer
+
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
             episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
             num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
@@ -163,10 +177,12 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             # No need to preprocess the o_2 and g_2 since this is only used for stats
 
             self.o_stats.update(transitions['o'])
-            self.g_stats.update(transitions['g'])
-
             self.o_stats.recompute_stats()
+
+            self.g_stats.update(transitions['g'])
             self.g_stats.recompute_stats()
+
+        # print("Done storing Episode")
 
     def get_current_buffer_size(self):
         return self.buffer.get_current_size()

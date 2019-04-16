@@ -88,9 +88,9 @@ class Normalizer:
         return buf
 
     def synchronize(self, local_sum, local_sumsq, local_count, root=None):
-        local_sum[...] = self._mpi_average(local_sum)
-        local_sumsq[...] = self._mpi_average(local_sumsq)
-        local_count[...] = self._mpi_average(local_count)
+        # local_sum[...] = self._mpi_average(local_sum)
+        # local_sumsq[...] = self._mpi_average(local_sumsq)
+        # local_count[...] = self._mpi_average(local_count)
         return local_sum, local_sumsq, local_count
 
     def recompute_stats(self):
