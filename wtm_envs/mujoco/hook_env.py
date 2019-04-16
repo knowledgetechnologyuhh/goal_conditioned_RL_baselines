@@ -79,6 +79,9 @@ class HookEnv(robot_env.RobotEnv):
         self.max_tower_height = max_tower_height
         self.step_ctr = 0
 
+        self.obs_limits = [None, None]
+        self.obs_noise_coefficient = 0.0
+
         self.plan_cache = {}
         self.goal_hierarchy = {}
         self.goal = []
