@@ -297,9 +297,14 @@ class HookEnv(robot_env.RobotEnv):
                 # Iterate through all previously placed boxes and select closest:
                 for o_other in range(o):
                     other_xpos = self.sim.data.get_joint_qpos('object{}:joint'.format(o_other))[:2]
+                    # Reduce the complexity of the environment by generating the cube very close to the hook
+                    if np.random.random() >= 0.5:
+                        object_xpos[1] = other_xpos[1] + 0.02
+                    else:
+                        object_xpos[1] = other_xpos[1] - 0.02
                     dist = np.linalg.norm(object_xpos - other_xpos)
                     dist_to_nearest = min(dist, dist_to_nearest)
-                if dist_to_nearest < 0.1:
+                if dist_to_nearest < 0.01:
                     close = True
 
             object_qpos = self.sim.data.get_joint_qpos('{}:joint'.format(oname))
@@ -352,7 +357,7 @@ class HookEnv(robot_env.RobotEnv):
                     for i in range(0, target_goal_start_idx, 3):
                         other_loc = goal[i:i + 3]
                         dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
-                        if dist < 0.05:
+                        if dist < 0.01:
                             too_close = True
                     if too_close is False:
                         break

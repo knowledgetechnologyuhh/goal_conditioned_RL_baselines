@@ -14,7 +14,8 @@ class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
         hook_env.HookEnv.__init__(
             self, 'hook/environment.xml', block_gripper=False, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
-            obj_range=0.15, target_range=0.2,    #0.15
+            obj_range=0.15,
+            target_range=0.05,    # 0.15 target_range is used to define the target position wrt current object position
             # distance_threshold=0.02,
             distance_threshold=RakeObjectThresholds.distance_threshold,  #0.02
             initial_qpos=initial_qpos, reward_type=reward_type,
