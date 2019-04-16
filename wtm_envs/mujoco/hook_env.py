@@ -352,7 +352,7 @@ class HookEnv(robot_env.RobotEnv):
                     for i in range(0, target_goal_start_idx, 3):
                         other_loc = goal[i:i + 3]
                         dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
-                        if dist < 0.1:
+                        if dist < 0.05:
                             too_close = True
                     if too_close is False:
                         break
