@@ -8,9 +8,11 @@ import copy
 class RakeObjectThresholds: #TODO: fix this
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
-    distance_threshold = 0.025
+    distance_threshold = 0.02
     grasp_z_offset = 0.02
     rake_handle_x_offset = 0.38
+    at_x_offset = 0.02
+    at_y_offset = 0.02
     on_z_offset = 0.05
 
 
@@ -285,7 +287,7 @@ def plans2subgoals(plans, obs, goals, n_objects, actions_to_skip=[]):   # TODO: 
     return subgoals
 
 
-def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
+def action2subgoal(action, obs, goal, n_objects):
     ROT = RakeObjectThresholds
 
     def get_o_pos(obs, o_idx):
@@ -308,19 +310,30 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
         o_pos = get_o_pos(obs, o_idx)
         if action == 'move_gripper_to__o{}'.format(o_idx):
             # First three elements of goal represent target gripper pos.
-            subgoal[:3] = o_pos.copy()  # Gripper should be above (at) object
+            subgoal[:3] = o_pos.copy()  # Gripper should be above the handle of the hook
             if o_idx == 0:  # if the hook, assuming that the hook position returned from the environment is at the tip
-                subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
+                subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
             subgoal[2] += np.mean(ROT.grasp_z_offset)
         if action == 'move__o{}_to_target_by__o{}'.format(o_idx, o_idx-1) and o_idx == 1:
+            hook_pos = get_o_pos(obs, 0)
+            # The cube is at its target
             start_idx = (o_idx + 1) * 3
             end_idx = start_idx + 3
             o_goal = goal[start_idx:end_idx]
-            # Gripper should be at object goal
-            subgoal[:3] = o_goal.copy()
-            subgoal[2] += np.mean(ROT.grasp_z_offset)
             # Object should be at object goal
             subgoal[start_idx:end_idx] = o_goal
+            # The hook is near the cube
+            o2_pos = o_goal.copy()
+            o2_pos[0] += ROT.at_x_offset
+            if hook_pos[1] >= o_goal[1]:  # the hook is on the left side of the cube
+                o2_pos[1] += ROT.at_y_offset
+            else:
+                o2_pos[1] -= ROT.at_y_offset
+            subgoal[o_idx*3:o_idx*3+3] = o2_pos
+            # Gripper should be at the handle of the hook
+            subgoal[:3] = o2_pos.copy()
+            subgoal[2] += np.mean(ROT.grasp_z_offset)
+            subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
 
         for o2_idx in range(n_objects):
             o2_pos = get_o_pos(obs, o2_idx)
@@ -328,14 +341,20 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
                 # First three elements of goal represent target gripper pos.
                 # subgoal[:3] = o2_pos.copy()  # Gripper should be above (at) object
                 # subgoal[2] += np.mean(BTT.grasp_z_offset)
-                # Object should be on top of o2
+                # Hook end-effector should be near the cube (o2)
                 o_goal = o2_pos
-                # o_goal[0] += ROT.rake_handle_x_offset
-                o_goal[2] += (ROT.on_z_offset * 1.0)
+                o_goal[0] += ROT.at_x_offset
+                if o_pos[1] >= o2_pos[1]: # the hook is on the left side of the cube
+                    o_goal[1] += ROT.at_y_offset
+                else:
+                    o_goal[1] -= ROT.at_y_offset
+                # o_goal[2] += (ROT.on_z_offset * 1.0)
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
-                subgoal[start_idx:end_idx] = o_goal
-                subgoal[:3] = o_goal
+                subgoal[start_idx:end_idx] = o_goal # hook position
+                subgoal[:3] = o_goal                # gripper position
+                if o_idx == 0:  # if the hook
+                    subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
                 subgoal[2] += np.mean(ROT.grasp_z_offset)
     if action == 'move_gripper_to_target':
         subgoal[3:] = final_goal[3:]  # Gripper should be at gripper goal
@@ -344,6 +363,7 @@ def action2subgoal(action, obs, goal, n_objects):   # TODO: fix this
         print("Warning, looks like action {} is invalid. Setting subgoal to final goal".format(action))
         subgoal = goal.copy()
     return subgoal
+
 
 # Seem to be used only in plans2subgoal TODO: check
 def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []): # TODO: check
