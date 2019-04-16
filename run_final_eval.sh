@@ -19,8 +19,8 @@ early_stop_threshold=90
 n_train_batches=15
 min_th=1
 
-n_objects=1
-#n_subgoals_layers=$(( n_objects*10 ))
+#n_objects=1
+n_subgoals_layers=$(( n_objects*10 ))
 n_subgoals_layers=1
 max_th=${n_objects}
 env="TowerBuildMujocoEnv-sparse-gripper_random-o${n_objects}-h${min_th}-${max_th}-v1"
