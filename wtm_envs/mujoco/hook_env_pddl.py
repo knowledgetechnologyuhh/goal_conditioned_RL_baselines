@@ -1,5 +1,6 @@
 import numpy as np
 from baselines.her_pddl.pddl.propositional_planner import Propositional_Planner
+from gym.envs.robotics import rotations
 import time
 
 import copy
@@ -9,11 +10,39 @@ class RakeObjectThresholds: #TODO: fix this
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
     distance_threshold = 0.02
-    grasp_z_offset = 0.02
+    grasp_z_offset = 0.01
     rake_handle_x_offset = 0.38
     at_x_offset = 0.02
     at_y_offset = 0.02
     on_z_offset = 0.05
+
+
+def get_o_pos(obs, o_idx):
+    start_idx = (o_idx + 1) * 3
+    end_idx = start_idx + 3
+    o_pos = obs[start_idx:end_idx]
+    return o_pos
+
+
+def get_o_rot(obs, o_idx):
+    start_idx = (o_idx + 6) * 3 - 1 # gripper_state has 2 in size
+    end_idx = start_idx + 3
+    o_rot = obs[start_idx:end_idx]
+    return o_rot
+
+
+def compute_handle_pos(tip_pos, tip_rot):
+    rot_mat = rotations.euler2mat(tip_rot)
+    tran_mat = np.zeros((4, 4))
+    tran_mat[3, 3] = 1.
+    tran_mat[:3, 3] = tip_pos
+    tran_mat[:3, :3] = rot_mat
+    handle = np.zeros((4,))
+    # handle[:3] = subgoal[:3]
+    handle[0] = -RakeObjectThresholds.rake_handle_x_offset
+    # handle[3] = 1.
+    handle_new = tran_mat * handle
+    return handle_new[:3, 0]
 
 
 def obs_to_preds(obs, goal, n_objects):
@@ -32,11 +61,11 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
     gripper_state = np.sum(obs[3 + 6 * n_objects: 3 + 6 * n_objects + 1])
     gripper_in_goal = (len(goal) / 3) > n_objects
 
-    def get_o_pos(obs, o_idx):
-        start_idx = (o_idx + 1) * 3
-        end_idx = start_idx + 3
-        o_pos = obs[start_idx:end_idx]
-        return o_pos.copy()
+    # def get_o_pos(obs, o_idx):
+    #     start_idx = (o_idx + 1) * 3
+    #     end_idx = start_idx + 3
+    #     o_pos = obs[start_idx:end_idx]
+    #     return o_pos.copy()
 
     def get_o_goal_pos(goal, o_idx):
         start_idx = (o_idx + 1) * 3
@@ -52,7 +81,9 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
         o_pos = get_o_pos(obs, o)
         gripper_tgt_pos = o_pos.copy()
         if o == 0: # if the hook, assuming that the hook position returned from the environment is at the tip
-            gripper_tgt_pos[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
+            # gripper_tgt_pos[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
+            o_rot = get_o_rot(obs, o)
+            gripper_tgt_pos += compute_handle_pos(o_pos, o_rot)
         gripper_tgt_pos[2] += ROT.grasp_z_offset
         distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
         preds[pred_name] = distance < ROT.distance_threshold
@@ -290,11 +321,30 @@ def plans2subgoals(plans, obs, goals, n_objects, actions_to_skip=[]):   # TODO: 
 def action2subgoal(action, obs, goal, n_objects):
     ROT = RakeObjectThresholds
 
-    def get_o_pos(obs, o_idx):
-        start_idx = (o_idx + 1) * 3
-        end_idx = start_idx + 3
-        o_pos = obs[start_idx:end_idx]
-        return o_pos
+    # def get_o_pos(obs, o_idx):
+    #     start_idx = (o_idx + 1) * 3
+    #     end_idx = start_idx + 3
+    #     o_pos = obs[start_idx:end_idx]
+    #     return o_pos
+    #
+    # def get_o_rot(obs, o_idx):
+    #     start_idx = (o_idx + 6) * 3 - 1 # gripper_state has 2 in size
+    #     end_idx = start_idx + 3
+    #     o_rot = obs[start_idx:end_idx]
+    #     return o_rot
+    #
+    # def compute_handle_pos(tip_pos, tip_rot):
+    #     rot_mat = rotations.euler2mat(tip_rot)
+    #     tran_mat = np.zeros((4, 4))
+    #     tran_mat[3, 3] = 1.
+    #     tran_mat[:3, 3] = tip_pos
+    #     tran_mat[:3, :3] = rot_mat
+    #     handle = np.zeros((4,))
+    #     # handle[:3] = subgoal[:3]
+    #     handle[0] = -ROT.rake_handle_x_offset
+    #     # handle[3] = 1.
+    #     handle_new = tran_mat * handle
+    #     return handle_new[:3, 0]
 
     final_goal = copy.deepcopy(goal)
     # subgoal = copy.deepcopy(goal)
@@ -308,11 +358,30 @@ def action2subgoal(action, obs, goal, n_objects):
     subgoal = no_change_subgoal.copy()
     for o_idx in range(n_objects):
         o_pos = get_o_pos(obs, o_idx)
+        o_rot = get_o_rot(obs, o_idx)
+        # print('o_rot {}'.format(o_rot))
+        o_rot_deg = o_rot * 180. / np.pi
         if action == 'move_gripper_to__o{}'.format(o_idx):
             # First three elements of goal represent target gripper pos.
             subgoal[:3] = o_pos.copy()  # Gripper should be above the handle of the hook
             if o_idx == 0:  # if the hook, assuming that the hook position returned from the environment is at the tip
-                subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
+                # subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
+                # theta = o_rot[2]
+                # subgoal[0] -= ROT.rake_handle_x_offset * np.cos(theta)  # the hook is 0.38 m long in x-axis
+                # subgoal[1] += ROT.rake_handle_x_offset * np.sin(theta)  # the hook is 0.38 m long in x-axis
+                # rot_mat = rotations.euler2mat(o_rot)
+                # tran_mat = np.zeros((4, 4))
+                # tran_mat[3, 3] = 1.
+                # tran_mat[:3, 3] = o_pos
+                # tran_mat[:3, :3] = rot_mat
+                # handle = np.zeros((4,))
+                # # handle[:3] = subgoal[:3]
+                # handle[0] = -ROT.rake_handle_x_offset
+                # # handle[3] = 1.
+                # handle_new = tran_mat*handle
+                # subgoal[:3] += handle_new[:3, 0]
+                handle_offset = compute_handle_pos(o_pos, o_rot)
+                subgoal[:3] += handle_offset
             subgoal[2] += np.mean(ROT.grasp_z_offset)
         if action == 'move__o{}_to_target_by__o{}'.format(o_idx, o_idx-1) and o_idx == 1:
             hook_pos = get_o_pos(obs, 0)
@@ -332,6 +401,8 @@ def action2subgoal(action, obs, goal, n_objects):
             subgoal[o_idx*3:o_idx*3+3] = o2_pos
             # Gripper should be at the handle of the hook
             subgoal[:3] = o2_pos.copy()
+            # o2_rot = get_o_rot(obs, 0)
+            # subgoal[:3] += compute_handle_pos(o2_pos, o2_rot)
             subgoal[2] += np.mean(ROT.grasp_z_offset)
             subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
 
