@@ -1,19 +1,21 @@
 # Getting started
 
-1. Install MuJoCo (mujoco.org) and copy mjpro150 folder as well as mjkey.txt to ~/.mujoco
+1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro150 folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to ~/.mujoco
 2. Set environment variables according to your Graphics driver version as in `set_paths.sh`
 3. Set up virtual environment using `virtualenv -p python3 venv`
 4. Activate virtualenvironment using `source venv/bin/activate`
-5. Install python libraries using `pip3 install -r requirements_gpu.txt`
+5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
 6. Run script with `experiment/train.py`
 
-Logs will be stored in a directory according to the `--logs` command line parameter (by default `logs`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far. The name of this second subdirectory is determined in the `main` function of `train.py`, according to line `override_params = config.OVERRIDE_PARAMS_LIST`.
-
-
+Logs will be stored in a directory according to the `--logs` command line parameter (by default `data`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far.
 
 # Currently supported algorithms
+The algorithm can be selected using the command line option `--algorithm` (see below).
+
 Algorithm-specific implementation details are stored in `baselines/<alg name>`.
-We currently support `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results. This code is about `baselines.model_based`. Hence, the folder `baselines/model_based` is where most of the coding takes place. The algorithm can be selected using the command line option `--algorithm` (see below).
+We currently support `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results.
+We also support `baselines.herhrl` (Hindsight Experience Replay with Hierarchical Reinforcement Learning).
+We have experimental support for `baselines.model_based` which learns a model of the environment but does not yet generate useful actions.
 
 # Command line options
 Command line options are realized using the *click* library.
@@ -21,8 +23,19 @@ General command line options can be found in `experiment/click_options.py`
 
 Algoritm specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
 
+# herhrl algorithm
+This is adapted from the implementation by Levy et al. 2018. We extended it with the possibility to also use a high-level PDDL planner to generate subgoals. However, PDDL requires the implementation of an environment-specific file to generate planning domains. An example is `wtm_envs/mujoco/tower_env_pddl.py`, which extends `wtm_envs/mujoco/tower_env.py` with PDDL capabilities. We also support a mixed HRL/PDDL policy which switches over from PDDL to HRL when PDDL does not continue to improve the success rate. The following parameters are most important:
 
-# Main algorithm
+* `--policies_layers` determines the layers above the lower level layer. The low-level layer is always `DDPG_HER_HRL_POLICY`. That is, if you define `--policies_layers [DDPG_HER_HRL_POLICY]` then this means that you have a two-layer HRL agent with the high level layer being DDPG_HER_HRL_POLICY and the low-level layer also DDPG_HER_HRL_POLICY. If you set `--policies_layers [PDDL_POLICY,DDPG_HER_HRL_POLICY]` then you have a three-layer HRL agent with the high level layer being PDDL, the mid-level layer being  DDPG_HER_HRL_POLICY and the low-level layer also being DDPG_HER_HRL_POLICY. However, we have not yet tested more than two layers. It is, therefore, highly recommended to use no more than two layers in total at this point of the implementation, i.e., either set `--policies_layers [DDPG_HER_HRL_POLICY]` or `--policies_layers [PDDL_POLICY]`
+
+* `--n subgoals_layers` determines the max. amount of steps allowed for all layers except for the lowest layer. For example, `--n subgoals_layers [10]` means that you have a two-layer agent where the high-level layer has at most 10 steps.
+
+* `--penalty_magnitude` determines the penalty score when the subgoal is missed, as described in Levy et al. 2018
+
+* `--test_subgoal_perc` determines the probability that a penalty is applied to a specific high-level policy step (also see Levy et al. 2018).
+
+
+# model_based algorithm
 1. Initialize replay buffer (The replay buffer is implemented in the class [ModelReplayBuffer](baselines/model_based/mb_policy.py) and initialized as part of the class [MBPolicy](baselines/model_based/mb_policy.py).)
 2. **Exploration Phase**
     1. For each epoch (in function [train](experiment/train.py))
@@ -39,9 +52,5 @@ Algoritm specific command line options can be found in `baselines/<alg name>/int
 3. **Exploitation Phase**
     As in HER, but instead of generating actions in `policy.get_actions`, generate multiple candidate-actions (e.g. by adding noise to observations) and use the model to select the most promising one.
 
-# TODO
-1. Currently, the action selection in the exploration phase is random, and the surprise prediction is used to select the action out of a candidate set of actions that is supposed to maximize the model error (kind of beam search). Instead of this approach, use another RL algorithm, e.g. PPO, to maximize the model loss during exploration. We can later combine that algorithm also with the model, but this should happen in a second step.
 
-   To this end, we should start by adding a command line option for `action_selection` [here](baselines/model_based/interface/click_options.py), and add the respective functionality in the `get_action` function of [MBPolicy](baselines/model_based/mb_policy.py).
-2. Implement Exploitation Phase
 
