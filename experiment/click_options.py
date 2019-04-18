@@ -2,7 +2,8 @@ import click
 import importlib
 
 _global_options = [
-click.option('--env', type=str, default='HookMujocoEnv-sparse-gripper_random-o2-h1-3-v1', help='the name of the OpenAI Gym environment that you want to train on'),
+# click.option('--env', type=str, default='HookMujocoEnv-sparse-gripper_random-o2-h1-3-v1', help='the name of the OpenAI Gym environment that you want to train on'),
+click.option('--env', type=str, default='TowerBuildMujocoEnv-sparse-gripper_random-o1-h1-1-v1', help='the name of the OpenAI Gym environment that you want to train on'),
 click.option('--algorithm', default='baselines.her', help='the name of the algorithm to be used',
              type=click.Choice(['baselines.her', 'baselines.model_based', 'baselines.her_pddl', 'baselines.herhrl'])
              ),
