@@ -177,11 +177,16 @@ def gen_actions(n_objects): # TODO: check
         ":parameters () \n\t" \
         ":precondition () \n\t" \
         ":effect (and (gripper_at_o{}) {} {} (not (gripper_at_target)) )\n)\n\n"
-    move_o_to_target_by_o_template = \
+    move_o_to_target_by_o_act_template = \
         "(:action move__o{}_to_target_by__o{} \n\t" \
         ":parameters () \n\t" \
-        ":precondition (and (o{}_at_o{}) ) \n\t" \
-        ":effect (and (o{}_at_target) (o{}_at_target) (o{}_at_o{}))\n)\n\n"
+        ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t" \
+        ":effect (and (o{}_at_target) (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
+    move_o_to_target_act_template = \
+        "(:action move__o{}_to_target \n\t" \
+        ":parameters () \n\t" \
+        ":precondition (and (gripper_at_o{}) ) \n\t" \
+        ":effect (and (o{}_at_target) (gripper_at_o{}))\n)\n\n"
     move_o1_on_o2_act_template = \
         "(:action move__o{}_on__o{}  \n\t" \
         ":parameters () \n\t" \
@@ -236,15 +241,19 @@ def gen_actions(n_objects): # TODO: check
     move_gripper_to_hook_act = move_gripper_to_o_act_template.format(0, 0, not_elsewhere_str, not_o2_at_o_str)
     actions.append(move_gripper_to_hook_act)
 
-    # Move the hook to the cube (object1) action.
-    # This is to place the first object on the ground on which other objects will be stacked.
-    move_hook_to_o_act = move_o1_at_o2_act_template.format(0, 1, 0, 0, 1, 0)
-    actions.append(move_hook_to_o_act)
+    if n_objects>=2:
+        # Move the hook to the cube (object1) action.
+        # This is to place the first object on the ground on which other objects will be stacked.
+        move_hook_to_o_act = move_o1_at_o2_act_template.format(0, 1, 0, 0, 1, 0)
+        actions.append(move_hook_to_o_act)
 
-    # Move o to target action.
-    # This is to place the cube on the ground at the target position
-    move_o_to_target_act = move_o_to_target_by_o_template.format(1, 0, 0, 1, 1, 0, 0, 1)
-    actions.append(move_o_to_target_act)
+        # Move o to target action.
+        # This is to place the cube on the ground at the target position
+        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 0, 1, 0)
+        actions.append(move_o_to_target_act)
+    else:
+        move_o_to_target_act = move_o_to_target_act_template.format(0, 0, 0, 0)
+        actions.append(move_o_to_target_act)
 
     # This is to place the hook to its target position  --> TODO: check if necessary
     # move_hook_to_target_act = move_o_to_target_template.format(0, 0, 1, 0)
@@ -406,6 +415,18 @@ def action2subgoal(action, obs, goal, n_objects):
             subgoal[2] += np.mean(ROT.grasp_z_offset)
             subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
 
+        if action == 'move__o{}_to_target'.format(o_idx) and o_idx == 0:
+            start_idx = (o_idx + 1) * 3
+            end_idx = start_idx + 3
+            o_goal = goal[start_idx:end_idx]
+            # Object (hook) should be at object goal
+            subgoal[start_idx:end_idx] = o_goal
+
+            # Gripper should be at the handle of the hook
+            subgoal[:3] = o_goal.copy()
+            subgoal[2] += np.mean(ROT.grasp_z_offset)
+            subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
+
         for o2_idx in range(n_objects):
             o2_pos = get_o_pos(obs, o2_idx)
             if action == 'move__o{}_at__o{}'.format(o_idx, o2_idx):
@@ -413,7 +434,7 @@ def action2subgoal(action, obs, goal, n_objects):
                 # subgoal[:3] = o2_pos.copy()  # Gripper should be above (at) object
                 # subgoal[2] += np.mean(BTT.grasp_z_offset)
                 # Hook end-effector should be near the cube (o2)
-                o_goal = o2_pos
+                o_goal = o2_pos.copy()
                 o_goal[0] += ROT.at_x_offset
                 if o_pos[1] >= o2_pos[1]: # the hook is on the left side of the cube
                     o_goal[1] += ROT.at_y_offset
