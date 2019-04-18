@@ -23,6 +23,7 @@ General command line options can be found in `experiment/click_options.py`
 
 Algoritm specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
 
+
 # herhrl algorithm
 This is adapted from the implementation by Levy et al. 2018. We extended it with the possibility to also use a high-level PDDL planner to generate subgoals. However, PDDL requires the implementation of an environment-specific file to generate planning domains. An example is `wtm_envs/mujoco/tower_env_pddl.py`, which extends `wtm_envs/mujoco/tower_env.py` with PDDL capabilities. We also support a mixed HRL/PDDL policy which switches over from PDDL to HRL when PDDL does not continue to improve the success rate. The following parameters are most important:
 
