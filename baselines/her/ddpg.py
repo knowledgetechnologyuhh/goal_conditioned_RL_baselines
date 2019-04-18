@@ -142,7 +142,6 @@ class DDPG(Policy):
             u = u[0]
         u = u.copy()
         ret[0] = u
-
         if len(ret) == 1:
             return ret[0]
         else:
