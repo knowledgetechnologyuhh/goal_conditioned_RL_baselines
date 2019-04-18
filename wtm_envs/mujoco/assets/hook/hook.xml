@@ -2,7 +2,7 @@
 	<body name="object0" pos="0.925 0.4 0.6">
 		<joint name="object0:joint" type="free" damping="0.01"></joint>
 
-		<geom name="object0:geom" size="0.2 0.008 0.018" condim="3" type="box" mass="4" />
+		<geom name="object0:geom" size="0.2 0.008 0.018" condim="3" type="box" mass="6" />
 		<inertial pos="0 0 0" mass="4" diaginertia="0.059 0.0586 0.0041" />
 		<site name="object0" pos="0.2 0 0" size="0.02 0.08 0.02" rgba="0 1 0 0.1" type="ellipsoid"></site>
 		<body name="edge_left" pos="0.2 0.015 0">
