@@ -9,8 +9,8 @@ import copy
 class RakeObjectThresholds: #TODO: fix this
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
-    distance_threshold = 0.02
-    grasp_z_offset = 0.01
+    distance_threshold = 0.01
+    grasp_z_offset = 0.005
     rake_handle_x_offset = 0.38
     at_x_offset = 0.02
     at_y_offset = 0.02
@@ -83,7 +83,8 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
         if o == 0: # if the hook, assuming that the hook position returned from the environment is at the tip
             # gripper_tgt_pos[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
             o_rot = get_o_rot(obs, o)
-            gripper_tgt_pos += compute_handle_pos(o_pos, o_rot)
+            handle_offset = compute_handle_pos(o_pos, o_rot)
+            gripper_tgt_pos += handle_offset
         gripper_tgt_pos[2] += ROT.grasp_z_offset
         distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
         preds[pred_name] = distance < ROT.distance_threshold
