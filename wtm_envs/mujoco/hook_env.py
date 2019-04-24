@@ -327,8 +327,10 @@ class HookEnv(robot_env.RobotEnv):
             while close:
                 inner_radius_id = self.sim.model.site_name2id('inner_radius_target')
                 outer_radius_id = self.sim.model.site_name2id('outer_radius_target')
-                inner_outer_ratio = self.sim.model.site_size[inner_radius_id][0] / self.sim.model.site_size[outer_radius_id][0]
-                r = (self.sim.model.site_size[outer_radius_id][0]) * np.sqrt(np.random.uniform(inner_outer_ratio, 0.7, 1))
+                inner_outer_ratio = self.sim.model.site_size[inner_radius_id][0] / \
+                                    self.sim.model.site_size[outer_radius_id][0]
+                r = self.sim.model.site_size[outer_radius_id][0] * \
+                    np.sqrt(np.random.uniform(inner_outer_ratio, 0.7, 1))
                 theta = np.random.uniform(-0.1, 0.1, 1) * 2 * np.pi
                 x = self.sim.data.get_site_xpos('outer_radius_target')[0] + r * np.cos(theta)
                 y = self.sim.data.get_site_xpos('outer_radius_target')[1] + r * np.sin(theta)
@@ -375,7 +377,7 @@ class HookEnv(robot_env.RobotEnv):
                 target_range = self.n_objects
             else:
                 target_range = 1
-            target_0 = None
+            hook = None
             for n_o in range(target_range):
                 # too_close = True
                 while True:
@@ -383,17 +385,17 @@ class HookEnv(robot_env.RobotEnv):
                                                                                          self.target_range,
                                                                                          size=3)
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object1:joint')[1] - self.np_random.uniform(0,
+                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] - self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=1)
                     else:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object1:joint')[1] + self.np_random.uniform(0,
+                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] + self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=1)
 
                     target_goal += self.target_offset
                     rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
-                    self.goal_tower_height = rnd_height
+                    self.goal_tower_height = rnd_height # TODO: remove tower_height in rollout for this environment
                     target_goal[2] = self.table_height + (self.obj_height) - (self.obj_height / 2)
                     too_close = False
                     for i in range(0, target_goal_start_idx, 3):
@@ -404,14 +406,14 @@ class HookEnv(robot_env.RobotEnv):
                     if too_close is False:
                         break
 
-                if target_0 is not None:    # target_0 is None when n_o = 0: the hook case
-                    target_goal[0] = target_0[0] - self.np_random.uniform(0.03, 0.04, size=1)
+                if hook is not None:    # target_0 is None when n_o = 0: the hook case
+                    target_goal[0] = hook[0] - self.np_random.uniform(0.03, 0.04, size=1)
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = target_0[1] - self.np_random.uniform(0.03, 0.04, size=1)
+                        target_goal[1] = hook[1] - self.np_random.uniform(0.03, 0.04, size=1)
                     else:
-                        target_goal[1] = target_0[1] + self.np_random.uniform(0.03, 0.04, size=1)
+                        target_goal[1] = hook[1] + self.np_random.uniform(0.03, 0.04, size=1)
                 else:
-                    target_0 = target_goal
+                    hook = target_goal
 
                 goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
                 target_goal_start_idx += 3
