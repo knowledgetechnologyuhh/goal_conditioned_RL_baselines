@@ -176,6 +176,9 @@ class HookEnv(robot_env.RobotEnv):
                 this_object_pos = self.sim.data.get_site_xpos(oname)
                 # rotations
                 this_object_rot = rotations.mat2euler(self.sim.data.get_site_xmat(oname))
+                if n_o == 0:
+                    hook_handle_pos = compute_handle_pos(this_object_pos, this_object_rot)
+                    this_object_rot = np.concatenate([this_object_rot, hook_handle_pos])
                 # velocities
                 this_object_velp = self.sim.data.get_site_xvelp(oname) * dt
                 this_object_velr = self.sim.data.get_site_xvelr(oname) * dt
@@ -210,7 +213,6 @@ class HookEnv(robot_env.RobotEnv):
         # obs['achieved_goal'] = self._obs2goal(obs['observation'])
 
         return obs
-
 
     # TODO: Make sure that limits don't include outliers.
     # def add_noise(self, vec, limits, noise_coeff):
@@ -247,7 +249,6 @@ class HookEnv(robot_env.RobotEnv):
         noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
         vec = vec.copy() + noise
         return vec
-
 
     def _get_viewer(self, mode='human'):
         viewer = self._viewers.get(mode)
