@@ -421,11 +421,12 @@ class HookEnv(robot_env.RobotEnv):
 
             # Final gripper position
             if self.gripper_goal != 'gripper_none':
-                gripper_goal_pos = goal.copy()[-6:-3]
-                # gripper_goal_pos[0] -= self.sim.data.get_geom_xpos('object0/geom')[0]
-                geom_id = self.sim.model.geom_name2id('object0:geom')
-                gripper_goal_pos[0] -= 2*(self.sim.model.geom_size[geom_id][0] - 0.01)  # 0.38
+                # gripper_goal_pos = goal.copy()[-6:-3]
                 if self.gripper_goal == 'gripper_above':
+                    gripper_goal_pos = goal.copy()[3:6]  # hook tip position
+                    # gripper_goal_pos[0] -= self.sim.data.get_geom_xpos('object0/geom')[0]
+                    geom_id = self.sim.model.geom_name2id('object0:geom')
+                    gripper_goal_pos[0] -= 2 * (self.sim.model.geom_size[geom_id][0] - 0.01)  # 0.38
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
                     too_close = True
@@ -439,6 +440,8 @@ class HookEnv(robot_env.RobotEnv):
 
                         if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
                             too_close = False
+                else:
+                    raise Exception('gripper_goal {} is not defined'.format(self.gripper_goal))
                 goal[:3] = gripper_goal_pos
 
             return goal.copy()
