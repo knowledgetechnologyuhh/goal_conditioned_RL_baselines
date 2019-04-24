@@ -11,7 +11,7 @@ class RakeObjectThresholds: #TODO: fix this
     grip_closed_threshold = [0.0, 0.025]
     distance_threshold = 0.01
     grasp_z_offset = 0.005
-    rake_handle_x_offset = 0.38
+    rake_handle_x_offset = 2*(0.15-0.01)
     at_x_offset = 0.02
     at_y_offset = 0.02
     on_z_offset = 0.05

@@ -24,7 +24,7 @@
 			<site name="final_arm_goal" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0 0 0.1" type="ellipsoid"></site>
 
             <site name="inner_radius_target" pos="0 0 0.5" size="0.35 0.01" rgba="1 0 0 0.3" type="cylinder"></site>
-            <site name="outer_radius_target" pos="0 0 0.5" size="0.60 0.01" rgba="0 1 0 0.3" type="cylinder"></site>
+            <site name="outer_radius_target" pos="0 0 0.5" size="0.50 0.01" rgba="0 1 0 0.3" type="cylinder"></site>
 		</body>
 
 		<include file="robot.xml"></include>
