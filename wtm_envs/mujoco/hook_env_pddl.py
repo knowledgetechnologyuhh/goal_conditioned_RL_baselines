@@ -24,8 +24,8 @@ def get_o_pos(obs, o_idx):
     return o_pos
 
 
-def get_o_rot(obs, o_idx):
-    start_idx = (o_idx + 6) * 3 - 1 # gripper_state has 2 in size
+def get_o_rot(obs, o_idx, n_objects=2):
+    start_idx = (o_idx + 2 + 2*n_objects) * 3 - 1 # gripper_state has 2 in size
     end_idx = start_idx + 3
     o_rot = obs[start_idx:end_idx]
     return o_rot
@@ -82,7 +82,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
         gripper_tgt_pos = o_pos.copy()
         if o == 0: # if the hook, assuming that the hook position returned from the environment is at the tip
             # gripper_tgt_pos[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
-            o_rot = get_o_rot(obs, o)
+            o_rot = get_o_rot(obs, o, n_objects)
             handle_offset = compute_handle_pos(o_pos, o_rot)
             gripper_tgt_pos += handle_offset
         gripper_tgt_pos[2] += ROT.grasp_z_offset
@@ -368,7 +368,7 @@ def action2subgoal(action, obs, goal, n_objects):
     subgoal = no_change_subgoal.copy()
     for o_idx in range(n_objects):
         o_pos = get_o_pos(obs, o_idx)
-        o_rot = get_o_rot(obs, o_idx)
+        o_rot = get_o_rot(obs, o_idx, n_objects)
         # print('o_rot {}'.format(o_rot))
         o_rot_deg = o_rot * 180. / np.pi
         if action == 'move_gripper_to__o{}'.format(o_idx):
