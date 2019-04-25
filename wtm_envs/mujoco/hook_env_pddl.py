@@ -182,7 +182,7 @@ def gen_actions(n_objects): # TODO: check
         "(:action move__o{}_to_target_by__o{} \n\t" \
         ":parameters () \n\t" \
         ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t" \
-        ":effect (and (o{}_at_target) (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
+        ":effect (and (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
     move_o_to_target_act_template = \
         "(:action move__o{}_to_target \n\t" \
         ":parameters () \n\t" \
@@ -250,8 +250,11 @@ def gen_actions(n_objects): # TODO: check
 
         # Move o to target action.
         # This is to place the cube on the ground at the target position
-        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 0, 1, 0)
+        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 1, 0)
         actions.append(move_o_to_target_act)
+
+        move_hook_to_target_act = move_o_to_target_act_template.format(0, 0, 0, 0)
+        actions.append(move_hook_to_target_act)
     else:
         move_o_to_target_act = move_o_to_target_act_template.format(0, 0, 0, 0)
         actions.append(move_o_to_target_act)
