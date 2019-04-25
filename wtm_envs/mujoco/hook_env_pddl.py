@@ -115,7 +115,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
             o2_pos = get_o_pos(obs, o2)
             # o1_tgt_pos = o2_pos + [0, 0, ROT.on_z_offset]
             distance = np.linalg.norm(o2_pos - o1_pos)
-            preds[pred_name] = distance < ROT.distance_threshold
+            preds[pred_name] = distance < 2.5*ROT.distance_threshold
 
     for o in range(n_objects):
         pred_name = 'o{}_at_target'.format(o)
