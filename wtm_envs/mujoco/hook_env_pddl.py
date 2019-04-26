@@ -12,8 +12,8 @@ class RakeObjectThresholds: #TODO: fix this
     distance_threshold = 0.015
     grasp_z_offset = 0.005
     rake_handle_x_offset = 2*(0.125-0.01)
-    at_x_offset = 0.02
-    at_y_offset = 0.02
+    at_x_offset = 0.025
+    at_y_offset = 0.03
     on_z_offset = 0.05
 
 
@@ -115,14 +115,15 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
             o2_pos = get_o_pos(obs, o2)
             # o1_tgt_pos = o2_pos + [0, 0, ROT.on_z_offset]
             distance = np.linalg.norm(o2_pos - o1_pos)
-            preds[pred_name] = distance < 3.5*ROT.distance_threshold
+            preds[pred_name] = distance < 4.*ROT.distance_threshold
 
     for o in range(n_objects):
         pred_name = 'o{}_at_target'.format(o)
         o_pos = get_o_pos(obs, o)
         g_pos = get_o_goal_pos(goal, o)
         distance = np.linalg.norm(g_pos - o_pos, axis=-1)
-        preds[pred_name] = distance < ROT.distance_threshold
+        threshold = ROT.distance_threshold if o == 0 else 1.5*ROT.distance_threshold
+        preds[pred_name] = distance < threshold
 
     if gripper_in_goal:
         distance = np.linalg.norm(gripper_pos - goal[:3], axis=-1)
@@ -182,7 +183,8 @@ def gen_actions(n_objects): # TODO: check
         "(:action move__o{}_to_target_by__o{} \n\t" \
         ":parameters () \n\t" \
         ":precondition (and (o{}_at_o{}) ) \n\t" \
-        ":effect (and (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
+        ":effect (and (o{}_at_target) (o{}_at_o{}) )\n)\n\n"
+      # ":effect (and (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
       # ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t"
     move_o_to_target_act_template = \
         "(:action move__o{}_to_target \n\t" \
@@ -254,7 +256,8 @@ def gen_actions(n_objects): # TODO: check
         # Move o to target action.
         # This is to place the cube on the ground at the target position
         # move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 1, 0)
-        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 1, 0, 1, 0)
+        # move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 1, 0, 1, 0)
+        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 1, 0, 1)
         actions.append(move_o_to_target_act)
 
         move_hook_to_target_act = move_o_to_target_act_template.format(0, 0, 0, 0)
