@@ -170,6 +170,7 @@ def configure_her(params):
     return sample_her_transitions
 
 
+
 def simple_goal_subtract(a, b):
     assert a.shape == b.shape
     return a - b
