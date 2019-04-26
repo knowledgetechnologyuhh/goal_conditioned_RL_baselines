@@ -408,11 +408,11 @@ class HookEnv(robot_env.RobotEnv):
                         break
 
                 if hook is not None:    # target_0 is None when n_o = 0: the hook case
-                    target_goal[0] = hook[0] - self.np_random.uniform(0.03, 0.04, size=1)
+                    target_goal[0] = hook[0] - self.np_random.uniform(0.025, 0.035, size=1)
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = hook[1] - self.np_random.uniform(0.03, 0.04, size=1)
+                        target_goal[1] = hook[1] - self.np_random.uniform(0.03, 0.05, size=1)
                     else:
-                        target_goal[1] = hook[1] + self.np_random.uniform(0.03, 0.04, size=1)
+                        target_goal[1] = hook[1] + self.np_random.uniform(0.03, 0.05, size=1)
                 else:
                     hook = target_goal
 
