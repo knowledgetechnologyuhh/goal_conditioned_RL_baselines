@@ -76,7 +76,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
         return g_pos
 
     # Determine whether gripper has reached an object's location
-    for o in range(n_objects):
+    for o in range(1):
         pred_name = 'gripper_at_o{}'.format(o)
         o_pos = get_o_pos(obs, o)
         gripper_tgt_pos = o_pos.copy()
@@ -104,10 +104,10 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
 
     # Determine whether the rake/hook (object0) at the cube (object1)
     # --> environment is defined in such a way that the rake end-effector is always front of the cube wrt the robot
-    for o1 in range(n_objects):
+    for o1 in range(1):
         o1_pos = get_o_pos(obs, o1)
         # o1_pos[0] += ROT.rake_handle_x_offset   # use the tip of the hook to find the distance to the cube
-        for o2 in range(n_objects):
+        for o2 in range(1, n_objects):
             if o1 == o2:
                 continue
             pred_name = 'o{}_at_o{}'.format(o1, o2)
@@ -115,7 +115,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
             o2_pos = get_o_pos(obs, o2)
             # o1_tgt_pos = o2_pos + [0, 0, ROT.on_z_offset]
             distance = np.linalg.norm(o2_pos - o1_pos)
-            preds[pred_name] = distance < 2.5*ROT.distance_threshold
+            preds[pred_name] = distance < 3.*ROT.distance_threshold
 
     for o in range(n_objects):
         pred_name = 'o{}_at_target'.format(o)
@@ -181,8 +181,9 @@ def gen_actions(n_objects): # TODO: check
     move_o_to_target_by_o_act_template = \
         "(:action move__o{}_to_target_by__o{} \n\t" \
         ":parameters () \n\t" \
-        ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t" \
+        ":precondition (and (o{}_at_o{}) ) \n\t" \
         ":effect (and (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
+      # ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t"
     move_o_to_target_act_template = \
         "(:action move__o{}_to_target \n\t" \
         ":parameters () \n\t" \
@@ -197,7 +198,8 @@ def gen_actions(n_objects): # TODO: check
         "(:action move__o{}_at__o{}  \n\t" \
         ":parameters () \n\t" \
         ":precondition (and (gripper_at_o{}) ) \n\t" \
-        ":effect (and (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
+        ":effect (and (o{}_at_o{}) )\n)\n\n"
+      # ":effect (and (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
 
     not_o2_at_o_str = ''
     not_elsewhere_str = ''
@@ -245,12 +247,14 @@ def gen_actions(n_objects): # TODO: check
     if n_objects>=2:
         # Move the hook to the cube (object1) action.
         # This is to place the first object on the ground on which other objects will be stacked.
-        move_hook_to_o_act = move_o1_at_o2_act_template.format(0, 1, 0, 0, 1, 0)
+        # move_hook_to_o_act = move_o1_at_o2_act_template.format(0, 1, 0, 0, 1, 0)
+        move_hook_to_o_act = move_o1_at_o2_act_template.format(0, 1, 0, 0, 1)
         actions.append(move_hook_to_o_act)
 
         # Move o to target action.
         # This is to place the cube on the ground at the target position
-        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 1, 0)
+        # move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 1, 0)
+        move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 1, 0, 1, 0)
         actions.append(move_o_to_target_act)
 
         move_hook_to_target_act = move_o_to_target_act_template.format(0, 0, 0, 0)
