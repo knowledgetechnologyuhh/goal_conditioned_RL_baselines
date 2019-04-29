@@ -39,6 +39,7 @@ class HookEnv(robot_env.RobotEnv):
             target_in_the_air, target_offset, obj_range, target_range,
             distance_threshold, initial_qpos, reward_type,
             gripper_goal, n_objects, table_height, obj_height, min_tower_height=None, max_tower_height=None,
+            easy=1
     ):
         """Initializes a new Fetch environment.
 
@@ -92,6 +93,8 @@ class HookEnv(robot_env.RobotEnv):
         self.gripper_has_target = (gripper_goal != 'gripper_none')
 
         self._viewers = {}
+
+        self.easy = easy
 
         super(HookEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -343,10 +346,11 @@ class HookEnv(robot_env.RobotEnv):
                 for o_other in range(o):
                     other_xpos = self.sim.data.get_joint_qpos('object{}:joint'.format(o_other))[:2]
                     # Reduce the complexity of the environment by generating the cube very close to the hook
-                    if np.random.random() >= 0.5:
-                        object_xpos[1] = other_xpos[1] + 0.02
-                    else:
-                        object_xpos[1] = other_xpos[1] - 0.02
+                    if self.easy:
+                        if np.random.random() >= 0.5:
+                            object_xpos[1] = other_xpos[1] + 0.02
+                        else:
+                            object_xpos[1] = other_xpos[1] - 0.02
                     dist = np.linalg.norm(object_xpos - other_xpos)
                     dist_to_nearest = min(dist, dist_to_nearest)
                 if dist_to_nearest < 0.01:
@@ -385,14 +389,16 @@ class HookEnv(robot_env.RobotEnv):
                     target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=3)
-                    if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] - self.np_random.uniform(0,
-                                                                                         self.target_range,
-                                                                                         size=1)
+                    if self.easy and self.n_objects >= 2:
+                        oname = 1
                     else:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object0:joint')[1] + self.np_random.uniform(0,
-                                                                                         self.target_range,
-                                                                                         size=1)
+                        oname = 0
+                    if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
+                        target_goal[1] = self.sim.data.get_joint_qpos('object{}:joint'.format(oname))[1] \
+                                         - self.np_random.uniform(0, self.target_range, size=1)
+                    else:
+                        target_goal[1] = self.sim.data.get_joint_qpos('object{}:joint'.format(oname))[1] \
+                                         + self.np_random.uniform(0, self.target_range, size=1)
 
                     target_goal += self.target_offset
                     rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
