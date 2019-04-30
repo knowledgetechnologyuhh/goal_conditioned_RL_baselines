@@ -355,10 +355,17 @@ def action2subgoal(action, obs, goal, n_objects):
             if action == 'move__o{}_at__o{}'.format(o_idx, o2_idx):
                 o_goal = o2_pos.copy()
                 o_goal[0] += ROT.at_x_offset
-                if o_pos[1] >= o2_pos[1]: # the hook is on the left side of the cube
-                    o_goal[1] += ROT.at_y_offset
-                else:
+                # if o_pos[1] >= o2_pos[1]: # the hook is on the left side of the cube
+                #     o_goal[1] += ROT.at_y_offset
+                # else:
+                #     o_goal[1] -= ROT.at_y_offset
+
+                # if the final_goal is on the left side of the cube, the hook has to be on the right side of the cube
+                if final_goal[(o2_idx+1)*3+1] >= o2_pos[1]:
                     o_goal[1] -= ROT.at_y_offset
+                else:
+                    o_goal[1] += ROT.at_y_offset
+
                 # o_goal[2] += (ROT.on_z_offset * 1.0)
                 start_idx = (o_idx + 1) * 3
                 end_idx = start_idx + 3
