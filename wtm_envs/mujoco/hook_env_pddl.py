@@ -134,32 +134,7 @@ def obs_to_preds_single(obs, goal, n_objects):  # TODO: check
     preds = {p: int(v) for p,v in preds.items()}
     one_hot = np.array([preds[k] for k in sorted(preds.keys())])
 
-    # goal_preds = []
-    # if gripper_in_goal:
-    #     start_idx = 3
-    # else:
-    #     start_idx = 0
-
-    # goal_o_order = {}
-    # goal_pos = {}
-    # for o_idx in range(n_objects):
-    #     o_z = get_o_goal_pos(goal, o_idx)[2]
-    #     z_offset = 0.5
-    #     z_delta = 0.05
-    #     o_z -= (z_offset + z_delta/2)
-    #     n_order = o_z / z_delta
-    #     n_order = int(round(n_order))
-    #     # n_order = int(n_order)
-    #     goal_o_order[o_idx] = n_order
-    #     goal_pos[n_order] = o_idx
-    # print('goal_pos: {}'.format(goal_pos))
     goal_preds = []
-    # for pos, o_idx in goal_pos.items():
-    #     if pos == 0:
-    #         goal_pred_str = "o{}_at_target".format(o_idx)
-    #     else:
-    #         goal_pred_str = "o{}_at_o{}".format(o_idx, goal_pos[pos - 1])
-    #     goal_preds.append(goal_pred_str)
     for o in range(n_objects):
         goal_pred_str = "o{}_at_target".format(o)
         goal_preds.append(goal_pred_str)
@@ -219,29 +194,6 @@ def gen_actions(n_objects): # TODO: check
             if o_other != 0:
                 not_elsewhere_str += '(not (gripper_at_o{}))'.format(o_other)
 
-        # # Move gripper to object action
-        # move_gripper_to_o_act = move_gripper_to_o_act_template.format(o, o, not_elsewhere_str, not_o2_at_o_str)
-        # actions.append(move_gripper_to_o_act)
-        #
-        # # Move o to target action.
-        # # This is to place the first object on the ground on which other objects will be stacked.
-        # move_o_to_target_act = move_o_to_target_template.format(o, o, o)
-        # actions.append(move_o_to_target_act)
-        #
-        # # Move o1 on o2 action. This is to stack objects on other objects.
-        # for o2 in range(n_objects):
-        #     # if o-1 != o2:
-        #     #     continue # To restrict the action space, only allow to put an object with number o onto o-1
-        #     #     (e.g. object 1 on object 0, but not object 0 on object 2.)
-        #     not_o3_on_o2_str = ''
-        #     for o3 in range(n_objects):
-        #         if o3 == o2:
-        #             continue
-        #         if o3 == o:
-        #             continue
-        #         not_o3_on_o2_str += ' (not (o{}_on_o{}))'.format(o3, o2)
-        #     move_o1_on_o2_act = move_o1_on_o2_act_template.format(o, o2, o, o, o2, not_o3_on_o2_str)
-        #     actions.append(move_o1_on_o2_act)
     # Move gripper to hook (object0) action --> TODO: check where can grasp the hook
     move_gripper_to_hook_act = move_gripper_to_o_act_template.format(0, 0, not_elsewhere_str, not_o2_at_o_str)
     actions.append(move_gripper_to_hook_act)
@@ -341,31 +293,6 @@ def plans2subgoals(plans, obs, goals, n_objects, actions_to_skip=[]):   # TODO: 
 def action2subgoal(action, obs, goal, n_objects):
     ROT = RakeObjectThresholds
 
-    # def get_o_pos(obs, o_idx):
-    #     start_idx = (o_idx + 1) * 3
-    #     end_idx = start_idx + 3
-    #     o_pos = obs[start_idx:end_idx]
-    #     return o_pos
-    #
-    # def get_o_rot(obs, o_idx):
-    #     start_idx = (o_idx + 6) * 3 - 1 # gripper_state has 2 in size
-    #     end_idx = start_idx + 3
-    #     o_rot = obs[start_idx:end_idx]
-    #     return o_rot
-    #
-    # def compute_handle_pos(tip_pos, tip_rot):
-    #     rot_mat = rotations.euler2mat(tip_rot)
-    #     tran_mat = np.zeros((4, 4))
-    #     tran_mat[3, 3] = 1.
-    #     tran_mat[:3, 3] = tip_pos
-    #     tran_mat[:3, :3] = rot_mat
-    #     handle = np.zeros((4,))
-    #     # handle[:3] = subgoal[:3]
-    #     handle[0] = -ROT.rake_handle_x_offset
-    #     # handle[3] = 1.
-    #     handle_new = tran_mat * handle
-    #     return handle_new[:3, 0]
-
     final_goal = copy.deepcopy(goal)
     # subgoal = copy.deepcopy(goal)
     no_change_subgoal = copy.deepcopy(goal)
@@ -385,21 +312,6 @@ def action2subgoal(action, obs, goal, n_objects):
             # First three elements of goal represent target gripper pos.
             subgoal[:3] = o_pos.copy()  # Gripper should be above the handle of the hook
             if o_idx == 0:  # if the hook, assuming that the hook position returned from the environment is at the tip
-                # subgoal[0] -= ROT.rake_handle_x_offset  # the hook is 0.38 m long in x-axis
-                # theta = o_rot[2]
-                # subgoal[0] -= ROT.rake_handle_x_offset * np.cos(theta)  # the hook is 0.38 m long in x-axis
-                # subgoal[1] += ROT.rake_handle_x_offset * np.sin(theta)  # the hook is 0.38 m long in x-axis
-                # rot_mat = rotations.euler2mat(o_rot)
-                # tran_mat = np.zeros((4, 4))
-                # tran_mat[3, 3] = 1.
-                # tran_mat[:3, 3] = o_pos
-                # tran_mat[:3, :3] = rot_mat
-                # handle = np.zeros((4,))
-                # # handle[:3] = subgoal[:3]
-                # handle[0] = -ROT.rake_handle_x_offset
-                # # handle[3] = 1.
-                # handle_new = tran_mat*handle
-                # subgoal[:3] += handle_new[:3, 0]
                 handle_offset = compute_handle_pos(o_pos, o_rot)
                 subgoal[:3] += handle_offset
             subgoal[2] += np.mean(ROT.grasp_z_offset)
@@ -441,10 +353,6 @@ def action2subgoal(action, obs, goal, n_objects):
         for o2_idx in range(n_objects):
             o2_pos = get_o_pos(obs, o2_idx)
             if action == 'move__o{}_at__o{}'.format(o_idx, o2_idx):
-                # First three elements of goal represent target gripper pos.
-                # subgoal[:3] = o2_pos.copy()  # Gripper should be above (at) object
-                # subgoal[2] += np.mean(BTT.grasp_z_offset)
-                # Hook end-effector should be near the cube (o2)
                 o_goal = o2_pos.copy()
                 o_goal[0] += ROT.at_x_offset
                 if o_pos[1] >= o2_pos[1]: # the hook is on the left side of the cube
