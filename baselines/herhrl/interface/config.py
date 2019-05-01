@@ -229,6 +229,7 @@ def configure_policy(dims, params):
             subgoal_offset = np.zeros(input_dims['u'])
         else:
             input_dims = dims.copy()
+            # TODO: start preds2subgoals by adapting subgoal dimensions right here!
             input_dims['u'] = input_dims['g']
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
