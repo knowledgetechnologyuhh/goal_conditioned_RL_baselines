@@ -5,6 +5,7 @@ from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
 from wtm_envs.mujoco.tower_env_pddl import *
+from wtm_envs.mujoco.tower_env_pddl import BuildTowerPDDL
 import mujoco_py
 
 
@@ -98,7 +99,7 @@ class TowerEnv(robot_env.RobotEnv):
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
-        pass
+        self.pddl = BuildTowerPDDL(n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
 
     # GoalEnv methods
     # ----------------------------
@@ -154,6 +155,27 @@ class TowerEnv(robot_env.RobotEnv):
             return goals[0]
         else:
             return goals
+
+    def _goal2obs(self, goal):
+        if len(goal.shape) == 1:
+            goal_arr = np.array([goal])
+        else:
+            goal_arr = goal
+        assert len(goal_arr.shape) == 2
+        obs = []
+        o_dims = self.observation_space.spaces['observation'].shape[0]
+        o = np.zeros(o_dims, np.float32)
+        for g in goal_arr:
+            if self.gripper_goal != 'gripper_none':
+                o[:self.goal_size] = g
+            else:
+                o[3:self.goal_size + 3] = g
+            obs.append(o.copy())
+        obs = np.array(obs)
+        if len(goal.shape) == 1:
+            return obs[0]
+        else:
+            return obs
 
     def _get_obs(self, grip_pos=None, grip_velp=None):
         # If the grip position and grip velp are provided externally, the external values will be used.
@@ -454,25 +476,64 @@ class TowerEnv(robot_env.RobotEnv):
             g = self.goal
         else:
             g = self.final_goal
-        preds, one_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
-        return preds, one_hots, goal_preds
+        obs_preds, obs_n_hots = self.pddl.obs2preds_single(obs, g)
+        padded_goal_obs = self._goal2obs(g)
+        goal_preds, goal_n_hots = self.pddl.obs2preds_single(padded_goal_obs, g)
+        preds, n_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
+        return preds, n_hots, goal_preds
 
-    def get_plan(self):
+    def get_goal(self):
+        goal_preds = self.pddl.goal2preds(g, self.n_objects)
+        return goal_preds
+
+    def get_plan(self, return_states=False):
         obs = self._get_obs()
         if self.final_goal == []:
             g = self.goal
         else:
             g = self.final_goal
-        preds, n_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
-        cache_key = str(n_hots) + str(goal_preds)
+        obs_preds, obs_n_hots = self.pddl.obs2preds_single(obs['observation'], g)
+        padded_goal_obs = self._goal2obs(g)
+        goal_preds, goal_n_hots = self.pddl.obs2preds_single(padded_goal_obs, g)
+        preds, n_hots, goals = obs_to_preds_single(obs['observation'], g, self.n_objects)
+        if str(sorted(obs_preds)) != str(sorted(preds)):
+            print(obs_preds)
+            print(preds)
+            print("ERROR!")
+        if str(obs_n_hots) != str(n_hots):
+            print(obs_n_hots)
+            print(n_hots)
+            print("ERROR!")
+        goal_preds_list = [g for g,v in goal_preds.items() if v == 1]
+        if str(sorted(goal_preds_list)) != str(sorted(goals)):
+            print(goal_preds_list)
+            print(goals)
+            print("ERROR!")
+
+        cache_key = str(obs_n_hots) + str(goal_n_hots)
         if cache_key in self.plan_cache.keys():
-            plan = self.plan_cache[cache_key]
+            plan, world_states = self.plan_cache[cache_key]
         else:
-            plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
-            self.plan_cache[cache_key] = plan
+            old_plan = gen_plan_single(obs_preds, self.gripper_has_target, goal_preds)[0]
+            plan, world_states = self.pddl.gen_plan_single(obs_preds, self.gripper_has_target, goal_preds)
+            if str(old_plan) != str(plan):
+                print(old_plan)
+                print(plan)
+                print("ERROR!")
+
+            self.plan_cache[cache_key] = (plan, world_states)
             if len(self.plan_cache) % 50 == 0:
                 print("Number of cached plans: {}".format(len(self.plan_cache)))
-        return plan
+        if return_states:
+            return plan, world_states
+        else:
+            return plan
+
+    def preds2subgoal(self, preds):
+        obs = self._get_obs()['observation']
+        subgoal_obs = self.pddl.preds2subgoal_obs(preds, obs, self.final_goal)
+        subg = self._obs2goal(subgoal_obs)
+        return subg
 
     def action2subgoal(self, action):
         obs = self._get_obs()['observation']

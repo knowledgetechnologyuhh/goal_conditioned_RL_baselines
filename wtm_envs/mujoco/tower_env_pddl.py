@@ -11,6 +11,188 @@ class BuildTowerThresholds:
     grasp_z_offset = 0.02
     on_z_offset = 0.05
 
+class BuildTowerPDDL:
+    grip_open_threshold = [0.038, 1.0]
+    grip_closed_threshold = [0.0, 0.025]
+    distance_threshold = 0.025
+    grasp_z_offset = 0.02
+    on_z_offset = 0.05
+    table_height = 0.525
+
+    def __init__(self, n_objects, gripper_has_target):
+        self.n_objects = n_objects
+        self.gripper_has_target = gripper_has_target
+        self._gen_pred_functs()
+
+    def _gen_pred_functs(self):
+        self.pred2subg_functs = {}
+        self.obs2pred_functs = {}
+
+        def make_gripper_at_o_functs(o_idx):
+
+            def _pred2subg_function(obs, goal):
+                o_pos = self.get_o_pos(obs, o_idx)
+                gripper_tgt_pos = o_pos.copy()
+                gripper_tgt_pos[2] += self.grasp_z_offset
+                subg = [0] + list(gripper_tgt_pos)
+                return subg
+
+            def _obs2pred_function(obs, goal):
+                gripper_tgt_pos = _pred2subg_function(obs, goal)[1:]
+                gripper_pos = obs[0:3]
+                distance = np.linalg.norm(gripper_pos - gripper_tgt_pos)
+                is_true = distance < self.distance_threshold
+                return is_true
+
+            return _pred2subg_function, _obs2pred_function
+
+        for o in range(self.n_objects):
+            pred_name = 'gripper_at_o{}'.format(o)
+            self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_gripper_at_o_functs(o)
+
+        def make_o_on_o_functs(o1_idx, o2_idx):
+            def _pred2subg_function(obs, goal):
+                o2_pos = self.get_o_pos(obs, o2_idx)
+                o1_tgt_pos = o2_pos + [0, 0, self.on_z_offset]
+                subg = [o1_idx + 1] + list(o1_tgt_pos)
+                return subg
+
+            def _obs2pred_function(obs, goal):
+                tgt_pos = _pred2subg_function(obs, goal)[1:]
+                o_pos = self.get_o_pos(obs, o1_idx)
+                distance = np.linalg.norm(o_pos - tgt_pos)
+                is_true = distance < self.distance_threshold
+                return is_true
+
+            return _pred2subg_function, _obs2pred_function
+
+        for o1 in range(self.n_objects):
+            for o2 in range(self.n_objects):
+                if o1 == o2:
+                    continue
+                pred_name = 'o{}_on_o{}'.format(o1, o2)
+                self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_o_on_o_functs(o1, o2)
+
+        def make_gripper_tgt_funct():
+            def _pred2subg_function(obs, goal):
+                gripper_tgt_pos = goal[0:3]
+                subg = [0] + list(gripper_tgt_pos)
+                return subg
+
+            def _obs2pred_function(obs, goal):
+                tgt_pos = _pred2subg_function(obs, goal)[1:]
+                gripper_pos = obs[0:3]
+                distance = np.linalg.norm(gripper_pos - tgt_pos)
+                is_true = distance < self.distance_threshold
+                return is_true
+
+            return _pred2subg_function, _obs2pred_function
+
+        if self.gripper_has_target:
+            pred_name = 'gripper_at_target'
+            self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_gripper_tgt_funct()
+
+
+        def make_o_at_tgt_functs(o_idx):
+
+            def _pred2subg_function(obs, goal):
+                g_pos = self.get_o_goal_pos(goal, o_idx)
+                # object_at_target is only true if laying on table.
+                g_pos[2] = self.table_height
+                subg = [o_idx+1] + list(g_pos)
+                return subg
+
+            def _obs2pred_function(obs, goal):
+                tgt_pos = _pred2subg_function(obs, goal)[1:]
+                o_pos = self.get_o_pos(obs, o_idx)
+                distance = np.linalg.norm(o_pos - tgt_pos)
+                is_true = distance < self.distance_threshold
+                return is_true
+
+            return _pred2subg_function, _obs2pred_function
+
+        for o in range(self.n_objects):
+            pred_name = 'o{}_at_target'.format(o)
+            self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_o_at_tgt_functs(o)
+
+
+    def obs2preds_single(self, obs, goal):
+        preds = {}
+        for p, obs2pred_func in self.obs2pred_functs.items():
+            preds[p] = obs2pred_func(obs, goal.copy())
+        preds = {p: int(v) for p, v in preds.items()}
+        one_hot = np.array([preds[k] for k in sorted(preds.keys())])
+        return preds, one_hot
+
+
+
+    def get_o_pos(self, obs, o_idx):
+        start_idx = (o_idx + 1) * 3
+        end_idx = start_idx + 3
+        o_pos = obs[start_idx:end_idx]
+        return o_pos.copy()
+
+
+    def get_o_goal_pos(self, goal, o_idx):
+        start_idx = (o_idx + 1) * 3
+        if self.gripper_has_target is False:
+            start_idx -= 3
+        end_idx = start_idx + 3
+        g_pos = goal[start_idx:end_idx]
+        return g_pos
+
+    def gen_plan_single(self, obs_preds, gripper_has_target, goal_preds):
+
+        domain, problem = gen_pddl_domain_problem(obs_preds, goal_preds, gripper_has_target=gripper_has_target)
+
+        planner = Propositional_Planner()
+        plan_start = time.time()
+        plan, state_history = planner.solve(domain, problem, return_states=True)
+        duration = time.time() - plan_start
+        if duration > 10.0:
+            print("Plan generation took {:.2f} sec.".format(time.time() - plan_start))
+
+        plan_acts = []
+        # world_states = [state_history[0]]
+        goal_achieved = False
+        if plan is None:
+            print('No plan was found')
+            with open('no_plan_dom.pddl', 'w') as f:
+                f.write(domain)
+            with open('no_plan_prob.pddl', 'w') as f:
+                f.write(problem)
+            goal_achieved = False
+        elif plan == []:
+            goal_achieved = True
+            # print("Goal already achieved")
+        else:
+            # print('plan:')
+            for i, act in enumerate(plan):
+                plan_acts.append(act.name)
+
+        return plan_acts, state_history
+
+    def preds2subgoal_obs(self, preds, obs, goal):
+        subgoal_obs = obs.copy()
+        true_preds = [p for p,v in preds.items() if v == 1]
+        iter_ctr = 0
+        while True:
+            new_subgoal_obs = subgoal_obs.copy()
+            for p in true_preds:
+                pred_subgoal = self.pred2subg_functs[p](new_subgoal_obs, goal)
+                obs_start_idx = pred_subgoal[0] * 3
+                new_subgoal_obs[obs_start_idx:obs_start_idx + 3] = pred_subgoal[1:]
+
+            if str(new_subgoal_obs) == str(subgoal_obs):
+                break
+            iter_ctr += 1
+            if iter_ctr > len(true_preds):
+                print("TODO: This should not happen. Check why this does not converge...")
+                break
+            subgoal_obs = new_subgoal_obs
+
+        return subgoal_obs
+
 
 def obs_to_preds(obs, goal, n_objects):
     preds, n_hots = [], []
@@ -26,7 +208,7 @@ def obs_to_preds_single(obs, goal, n_objects):
     preds = {}
     gripper_pos = obs[0:3]
     gripper_state = np.sum(obs[3 + 6 * n_objects: 3 + 6 * n_objects + 1])
-    gripper_in_goal = (len(goal) / 3) > n_objects
+    gripper_has_target = (len(goal) / 3) > n_objects
 
     def get_o_pos(obs, o_idx):
         start_idx = (o_idx + 1) * 3
@@ -36,7 +218,7 @@ def obs_to_preds_single(obs, goal, n_objects):
 
     def get_o_goal_pos(goal, o_idx):
         start_idx = (o_idx + 1) * 3
-        if gripper_in_goal is False:
+        if gripper_has_target is False:
             start_idx -= 3
         end_idx = start_idx + 3
         g_pos = goal[start_idx:end_idx]
@@ -70,7 +252,7 @@ def obs_to_preds_single(obs, goal, n_objects):
         distance = np.linalg.norm(g_pos - o_pos, axis=-1)
         preds[pred_name] = distance < BTT.distance_threshold
 
-    if gripper_in_goal:
+    if gripper_has_target:
         distance = np.linalg.norm(gripper_pos - goal[:3], axis=-1)
         preds['gripper_at_target'] = distance < BTT.distance_threshold
     else:
@@ -80,7 +262,7 @@ def obs_to_preds_single(obs, goal, n_objects):
     one_hot = np.array([preds[k] for k in sorted(preds.keys())])
 
     goal_preds = []
-    if gripper_in_goal:
+    if gripper_has_target:
         start_idx = 3
     else:
         start_idx = 0
@@ -106,10 +288,11 @@ def obs_to_preds_single(obs, goal, n_objects):
         else:
             goal_pred_str = "o{}_on_o{}".format(o_idx, goal_pos[pos - 1])
         goal_preds.append(goal_pred_str)
-    if gripper_in_goal:
+    if gripper_has_target:
         goal_preds.append('gripper_at_target')
 
     return preds, one_hot, goal_preds
+
 
 def gen_actions(n_objects):
     actions = []
@@ -164,16 +347,16 @@ def gen_actions(n_objects):
     actions.append(move_gripper_to_target)
     return actions
 
-def gen_pddl_domain_problem(preds, goal_preds, gripper_has_target=True):
+def gen_pddl_domain_problem(obs_preds, goal_preds, gripper_has_target=True):
 
     head = "(define (domain tower) (:requirements :strips) \n{})\n"
 
     predicates = "(:predicates \n"
-    for p in sorted(preds.keys()):
+    for p in sorted(obs_preds.keys()):
         predicates += "\t{}\n".format(p)
     predicates += ")\n"
 
-    n_objects = len([p for p in preds if p.find("gripper_at_o") != -1])
+    n_objects = len([p for p in obs_preds if p.find("gripper_at_o") != -1])
 
     actions = gen_actions(n_objects)
     body = predicates + "".join(actions)
@@ -184,15 +367,19 @@ def gen_pddl_domain_problem(preds, goal_preds, gripper_has_target=True):
 
     # Define initial state
     init_str = "(:init\n"
-    for pred in preds:
-        pred_val = pred if preds[pred] == 1 else "not ({})".format(pred)
-        init_str+= "\t ({})\n".format(pred_val)
+    # for pred in obs_preds:
+    #     pred_val = pred if obs_preds[pred] == 1 else "not ({})".format(pred)
+    #     init_str+= "\t ({})\n".format(pred_val)
+    for pred in obs_preds:
+        if obs_preds[pred] == 1:
+        # pred_val = pred if obs_preds[pred] == 1 else "not ({})".format(pred)
+            init_str+= "\t ({})\n".format(pred)
     init_str += ")\n"
 
     # Define goal
     goal_str = "(:goal (and \n"
-    # o_order = []
-    for g in goal_preds:
+    true_goal_preds_list = [g for g,v in goal_preds.items() if v == 1]
+    for g in true_goal_preds_list:
         goal_str += '\t ({})\n'.format(g)
     goal_str += '))\n\n'
 
@@ -279,11 +466,11 @@ def plan2subgoal(plan, obs, goal, n_objects, actions_to_skip = []):
         break  # Stop after first useful action has been found.
     return subgoal
 
-def gen_plan_single(preds, gripper_has_target, goal_preds, ignore_actions=[]):
+def gen_plan_single(obs_preds, gripper_has_target, goal_preds, ignore_actions=[]):
 
     # hl_obs = [preds[k] for k in sorted(preds.keys())]
 
-    domain, problem = gen_pddl_domain_problem(preds, goal_preds, gripper_has_target=gripper_has_target)
+    domain, problem = gen_pddl_domain_problem(obs_preds, goal_preds, gripper_has_target=gripper_has_target)
 
     planner = Propositional_Planner()
     plan_start = time.time()
