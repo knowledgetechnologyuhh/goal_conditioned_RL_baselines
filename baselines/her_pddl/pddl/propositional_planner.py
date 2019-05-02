@@ -7,7 +7,7 @@ class Propositional_Planner:
     # Solve
     #-----------------------------------------------
 
-    def solve(self, domain, problem):
+    def solve(self, domain, problem, return_states=False):
         # Parser
         parser = PDDL_Parser()
         parser.parse_domain(domain)
@@ -15,11 +15,15 @@ class Propositional_Planner:
         # Parsed data
         actions = parser.actions
         state = parser.state
+        initial_state = state.copy()
         goal_pos = parser.positive_goals
         goal_not = parser.negative_goals
         # Do nothing
         if self.applicable(state, goal_pos, goal_not):
-            return []
+            if return_states:
+                return [], [initial_state]
+            else:
+                return []
         # Search
         visited = [state]
         fringe = [state, None]
@@ -32,14 +36,37 @@ class Propositional_Planner:
                     if new_state not in visited:
                         if self.applicable(new_state, goal_pos, goal_not):
                             full_plan = [act]
+                            # full_state_history = [initial_state, new_state]
                             while plan:
                                 act, plan = plan
                                 full_plan.insert(0, act)
-                            return full_plan
+                                # full_state_history.insert(0, new_state)
+                            if return_states:
+                                full_state_history = [initial_state]
+                                this_state = initial_state
+                                for plan_act in full_plan:
+                                    this_state = self.apply(this_state, plan_act.add_effects, plan_act.del_effects)
+                                    full_state_history.append(this_state)
+                                full_state_dict_history = []
+                                for full_state in full_state_history:
+                                    full_state_dict = {}
+                                    for pred_name in parser.predicates:
+                                        if [pred_name] in full_state:
+                                            full_state_dict[pred_name] = 1
+                                        else:
+                                            full_state_dict[pred_name] = 0
+
+                                    full_state_dict_history.append(full_state_dict)
+                                return full_plan, full_state_dict_history
+                            else:
+                                return full_plan
                         visited.append(new_state)
                         fringe.append(new_state)
                         fringe.append((act, plan))
-        return None
+        if return_states:
+            return None, None
+        else:
+            return None
 
     #-----------------------------------------------
     # Applicable
