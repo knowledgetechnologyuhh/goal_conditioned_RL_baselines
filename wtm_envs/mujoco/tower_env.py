@@ -87,26 +87,26 @@ class TowerEnv(WTMEnv,PDDLTowerEnv):
         else:
             return goals
 
-    def _goal2obs(self, goal):
-        if len(goal.shape) == 1:
-            goal_arr = np.array([goal])
-        else:
-            goal_arr = goal
-        assert len(goal_arr.shape) == 2
-        obs = []
-        o_dims = self.observation_space.spaces['observation'].shape[0]
-        o = np.zeros(o_dims, np.float32)
-        for g in goal_arr:
-            if self.gripper_goal != 'gripper_none':
-                o[:self.goal_size] = g
-            else:
-                o[3:self.goal_size + 3] = g
-            obs.append(o.copy())
-        obs = np.array(obs)
-        if len(goal.shape) == 1:
-            return obs[0]
-        else:
-            return obs
+    # def _goal2obs(self, goal):
+    #     if len(goal.shape) == 1:
+    #         goal_arr = np.array([goal])
+    #     else:
+    #         goal_arr = goal
+    #     assert len(goal_arr.shape) == 2
+    #     obs = []
+    #     o_dims = self.observation_space.spaces['observation'].shape[0]
+    #     o = np.zeros(o_dims, np.float32)
+    #     for g in goal_arr:
+    #         if self.gripper_goal != 'gripper_none':
+    #             o[:self.goal_size] = g
+    #         else:
+    #             o[3:self.goal_size + 3] = g
+    #         obs.append(o.copy())
+    #     obs = np.array(obs)
+    #     if len(goal.shape) == 1:
+    #         return obs[0]
+    #     else:
+    #         return obs
 
     def _get_obs(self, grip_pos=None, grip_velp=None):
         # If the grip position and grip velp are provided externally, the external values will be used.

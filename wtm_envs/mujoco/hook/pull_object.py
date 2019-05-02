@@ -1,6 +1,6 @@
 from gym import utils
 from wtm_envs.mujoco import hook_env
-from wtm_envs.mujoco.hook_env_pddl import RakeObjectThresholds
+from wtm_envs.mujoco.hook_env_pddl import PDDLHookEnv
 
 class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
@@ -18,9 +18,9 @@ class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
             obj_range=0.15,
             target_range=0.15,    # 0.15 target_range is used to define the target position wrt current object position
             # distance_threshold=0.02,
-            distance_threshold=RakeObjectThresholds.distance_threshold,  #0.02
+            distance_threshold=PDDLHookEnv.distance_threshold,  #0.02
             initial_qpos=initial_qpos, reward_type=reward_type,
-            gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
+            gripper_goal=gripper_goal, n_objects=n_objects, table_height=PDDLHookEnv.table_height, obj_height=PDDLHookEnv.obj_height,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height,
             easy=easy)
         utils.EzPickle.__init__(self)
