@@ -20,7 +20,10 @@ class Propositional_Planner:
         goal_not = parser.negative_goals
         # Do nothing
         if self.applicable(state, goal_pos, goal_not):
-            return []
+            if return_states:
+                return [], [initial_state]
+            else:
+                return []
         # Search
         visited = [state]
         fringe = [state, None]
@@ -60,7 +63,10 @@ class Propositional_Planner:
                         visited.append(new_state)
                         fringe.append(new_state)
                         fringe.append((act, plan))
-        return None
+        if return_states:
+            return None, None
+        else:
+            return None
 
     #-----------------------------------------------
     # Applicable

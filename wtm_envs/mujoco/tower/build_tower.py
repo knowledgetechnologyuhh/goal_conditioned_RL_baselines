@@ -22,6 +22,6 @@ class TowerBuildMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
             # distance_threshold=0.02,
             distance_threshold=PDDLTowerEnv.distance_threshold,
             initial_qpos=initial_qpos, reward_type=reward_type,
-            gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
+            gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=PDDLTowerEnv.obj_height,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height)
         utils.EzPickle.__init__(self)
