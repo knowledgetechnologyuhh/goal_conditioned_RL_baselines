@@ -74,7 +74,7 @@ class PDDLHookEnv(PDDLEnv):
             return _pred2subg_function, _obs2pred_function
 
         for o1 in range(self.n_objects):
-            for o2 in range(self.n_objects):
+            for o2 in range(1, self.n_objects):
                 if o1 == o2:
                     continue
                 pred_name = 'o{}_at_o{}'.format(o1, o2)
@@ -113,7 +113,8 @@ class PDDLHookEnv(PDDLEnv):
                 tgt_pos = _pred2subg_function(obs, goal)[1:]
                 o_pos = self.get_o_pos(obs, o_idx)
                 distance = np.linalg.norm(o_pos - tgt_pos)
-                is_true = distance < 1.5*self.distance_threshold
+                threshold = self.distance_threshold if o_idx == 0 else 1.5*self.distance_threshold
+                is_true = distance < threshold
                 return is_true
 
             return _pred2subg_function, _obs2pred_function
