@@ -190,9 +190,9 @@ def configure_policy(dims, params):
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
-    obs = env.env._get_obs()
-    obs_preds, _ = env.env.obs2preds_single(obs['observation'], obs['desired_goal'])
-    n_preds = len(obs_preds)
+    # obs = env.env._get_obs()
+    # obs_preds, _ = env.env.obs2preds_single(obs['observation'], obs['desired_goal'])
+    n_preds = len(env.env.preds)
     subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
     units_per_obs_len = 12
     n_obs = len(env.env._get_obs()['observation'])
