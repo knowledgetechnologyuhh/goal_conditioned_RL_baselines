@@ -30,6 +30,11 @@ class PDDLHookEnv(PDDLEnv):
             def _pred2subg_function(obs, goal):
                 o_pos = self.get_o_pos(obs, o_idx)
                 gripper_tgt_pos = o_pos.copy()
+                if o_idx == 0:  # if the hook, assuming that the hook position returned from the environment is at the tip
+                    # gripper_tgt_pos[0] -= ROT.rake_handle_x_offset  # the hook is 0.2 m long in x-axis
+                    o_rot = self.get_o_rot(obs, o_idx, self.n_objects)  # TODO: check n_objects
+                    handle_offset = self.compute_handle_pos(o_pos, o_rot)
+                    gripper_tgt_pos += handle_offset
                 gripper_tgt_pos[2] += self.grasp_z_offset
                 subg = [0] + list(gripper_tgt_pos)
                 return subg
@@ -47,10 +52,15 @@ class PDDLHookEnv(PDDLEnv):
             pred_name = 'gripper_at_o{}'.format(o)
             self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_gripper_at_o_functs(o)
 
-        def make_o_on_o_functs(o1_idx, o2_idx):
+        def make_o_at_o_functs(o1_idx, o2_idx):
             def _pred2subg_function(obs, goal):
                 o2_pos = self.get_o_pos(obs, o2_idx)
-                o1_tgt_pos = o2_pos + [0, 0, self.on_z_offset]
+                x_offset = self.at_x_offset
+                if goal[(o2_idx+1)*3+1] >= o2_pos[1]:
+                    y_offset = -self.at_y_offset
+                else:
+                    y_offset = +self.at_y_offset
+                o1_tgt_pos = o2_pos + [x_offset, y_offset, self.grasp_z_offset]
                 subg = [o1_idx + 1] + list(o1_tgt_pos)
                 return subg
 
@@ -58,7 +68,7 @@ class PDDLHookEnv(PDDLEnv):
                 tgt_pos = _pred2subg_function(obs, goal)[1:]
                 o_pos = self.get_o_pos(obs, o1_idx)
                 distance = np.linalg.norm(o_pos - tgt_pos)
-                is_true = distance < self.distance_threshold
+                is_true = distance < 4.*self.distance_threshold
                 return is_true
 
             return _pred2subg_function, _obs2pred_function
@@ -67,8 +77,8 @@ class PDDLHookEnv(PDDLEnv):
             for o2 in range(self.n_objects):
                 if o1 == o2:
                     continue
-                pred_name = 'o{}_on_o{}'.format(o1, o2)
-                self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_o_on_o_functs(o1, o2)
+                pred_name = 'o{}_at_o{}'.format(o1, o2)
+                self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_o_at_o_functs(o1, o2)
 
         def make_gripper_tgt_funct():
             def _pred2subg_function(obs, goal):
@@ -103,7 +113,7 @@ class PDDLHookEnv(PDDLEnv):
                 tgt_pos = _pred2subg_function(obs, goal)[1:]
                 o_pos = self.get_o_pos(obs, o_idx)
                 distance = np.linalg.norm(o_pos - tgt_pos)
-                is_true = distance < self.distance_threshold
+                is_true = distance < 1.5*self.distance_threshold
                 return is_true
 
             return _pred2subg_function, _obs2pred_function
@@ -117,6 +127,25 @@ class PDDLHookEnv(PDDLEnv):
         end_idx = start_idx + 3
         o_pos = obs[start_idx:end_idx]
         return o_pos.copy()
+
+    def get_o_rot(self, obs, o_idx, n_objects=2):
+        start_idx = (o_idx + 2 + 2 * n_objects) * 3 - 1  # gripper_state has 2 in size
+        end_idx = start_idx + 3
+        o_rot = obs[start_idx:end_idx]
+        return o_rot
+
+    def compute_handle_pos(self, tip_pos, tip_rot):
+        rot_mat = rotations.euler2mat(tip_rot)
+        tran_mat = np.zeros((4, 4))
+        tran_mat[3, 3] = 1.
+        tran_mat[:3, 3] = tip_pos
+        tran_mat[:3, :3] = rot_mat
+        handle = np.zeros((4,))
+        # handle[:3] = subgoal[:3]
+        handle[0] = -self.rake_handle_x_offset
+        # handle[3] = 1.
+        handle_new = tran_mat * handle
+        return handle_new[:3, 0]
 
     def get_o_goal_pos(self, goal, o_idx):
         start_idx = (o_idx + 1) * 3
