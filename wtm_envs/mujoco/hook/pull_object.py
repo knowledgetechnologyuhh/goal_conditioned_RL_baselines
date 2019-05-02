@@ -4,7 +4,8 @@ from wtm_envs.mujoco.hook_env_pddl import RakeObjectThresholds
 
 class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
-                 n_objects=2, min_tower_height=1, max_tower_height=3):
+                 n_objects=2, min_tower_height=1, max_tower_height=3,
+                 easy=1):
         initial_qpos = {
             'robot0:slide0': 0.0,
             'robot0:slide1': 0.0,
@@ -21,5 +22,5 @@ class HookMujocoEnv(hook_env.HookEnv, utils.EzPickle):
             initial_qpos=initial_qpos, reward_type=reward_type,
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height,
-            easy=0)
+            easy=easy)
         utils.EzPickle.__init__(self)
