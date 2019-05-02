@@ -68,8 +68,6 @@ class TowerEnv(WTMEnv,PDDLTowerEnv):
         WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos)
         PDDLTowerEnv.__init__(self, n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
 
-        # self.pddl = BuildTowerPDDL(n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
-
     def _obs2goal(self, obs):
         if len(obs.shape) == 1:
             obs_arr = np.array([obs])
