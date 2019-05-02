@@ -63,6 +63,8 @@ class WTMEnv(robot_env.RobotEnv):
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
+        assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
+
     # GoalEnv methods
     # ----------------------------
     def compute_reward(self, achieved_goal, goal, info):
@@ -80,6 +82,24 @@ class WTMEnv(robot_env.RobotEnv):
             self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
             self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
             self.sim.forward()
+
+    def _goal2obs(self, goal):
+        if len(goal.shape) == 1:
+            goal_arr = np.array([goal])
+        else:
+            goal_arr = goal
+        assert len(goal_arr.shape) == 2
+        obs = []
+        o_dims = self.observation_space.spaces['observation'].shape[0]
+        o = np.zeros(o_dims, np.float32)
+        for g in goal_arr:
+            o[:self.goal_size] = g
+            obs.append(o.copy())
+        obs = np.array(obs)
+        if len(goal.shape) == 1:
+            return obs[0]
+        else:
+            return obs
 
     def _set_action(self, action):
         assert action.shape == (4,)

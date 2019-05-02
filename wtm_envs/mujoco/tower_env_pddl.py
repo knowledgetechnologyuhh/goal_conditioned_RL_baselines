@@ -7,7 +7,7 @@ class PDDLTowerEnv(PDDLEnv):
     distance_threshold = 0.025
     grasp_z_offset = 0.02
     on_z_offset = 0.05
-    table_height = 0.525
+    table_height = 0.5
     obj_height = 0.05
 
     def __init__(self, n_objects, gripper_has_target):
@@ -89,7 +89,7 @@ class PDDLTowerEnv(PDDLEnv):
             def _pred2subg_function(obs, goal):
                 g_pos = self.get_o_goal_pos(goal, o_idx)
                 # object_at_target is only true if laying on table.
-                g_pos[2] = self.table_height + self.obj_height / 2
+                g_pos[2] = self.table_height + self.obj_height
                 subg = [o_idx+1] + list(g_pos)
                 return subg
 
