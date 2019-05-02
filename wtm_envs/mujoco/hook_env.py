@@ -8,6 +8,7 @@ from wtm_envs.mujoco.hook_env_pddl import *
 import mujoco_py
 
 
+
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
     norm_dist = np.linalg.norm(goal_a - goal_b, axis=-1)
