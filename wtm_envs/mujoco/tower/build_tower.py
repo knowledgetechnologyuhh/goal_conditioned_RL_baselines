@@ -1,6 +1,6 @@
 from gym import utils
 from wtm_envs.mujoco import tower_env
-from wtm_envs.mujoco.tower_env_pddl import BuildTowerThresholds as BTT
+from wtm_envs.mujoco.tower_env_pddl import PDDLTowerEnv
 
 class TowerBuildMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
@@ -20,7 +20,7 @@ class TowerBuildMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
             obj_range=0.15, target_range=0.15,
             # distance_threshold=0.02,
-            distance_threshold=BTT.distance_threshold,
+            distance_threshold=PDDLTowerEnv.distance_threshold,
             initial_qpos=initial_qpos, reward_type=reward_type,
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
             min_tower_height=min_tower_height, max_tower_height=max_tower_height)

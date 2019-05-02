@@ -5,35 +5,15 @@ from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
 from wtm_envs.mujoco.tower_env_pddl import *
-from wtm_envs.mujoco.tower_env_pddl import BuildTowerPDDL
+from wtm_envs.mujoco.tower_env_pddl import PDDLTowerEnv
+from wtm_envs.mujoco.wtm_env import goal_distance
+from wtm_envs.mujoco.wtm_env import WTMEnv
+
 import mujoco_py
 
 
-def goal_distance(goal_a, goal_b):
-    assert goal_a.shape == goal_b.shape
-    norm_dist = np.linalg.norm(goal_a - goal_b, axis=-1)
-    if goal_a.shape[-1] % 3 == 0:
-        n_xyz = int(goal_a.shape[-1] / 3)
-        max_dist = np.zeros(norm_dist.shape)
-        for n in range(n_xyz):
-            start = n * 3
-            end = start + 3
-            subg_a = goal_a[..., start:end]
-            subg_b = goal_b[..., start:end]
-            dist = np.asarray(np.linalg.norm(subg_a - subg_b, axis=-1))
-            if len(max_dist.shape) == 0:
-                max_dist = np.max([float(dist), float(max_dist)])
-            else:
-                max_dist = np.max([dist, max_dist], axis=0)
 
-        return max_dist
-    else:
-        return norm_dist
-
-
-
-
-class TowerEnv(robot_env.RobotEnv):
+class TowerEnv(WTMEnv,PDDLTowerEnv):
     """Superclass for all Tower environments.
     """
 
@@ -80,62 +60,15 @@ class TowerEnv(robot_env.RobotEnv):
         self.step_ctr = 0
 
         assert min_tower_height == 1 and max_tower_height == n_objects, "PDDL planner currently does not support multiple objects if they are not stacked to a tower. I.e.: max_tower_heigth must be equal to n_objects."
-
-        self.obs_limits = [None, None]
-        self.obs_noise_coefficient = 0.0
-
-        self.plan_cache = {}
-        self.goal_hierarchy = {}
-        self.goal = []
         self.goal_size = (n_objects * 3)
-        self.final_goal = []
         if self.gripper_goal != 'gripper_none':
             self.goal_size += 3
         self.gripper_has_target = (gripper_goal != 'gripper_none')
 
-        self._viewers = {}
+        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos)
+        PDDLTowerEnv.__init__(self, n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
 
-        super(TowerEnv, self).__init__(
-            model_path=model_path, n_substeps=n_substeps, n_actions=4,
-            initial_qpos=initial_qpos)
-
-        self.pddl = BuildTowerPDDL(n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
-
-    # GoalEnv methods
-    # ----------------------------
-    def compute_reward(self, achieved_goal, goal, info):
-        if self.reward_type == 'sparse':
-            success = self._is_success(achieved_goal, goal)
-            return (success - 1).astype(np.float32)
-        else:
-            d = goal_distance(achieved_goal, goal)
-            return -d
-
-    # RobotEnv methods
-    # ----------------------------
-    def _step_callback(self):
-        if self.block_gripper:
-            self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
-            self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
-            self.sim.forward()
-
-    def _set_action(self, action):
-        assert action.shape == (4,)
-        action = action.copy()  # ensure that we don't change the action outside of this scope
-        pos_ctrl, gripper_ctrl = action[:3], action[3]
-
-        pos_ctrl *= 0.05  # limit maximum change in position
-        rot_ctrl = [1., 0., 1., 0.]  # fixed rotation of the end effector, expressed as a quaternion
-        gripper_ctrl = np.array([gripper_ctrl, gripper_ctrl])
-        assert gripper_ctrl.shape == (2,)
-        if self.block_gripper:
-            gripper_ctrl = np.zeros_like(gripper_ctrl)
-        action = np.concatenate([pos_ctrl, rot_ctrl, gripper_ctrl])
-
-        # Apply action to simulation.
-        utils.ctrl_set_action(self.sim, action)
-        utils.mocap_set_action(self.sim, action)
-        self.step_ctr += 1
+        # self.pddl = BuildTowerPDDL(n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
 
     def _obs2goal(self, obs):
         if len(obs.shape) == 1:
@@ -220,78 +153,13 @@ class TowerEnv(robot_env.RobotEnv):
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
 
-        # obs = np.concatenate([
-        #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
-        # ])
-
         noisy_obs = self.add_noise(obs.copy(), self.obs_limits, self.obs_noise_coefficient)
         achieved_goal = self._obs2goal(noisy_obs)
 
         obs = {'observation': noisy_obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy(), 'non_noisy_obs': obs.copy()}
-        # obs['achieved_goal'] = self._obs2goal(obs['observation'])
 
         return obs
 
-
-    # TODO: Make sure that limits don't include outliers.
-    # def add_noise(self, vec, limits, noise_coeff):
-    #     if limits[1] is None or limits[0] is None:
-    #         limits[1] = vec
-    #         limits[0] = vec
-    #     # Limits may only be extended by 5%, just to ensure that no outliers boost the noise range.
-    #     valid_lim_idx = np.argwhere((vec > (limits[0] - (abs(limits[0]) * 0.05)))).squeeze()
-    #     invalid_lim_idx = list(set(np.arange(len(vec))) - set(valid_lim_idx))
-    #     invalid_lim_vals = vec[invalid_lim_idx]
-    #     non_zero_invalid_lim_val_idx = invalid_lim_idx[np.argwhere(abs(invalid_lim_vals) > 0.01)]
-    #     n_outliers = len(non_zero_invalid_lim_val_idx)
-    #     if n_outliers > 0 :
-    #         print("Neg. outliers: {}".format(vec[non_zero_invalid_lim_val_idx]))
-    #     # low_lim_ext_vec = np.where((vec > limits[0] + (abs(limits[0]) * 1.05)), limits[0], vec)
-    #     limits[0][valid_lim_idx] = np.minimum(vec[valid_lim_idx], limits[0][valid_lim_idx])
-    #
-    #     valid_lim = np.argwhere((vec + (abs(vec)* 1.05)) > limits[1])
-    #     up_lim_ext_vec = np.where((vec + (abs(vec)* 1.05)) > limits[0], limits[0], vec)
-    #     limits[1] = np.maximum(up_lim_ext_vec, limits[1])
-    #     range = limits[1] - limits[0]
-    #     coeff_range = noise_coeff * range
-    #     noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
-    #     vec = vec.copy() + noise
-    #     return vec
-    def add_noise(self, vec, limits, noise_coeff):
-        if limits[1] is None or limits[0] is None:
-            limits[1] = vec
-            limits[0] = vec
-        limits[0] = np.minimum(vec, limits[0])
-        limits[1] = np.maximum(vec, limits[1])
-        range = limits[1] - limits[0]
-        coeff_range = noise_coeff * range
-        noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
-        vec = vec.copy() + noise
-        return vec
-
-
-    def _get_viewer(self, mode='human'):
-        viewer = self._viewers.get(mode)
-        if viewer is None:
-            if mode == 'human':
-                viewer = mujoco_py.MjViewer(self.sim)
-            elif mode == 'rgb_array' or mode == 'depth_array':
-                viewer = mujoco_py.MjViewer(self.sim)
-                # The following should work but it does not. Therefore, replaced by human rendering (with MjViewer, the line above) now.
-                # viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
-            self._viewers[mode] = viewer
-            self._viewer_setup(mode=mode)
-
-        return self._viewers[mode]
-
-    def _viewer_setup(self,mode='human'):
-        body_id = self.sim.model.body_name2id('robot0:gripper_link')
-        lookat = self.sim.data.body_xpos[body_id]
-        for idx, value in enumerate(lookat):
-            self._viewers[mode].cam.lookat[idx] = value
-        self._viewers[mode].cam.distance = 2.5
-        self._viewers[mode].cam.azimuth = 132.
-        self._viewers[mode].cam.elevation = -14.
 
     def _render_callback(self):
         # Visualize target.
@@ -441,9 +309,7 @@ class TowerEnv(robot_env.RobotEnv):
         else:
             return []
 
-    def _is_success(self, achieved_goal, desired_goal):
-        d = goal_distance(achieved_goal, desired_goal)
-        return (d < self.distance_threshold).astype(np.float32)
+
 
     def _env_setup(self, initial_qpos):
         for name, value in initial_qpos.items():
@@ -468,78 +334,6 @@ class TowerEnv(robot_env.RobotEnv):
         if self.n_objects > 0:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
-    def get_preds(self, obs=None):
-        # We may want to refer to previous observations, because if we get the observation directly from the simulator they may differ from other relevant observatios.
-        if obs is None:
-            obs = self._get_obs()['observation']
-        if self.final_goal == []:
-            g = self.goal
-        else:
-            g = self.final_goal
-        obs_preds, obs_n_hots = self.pddl.obs2preds_single(obs, g)
-        padded_goal_obs = self._goal2obs(g)
-        goal_preds, goal_n_hots = self.pddl.obs2preds_single(padded_goal_obs, g)
-        preds, n_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
-        return preds, n_hots, goal_preds
-
-    def get_goal(self):
-        goal_preds = self.pddl.goal2preds(g, self.n_objects)
-        return goal_preds
-
-    def get_plan(self, return_states=False):
-        obs = self._get_obs()
-        if self.final_goal == []:
-            g = self.goal
-        else:
-            g = self.final_goal
-        obs_preds, obs_n_hots = self.pddl.obs2preds_single(obs['observation'], g)
-        padded_goal_obs = self._goal2obs(g)
-        goal_preds, goal_n_hots = self.pddl.obs2preds_single(padded_goal_obs, g)
-        preds, n_hots, goals = obs_to_preds_single(obs['observation'], g, self.n_objects)
-        # if str(sorted(obs_preds)) != str(sorted(preds)):
-        #     print(obs_preds)
-        #     print(preds)
-        #     print("ERROR!")
-        # if str(obs_n_hots) != str(n_hots):
-        #     print(obs_n_hots)
-        #     print(n_hots)
-        #     print("ERROR!")
-        # goal_preds_list = [g for g,v in goal_preds.items() if v == 1]
-        # if str(sorted(goal_preds_list)) != str(sorted(goals)):
-        #     print(goal_preds_list)
-        #     print(goals)
-        #     print("ERROR!")
-
-        cache_key = str(obs_n_hots) + str(goal_n_hots)
-        if cache_key in self.plan_cache.keys():
-            plan, world_states = self.plan_cache[cache_key]
-        else:
-            old_plan = gen_plan_single(obs_preds, self.gripper_has_target, goal_preds)[0]
-            plan, world_states = self.pddl.gen_plan_single(obs_preds, self.gripper_has_target, goal_preds)
-            # if str(old_plan) != str(plan):
-            #     print(old_plan)
-            #     print(plan)
-            #     print("ERROR!")
-
-            self.plan_cache[cache_key] = (plan, world_states)
-            if len(self.plan_cache) % 50 == 0:
-                print("Number of cached plans: {}".format(len(self.plan_cache)))
-        if return_states:
-            return plan, world_states
-        else:
-            return plan
-
-    def preds2subgoal(self, preds):
-        obs = self._get_obs()['observation']
-        subgoal_obs = self.pddl.preds2subgoal_obs(preds, obs, self.final_goal)
-        subg = self._obs2goal(subgoal_obs)
-        return subg
-
-    def action2subgoal(self, action):
-        obs = self._get_obs()['observation']
-        subg = action2subgoal(action, obs, self.final_goal, self.n_objects)
-        return subg
-
     def get_scale_and_offset_for_normalized_subgoal(self):
         n_objects = self.n_objects
         obj_height = self.obj_height
@@ -558,4 +352,5 @@ class TowerEnv(robot_env.RobotEnv):
             scale = scale[3:]
             offset = offset[3:]
         return scale, offset
+
 
