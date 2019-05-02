@@ -124,7 +124,7 @@ for n_objects in range(-1, 5):
         for max_tower_height in range(7):
             for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
                 for reward_type in ['dense', 'sparse', 'subgoal']:
-                    for easy in range(0, 1):
+                    for easy in range(2):
                         kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
                                   'gripper_goal': gripper_goal,
                                   'min_tower_height': min_tower_height + 1,
