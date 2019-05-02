@@ -221,18 +221,18 @@ class HookEnv(WTMEnv, PDDLHookEnv):
 
         return obs
 
-    def compute_handle_pos(self, tip_pos, tip_rot):
-        rot_mat = rotations.euler2mat(tip_rot)
-        tran_mat = np.zeros((4, 4))
-        tran_mat[3, 3] = 1.
-        tran_mat[:3, 3] = tip_pos
-        tran_mat[:3, :3] = rot_mat
-        handle = np.zeros((4,))
-        # handle[:3] = subgoal[:3]
-        handle[0] = -PDDLHookEnv.rake_handle_x_offset
-        # handle[3] = 1.
-        handle_new = tran_mat * handle
-        return handle_new[:3, 0]
+    # def compute_handle_pos(self, tip_pos, tip_rot):
+    #     rot_mat = rotations.euler2mat(tip_rot)
+    #     tran_mat = np.zeros((4, 4))
+    #     tran_mat[3, 3] = 1.
+    #     tran_mat[:3, 3] = tip_pos
+    #     tran_mat[:3, :3] = rot_mat
+    #     handle = np.zeros((4,))
+    #     # handle[:3] = subgoal[:3]
+    #     handle[0] = -PDDLHookEnv.rake_handle_x_offset
+    #     # handle[3] = 1.
+    #     handle_new = tran_mat * handle
+    #     return handle_new[:3, 0]
 
     # TODO: Make sure that limits don't include outliers.
     # def add_noise(self, vec, limits, noise_coeff):
