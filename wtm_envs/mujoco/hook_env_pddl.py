@@ -170,10 +170,10 @@ class PDDLHookEnv(PDDLEnv):
         move_o_to_target_by_o_act_template = \
             "(:action move__o{}_to_target_by__o{} \n\t" \
             ":parameters () \n\t" \
-            ":precondition (and (o{}_at_o{}) ) \n\t" \
+            ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t" \
             ":effect (and (o{}_at_target) (o{}_at_o{}) )\n)\n\n"
         # ":effect (and (o{}_at_target) (o{}_at_o{}) (gripper_at_o{}))\n)\n\n"
-        # ":precondition (and (o{}_at_o{}) (gripper_at_o{})) \n\t"
+        # ":precondition (and (o{}_at_o{}) ) \n\t"
         move_o_to_target_act_template = \
             "(:action move__o{}_to_target \n\t" \
             ":parameters () \n\t" \
@@ -222,7 +222,7 @@ class PDDLHookEnv(PDDLEnv):
             # This is to place the cube on the ground at the target position
             # move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 1, 0)
             # move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 1, 0, 1, 0)
-            move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 1, 0, 1)
+            move_o_to_target_act = move_o_to_target_by_o_act_template.format(1, 0, 0, 1, 0, 1, 0, 1)
             actions.append(move_o_to_target_act)
 
             move_hook_to_target_act = move_o_to_target_act_template.format(0, 0, 0, 0)
