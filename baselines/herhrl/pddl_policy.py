@@ -64,10 +64,8 @@ class PDDL_POLICY(HRL_Policy):
     def get_actions(self, o, ag, g, **kwargs):
         u = []
         for i in range(self.rollout_batch_size):
-            old_plan = self.envs[i].env.get_plan()[0]
             plan, world_states = self.envs[i].env.get_plan(return_states=True)
             if len(plan) > 0:
-                this_u_old = self.envs[i].env.action2subgoal(old_plan)
                 this_u = self.envs[i].env.preds2subgoal(world_states[1])
             else:
                 this_u = g[i].copy()
