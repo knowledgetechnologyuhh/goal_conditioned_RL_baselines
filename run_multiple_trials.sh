@@ -9,10 +9,11 @@ n_objects=2
 min_th=1
 max_th=1
 policy="PDDL_POLICY"
+easy=$1
 
 
 krenew -K 60 -b
-env="HookMujocoEnv-sparse-gripper_above-o${n_objects}-h${min_th}-${max_th}-v1"
+env="HookMujocoEnv-sparse-gripper_above-o${n_objects}-h${min_th}-${max_th}-e${easy}-v1"
 
 cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
