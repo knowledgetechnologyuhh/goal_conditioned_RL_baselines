@@ -496,19 +496,19 @@ class TowerEnv(robot_env.RobotEnv):
         padded_goal_obs = self._goal2obs(g)
         goal_preds, goal_n_hots = self.pddl.obs2preds_single(padded_goal_obs, g)
         preds, n_hots, goals = obs_to_preds_single(obs['observation'], g, self.n_objects)
-        if str(sorted(obs_preds)) != str(sorted(preds)):
-            print(obs_preds)
-            print(preds)
-            print("ERROR!")
-        if str(obs_n_hots) != str(n_hots):
-            print(obs_n_hots)
-            print(n_hots)
-            print("ERROR!")
-        goal_preds_list = [g for g,v in goal_preds.items() if v == 1]
-        if str(sorted(goal_preds_list)) != str(sorted(goals)):
-            print(goal_preds_list)
-            print(goals)
-            print("ERROR!")
+        # if str(sorted(obs_preds)) != str(sorted(preds)):
+        #     print(obs_preds)
+        #     print(preds)
+        #     print("ERROR!")
+        # if str(obs_n_hots) != str(n_hots):
+        #     print(obs_n_hots)
+        #     print(n_hots)
+        #     print("ERROR!")
+        # goal_preds_list = [g for g,v in goal_preds.items() if v == 1]
+        # if str(sorted(goal_preds_list)) != str(sorted(goals)):
+        #     print(goal_preds_list)
+        #     print(goals)
+        #     print("ERROR!")
 
         cache_key = str(obs_n_hots) + str(goal_n_hots)
         if cache_key in self.plan_cache.keys():
@@ -516,10 +516,10 @@ class TowerEnv(robot_env.RobotEnv):
         else:
             old_plan = gen_plan_single(obs_preds, self.gripper_has_target, goal_preds)[0]
             plan, world_states = self.pddl.gen_plan_single(obs_preds, self.gripper_has_target, goal_preds)
-            if str(old_plan) != str(plan):
-                print(old_plan)
-                print(plan)
-                print("ERROR!")
+            # if str(old_plan) != str(plan):
+            #     print(old_plan)
+            #     print(plan)
+            #     print("ERROR!")
 
             self.plan_cache[cache_key] = (plan, world_states)
             if len(self.plan_cache) % 50 == 0:
