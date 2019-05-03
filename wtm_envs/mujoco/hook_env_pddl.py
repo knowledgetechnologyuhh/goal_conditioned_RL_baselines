@@ -66,7 +66,7 @@ class PDDLHookEnv(PDDLEnv):
                 #     y_offset = -self.at_y_offset
                 # else:
                 #     y_offset = +self.at_y_offset
-                o1_tgt_pos = o2_pos + [x_offset, y_offset, self.grasp_z_offset]
+                o1_tgt_pos = o2_pos + [x_offset, y_offset, 0.]
                 subg = [o1_idx + 1] + list(o1_tgt_pos)
                 return subg
 
@@ -110,7 +110,7 @@ class PDDLHookEnv(PDDLEnv):
             def _pred2subg_function(obs, goal):
                 g_pos = self.get_o_goal_pos(goal, o_idx)
                 # object_at_target is only true if laying on table.
-                g_pos[2] = self.table_height + self.obj_height
+                # g_pos[2] = self.table_height + self.obj_height
                 subg = [o_idx+1] + list(g_pos)
                 return subg
 
@@ -124,7 +124,11 @@ class PDDLHookEnv(PDDLEnv):
 
             return _pred2subg_function, _obs2pred_function
 
-        for o in range(self.n_objects):
+        if self.n_objects == 1:
+            o_init = 0
+        else:
+            o_init = 1
+        for o in range(o_init, self.n_objects):
             pred_name = 'o{}_at_target'.format(o)
             self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_o_at_tgt_functs(o)
 
