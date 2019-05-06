@@ -5,11 +5,11 @@
 		<geom name="object0:geom" size="0.125 0.008 0.018" condim="3" type="box" mass="6" />
 		<inertial pos="0 0 0" mass="6" diaginertia="0.059 0.0586 0.0041" />
 		<site name="object0" pos="0.125 0 0" size="0.02 0.14 0.02" rgba="0 1 0 0.1" type="ellipsoid"></site>
-		<body name="edge_left" pos="0.125 0.015 0">
-			<geom size="0.002 0.07 0.015" condim="3" type="box" mass="1"/>
+		<body name="edge_left" pos="0.125 0.04065 0">
+			<geom size="0.002 0.07195 0.015" condim="3" type="box" mass="1"/>
 		</body>
-		<body name="edge_right" pos="0.125 -0.015 0">
-			<geom size="0.002 0.07 0.015" condim="3" type="box" mass="1"/>
+		<body name="edge_right" pos="0.125 -0.04065 0">
+			<geom size="0.002 0.07195 0.015" condim="3" type="box" mass="1"/>
 		</body>
 	</body>
 </mujoco>
