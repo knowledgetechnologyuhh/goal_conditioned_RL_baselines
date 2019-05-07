@@ -79,52 +79,8 @@ class HookEnv(WTMEnv, PDDLHookEnv):
 
         WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos)
         PDDLHookEnv.__init__(self, n_objects=self.n_objects)
-        # super(HookEnv, self).__init__(
-        #     model_path=model_path, n_substeps=n_substeps, n_actions=4,
-        #     initial_qpos=initial_qpos)
 
-        pass
 
-    # GoalEnv methods
-    # ----------------------------
-
-    # def compute_reward(self, achieved_goal, goal, info):
-    #     if self.reward_type == 'sparse':
-    #         success = self._is_success(achieved_goal, goal)
-    #         return (success - 1).astype(np.float32)
-    #     else:
-    #         d = goal_distance(achieved_goal, goal)
-    #         return -d
-
-    # RobotEnv methods
-    # ----------------------------
-
-    # def _step_callback(self):
-    #     if self.block_gripper:
-    #         self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
-    #         self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
-    #         self.sim.forward()
-
-    # def _goal2obs(self, goal):
-    #     if len(goal.shape) == 1:
-    #         goal_arr = np.array([goal])
-    #     else:
-    #         goal_arr = goal
-    #     assert len(goal_arr.shape) == 2
-    #     obs = []
-    #     o_dims = self.observation_space.spaces['observation'].shape[0]
-    #     o = np.zeros(o_dims, np.float32)
-    #     for g in goal_arr:
-    #         if self.gripper_goal != 'gripper_none':
-    #             o[:self.goal_size] = g
-    #         else:
-    #             o[3:self.goal_size + 3] = g
-    #         obs.append(o.copy())
-    #     obs = np.array(obs)
-    #     if len(goal.shape) == 1:
-    #         return obs[0]
-    #     else:
-    #         return obs
 
     def _set_action(self, action):
         assert action.shape == (4,)
@@ -220,69 +176,6 @@ class HookEnv(WTMEnv, PDDLHookEnv):
         # obs['achieved_goal'] = self._obs2goal(obs['observation'])
 
         return obs
-
-    # def compute_handle_pos(self, tip_pos, tip_rot):
-    #     rot_mat = rotations.euler2mat(tip_rot)
-    #     tran_mat = np.zeros((4, 4))
-    #     tran_mat[3, 3] = 1.
-    #     tran_mat[:3, 3] = tip_pos
-    #     tran_mat[:3, :3] = rot_mat
-    #     handle = np.zeros((4,))
-    #     # handle[:3] = subgoal[:3]
-    #     handle[0] = -PDDLHookEnv.rake_handle_x_offset
-    #     # handle[3] = 1.
-    #     handle_new = tran_mat * handle
-    #     return handle_new[:3, 0]
-
-    # TODO: Make sure that limits don't include outliers.
-    # def add_noise(self, vec, limits, noise_coeff):
-    #     if limits[1] is None or limits[0] is None:
-    #         limits[1] = vec
-    #         limits[0] = vec
-    #     # Limits may only be extended by 5%, just to ensure that no outliers boost the noise range.
-    #     valid_lim_idx = np.argwhere((vec > (limits[0] - (abs(limits[0]) * 0.05)))).squeeze()
-    #     invalid_lim_idx = list(set(np.arange(len(vec))) - set(valid_lim_idx))
-    #     invalid_lim_vals = vec[invalid_lim_idx]
-    #     non_zero_invalid_lim_val_idx = invalid_lim_idx[np.argwhere(abs(invalid_lim_vals) > 0.01)]
-    #     n_outliers = len(non_zero_invalid_lim_val_idx)
-    #     if n_outliers > 0 :
-    #         print("Neg. outliers: {}".format(vec[non_zero_invalid_lim_val_idx]))
-    #     # low_lim_ext_vec = np.where((vec > limits[0] + (abs(limits[0]) * 1.05)), limits[0], vec)
-    #     limits[0][valid_lim_idx] = np.minimum(vec[valid_lim_idx], limits[0][valid_lim_idx])
-    #
-    #     valid_lim = np.argwhere((vec + (abs(vec)* 1.05)) > limits[1])
-    #     up_lim_ext_vec = np.where((vec + (abs(vec)* 1.05)) > limits[0], limits[0], vec)
-    #     limits[1] = np.maximum(up_lim_ext_vec, limits[1])
-    #     range = limits[1] - limits[0]
-    #     coeff_range = noise_coeff * range
-    #     noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
-    #     vec = vec.copy() + noise
-    #     return vec
-    # def add_noise(self, vec, limits, noise_coeff):
-    #     if limits[1] is None or limits[0] is None:
-    #         limits[1] = vec
-    #         limits[0] = vec
-    #     limits[0] = np.minimum(vec, limits[0])
-    #     limits[1] = np.maximum(vec, limits[1])
-    #     range = limits[1] - limits[0]
-    #     coeff_range = noise_coeff * range
-    #     noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
-    #     vec = vec.copy() + noise
-    #     return vec
-
-    # def _get_viewer(self, mode='human'):
-    #     viewer = self._viewers.get(mode)
-    #     if viewer is None:
-    #         if mode == 'human':
-    #             viewer = mujoco_py.MjViewer(self.sim)
-    #         elif mode == 'rgb_array' or mode == 'depth_array':
-    #             viewer = mujoco_py.MjViewer(self.sim)
-    #             # The following should work but it does not. Therefore, replaced by human rendering (with MjViewer, the line above) now.
-    #             # viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
-    #         self._viewers[mode] = viewer
-    #         self._viewer_setup(mode=mode)
-    #
-    #     return self._viewers[mode]
 
     def _viewer_setup(self,mode='human'):
         body_id = self.sim.model.body_name2id('robot0:gripper_link')
@@ -500,40 +393,6 @@ class HookEnv(WTMEnv, PDDLHookEnv):
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
         if self.n_objects > 0:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
-
-    # def get_preds(self, obs=None):
-    #     if obs is None:
-    #         obs = self._get_obs()['observation']
-    #     if self.final_goal == []:
-    #         g = self.goal
-    #     else:
-    #         g = self.final_goal
-    #     preds, one_hots, goal_preds = obs_to_preds_single(obs, g, self.n_objects)
-    #     # print('preds: {}'.format(preds))
-    #     return preds, one_hots, goal_preds
-
-    # def get_plan(self):
-    #     obs = self._get_obs()
-    #     if self.final_goal == []:
-    #         g = self.goal
-    #     else:
-    #         g = self.final_goal
-    #     preds, n_hots, goal_preds = obs_to_preds_single(obs['observation'], g, self.n_objects)
-    #     cache_key = str(n_hots) + str(goal_preds)
-    #     if cache_key in self.plan_cache.keys():
-    #         plan = self.plan_cache[cache_key]
-    #     else:
-    #         plan = gen_plan_single(preds, self.gripper_has_target, goal_preds)
-    #         self.plan_cache[cache_key] = plan
-    #         if len(self.plan_cache) % 50 == 0:
-    #             print("Number of cached plans: {}".format(len(self.plan_cache)))
-    #     # print('plan: {}'.format(plan))
-    #     return plan
-
-    # def action2subgoal(self, action):
-    #     obs = self._get_obs()['observation']
-    #     subg = action2subgoal(action, obs, self.final_goal, self.n_objects)
-    #     return subg
 
     def get_scale_and_offset_for_normalized_subgoal(self):
         n_objects = self.n_objects
