@@ -299,12 +299,14 @@ class HookEnv(WTMEnv, PDDLHookEnv):
                     target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(0,
                                                                                          self.target_range,
                                                                                          size=3)
-                    if self.easy and self.n_objects >= 2:
-                        oname = 1
-                        sign = 1.
-                    else:
-                        oname = 0
-                        sign = -1.
+                    sign = 1.
+                    oname = 1
+                    # if self.easy and self.n_objects >= 2:
+                    #     oname = 1
+                    #     sign = 1.
+                    # else:
+                    #     oname = 0
+                    #     sign = -1.
                     if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
                         target_goal[1] = self.sim.data.get_joint_qpos('object{}:joint'.format(oname))[1] \
                                          - sign*self.np_random.uniform(0, self.target_range, size=1)
