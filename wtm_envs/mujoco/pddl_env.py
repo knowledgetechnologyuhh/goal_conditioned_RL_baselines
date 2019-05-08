@@ -24,11 +24,9 @@ class PDDLEnv:
         one_hot = np.array([preds[k] for k in sorted(preds.keys())])
         return preds, one_hot
 
-
     def gen_plan_single(self, obs_preds, goal_preds):
 
         problem = self.gen_pddl_problem(obs_preds, goal_preds)
-
 
         plan_start = time.time()
         plan, state_history = self.planner.solve(self.domain, problem, return_states=True)
