@@ -151,7 +151,7 @@ class TowerEnv(WTMEnv,PDDLTowerEnv):
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
 
-        noisy_obs = self.add_noise(obs.copy(), self.obs_limits, self.obs_noise_coefficient)
+        noisy_obs = self.add_noise(obs.copy(), self.obs_history, self.obs_noise_coefficient)
         achieved_goal = self._obs2goal(noisy_obs)
 
         obs = {'observation': noisy_obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy(), 'non_noisy_obs': obs.copy()}

@@ -1,6 +1,7 @@
 import numpy as np
 from wtm_envs.mujoco import robot_env, utils
 import mujoco_py
+from queue import deque
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -23,9 +24,27 @@ def goal_distance(goal_a, goal_b):
     else:
         return norm_dist
 
+class PercDeque(deque):
+    def __init__(self, maxlen, perc_recomp=100):
+        self.ctr = 0
+        self.upper_perc = None
+        self.lower_perc = None
+        self.perc_recomp = perc_recomp
+        super(PercDeque, self).__init__(maxlen=maxlen)
+
+    def append(self, vec):
+        super(PercDeque, self).append(vec)
+        if self.ctr == self.maxlen:
+            self.ctr = 0
+        if self.ctr % self.perc_recomp == 0:
+            hist_vec = np.array(self)
+            self.upper_perc = np.percentile(hist_vec, 75, axis=0)
+            self.lower_perc = np.percentile(hist_vec, 25, axis=0)
+        self.ctr += 1
+
+
 
 class WTMEnv(robot_env.RobotEnv):
-
     def __init__(
         self, model_path, n_substeps, initial_qpos
     ):
@@ -51,7 +70,8 @@ class WTMEnv(robot_env.RobotEnv):
 
         self._viewers = {}
 
-        self.obs_limits = [None, None]
+
+        self.obs_history = PercDeque(maxlen=5000)
         self.obs_noise_coefficient = 0.0
 
         self.plan_cache = {}
@@ -144,13 +164,9 @@ class WTMEnv(robot_env.RobotEnv):
     #     vec = vec.copy() + noise
     #     return vec
 
-    def add_noise(self, vec, limits, noise_coeff):
-        if limits[1] is None or limits[0] is None:
-            limits[1] = vec
-            limits[0] = vec
-        limits[0] = np.minimum(vec, limits[0])
-        limits[1] = np.maximum(vec, limits[1])
-        range = limits[1] - limits[0]
+    def add_noise(self, vec, history, noise_coeff):
+        history.append(vec)
+        range = history.upper_perc - history.lower_perc
         coeff_range = noise_coeff * range
         noise = np.random.normal(loc=np.zeros_like(coeff_range), scale=coeff_range)
         vec = vec.copy() + noise
