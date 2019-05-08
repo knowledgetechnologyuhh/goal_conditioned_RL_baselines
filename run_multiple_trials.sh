@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
 
-n_cpu=8
+n_cpu=16
 rollout_batch_size=1
 n_episodes=50
 n_epochs=500
@@ -17,7 +17,8 @@ env="HookMujocoEnv-sparse-gripper_above-o${n_objects}-h${min_th}-${max_th}-e${ea
 
 cmd="python3 experiment/train.py --num_cpu ${n_cpu} --env ${env} --algorithm baselines.herhrl
 --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_episodes ${n_episodes}
---base_logdir /data/$(whoami)/herhrl --render 0 --policies_layers [${policy}] --n_subgoals_layers [5]"
+--base_logdir /data/$(whoami)/herhrl --render 0 --policies_layers [${policy}] --n_subgoals_layers [6]
+--early_stop_success_rate 90 --obs_noise_coeff 0.005"
 
 for i in 1 2 3 4 5
 do
