@@ -4,6 +4,7 @@ from gym.envs.robotics import rotations
 import time
 from wtm_envs.mujoco.pddl_env import PDDLEnv
 
+
 class PDDLHookEnv(PDDLEnv):
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
@@ -56,11 +57,16 @@ class PDDLHookEnv(PDDLEnv):
             def _pred2subg_function(obs, goal):
                 o2_pos = self.get_o_pos(obs, o2_idx)
                 x_offset = self.at_x_offset
-                if goal[(o2_idx+1)*3+1] >= o2_pos[1]:
-                    y_offset = -self.at_y_offset
-                else:
+                o1_pos = self.get_o_pos(obs, o1_idx)
+                if o1_pos[1] >= o2_pos[1]:
                     y_offset = +self.at_y_offset
-                o1_tgt_pos = o2_pos + [x_offset, y_offset, self.grasp_z_offset]
+                else:
+                    y_offset = -self.at_y_offset
+                # if goal[(o2_idx+1)*3+1] >= o2_pos[1]:
+                #     y_offset = -self.at_y_offset
+                # else:
+                #     y_offset = +self.at_y_offset
+                o1_tgt_pos = o2_pos + [x_offset, y_offset, 0.]
                 subg = [o1_idx + 1] + list(o1_tgt_pos)
                 return subg
 
@@ -99,13 +105,12 @@ class PDDLHookEnv(PDDLEnv):
             pred_name = 'gripper_at_target'
             self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_gripper_tgt_funct()
 
-
         def make_o_at_tgt_functs(o_idx):
 
             def _pred2subg_function(obs, goal):
                 g_pos = self.get_o_goal_pos(goal, o_idx)
                 # object_at_target is only true if laying on table.
-                g_pos[2] = self.table_height + self.obj_height
+                # g_pos[2] = self.table_height + self.obj_height
                 subg = [o_idx+1] + list(g_pos)
                 return subg
 
@@ -119,7 +124,11 @@ class PDDLHookEnv(PDDLEnv):
 
             return _pred2subg_function, _obs2pred_function
 
-        for o in range(self.n_objects):
+        if self.n_objects == 1:
+            o_init = 0
+        else:
+            o_init = 1
+        for o in range(o_init, self.n_objects):
             pred_name = 'o{}_at_target'.format(o)
             self.pred2subg_functs[pred_name], self.obs2pred_functs[pred_name] = make_o_at_tgt_functs(o)
 

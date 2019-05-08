@@ -8,43 +8,29 @@
 	<include file="shared.xml"></include>
 	
 	<worldbody>
-		<geom name="floor0" pos="0.8 0.25 0" size="0.85 1.7 1" type="plane" condim="3" material="floor_mat"></geom>
+		<geom name="floor0" pos="0.8 0.25 0" size="0.85 0.7 1" type="plane" condim="3" material="floor_mat"></geom>
 		<body name="floor0" pos="0.8 0.25 0">
-			<!--<site name="target0" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 1 0 0.0" type="ellipsoid"></site>-->
-			<!--<site name="target1" pos="0 0 0" size="0.05 0.02 0.02" rgba="1 0 0 0.0" type="ellipsoid"></site>-->
-			<!--<site name="target2" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 0 1 0.0" type="ellipsoid"></site>-->
-			<!--<site name="target3" pos="0 0 0" size="0.05 0.02 0.02" rgba="1 1 0 0.0" type="ellipsoid"></site>-->
-			<!--<site name="target4" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 1 1 0.0" type="ellipsoid"></site>-->
-			<!--<site name="final_arm_target" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 0 0 0.0" type="ellipsoid"></site>-->
 			<site name="target0" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 1 0 0.3" type="ellipsoid"></site>
 			<site name="target1" pos="0 0 0" size="0.05 0.02 0.02" rgba="1 0 0 0.3" type="ellipsoid"></site>
 			<site name="target2" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 0 1 0.3" type="ellipsoid"></site>
 			<site name="target3" pos="0 0 0" size="0.05 0.02 0.02" rgba="1 1 0 0.3" type="ellipsoid"></site>
 			<site name="target4" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 1 1 0.3" type="ellipsoid"></site>
-			<site name="final_arm_target" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 0 0 0.3" type="ellipsoid"></site>
-			<!--<site name="goal0" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 0 0.0" type="ellipsoid"></site>-->
-			<!--<site name="goal1" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 0.1" type="box"></site>-->
-			<!--<site name="goal2" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0 1 0.0" type="ellipsoid"></site>-->
-			<!--<site name="goal3" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 1 0 0.0" type="ellipsoid"></site>-->
-			<!--<site name="goal4" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 1 0.0" type="ellipsoid"></site>-->
-			<!--<site name="final_arm_goal" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0 0 0.0" type="ellipsoid"></site>-->
-			<site name="goal0" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 0 0.1" type="ellipsoid"></site>
-			<site name="goal1" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 0.1" type="ellipsoid"></site>
+			<site name="final_arm_target" pos="0 0 0" size="0.05 0.02 0.02" rgba="0 0 0 0.5" type="ellipsoid"></site>
+			<site name="goal0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 0.1" type="ellipsoid"></site>
+			<site name="goal1" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 0 0.1" type="ellipsoid"></site>
 			<site name="goal2" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0 1 0.1" type="ellipsoid"></site>
 			<site name="goal3" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 1 0 0.1" type="ellipsoid"></site>
 			<site name="goal4" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 1 1 0.1" type="ellipsoid"></site>
 			<site name="final_arm_goal" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0 0 0.1" type="ellipsoid"></site>
 
-            <site name="inner_radius_target" pos="0 0 0.5" size="0.35 0.01" rgba="1 0 0 0.1" type="cylinder"></site>
-            <site name="outer_radius_target" pos="0 0 0.5" size="0.50 0.01" rgba="0 1 0 0.1" type="cylinder"></site>
-			<!--<site name="inner_radius_target" pos="0 0 0.5" size="0.35 0.01" rgba="1 0 0 0.3" type="cylinder"></site>-->
-            <!--<site name="outer_radius_target" pos="0 0 0.5" size="0.50 0.01" rgba="0 1 0 0.3" type="cylinder"></site>-->
+            <site name="inner_radius_target" pos="0 0 0.5" size="0.35 0.5 0.01" rgba="1 0 0 0.3" type="ellipsoid"></site>
+            <site name="outer_radius_target" pos="0 0 0.5" size="0.50 0.65 0.01" rgba="0 1 0 0.3" type="ellipsoid"></site>
 		</body>
 
 		<include file="robot.xml"></include>
 
 		<body pos="1.25 0.25 0.25" name="table0">
-			<geom size="0.6 0.45 0.25" type="box" mass="2000" material="table_mat"></geom>
+			<geom size="0.6 0.6 0.25" type="box" mass="2000" material="table_mat"></geom>
 		</body>
 
 		<include file="hook.xml"></include>
