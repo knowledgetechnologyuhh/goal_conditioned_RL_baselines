@@ -154,9 +154,10 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         # plt.fill_between(x_vals, min_vals, max_vals, alpha=0.25)
     # plt.title(env_id)
     # ax.set_xlim([0, 150])
-    plt.xlabel('epoch')
-    plt.ylabel(y_axis_title)
-    plt.legend(loc='lower right')
+    ax.tick_params(labelsize=20)
+    plt.xlabel('epoch', fontsize=20)
+    plt.ylabel(y_axis_title, fontsize=20)
+    plt.legend(loc='lower right', fontsize=20)
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.png'.format(y_axis_title.replace("/", "_"))))
 
