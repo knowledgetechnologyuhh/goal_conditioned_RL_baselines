@@ -89,7 +89,7 @@ class PDDLTowerEnv(PDDLEnv):
             def _pred2subg_function(obs, goal):
                 g_pos = self.get_o_goal_pos(goal, o_idx)
                 # object_at_target is only true if laying on table.
-                g_pos[2] = self.table_height + self.obj_height
+                g_pos[2] = self.table_height + (self.obj_height / 2)
                 subg = [o_idx+1] + list(g_pos)
                 return subg
 
