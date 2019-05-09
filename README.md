@@ -18,10 +18,10 @@ We also support `baselines.herhrl` (Hindsight Experience Replay with Hierarchica
 We have experimental support for `baselines.model_based` which learns a model of the environment but does not yet generate useful actions.
 
 # Command line options
-Command line options are realized using the *click* library.
+Command line options are realized using the *click* library. They should be more or less self-explanatory.
 General command line options can be found in `experiment/click_options.py`
 
-Algoritm specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
+Algorithm-specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
 
 
 # herhrl algorithm
