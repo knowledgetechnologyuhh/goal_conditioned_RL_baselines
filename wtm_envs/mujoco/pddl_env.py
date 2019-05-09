@@ -91,7 +91,7 @@ class PDDLEnv:
 
 
         cache_key = str(obs_n_hots) + str(goal_n_hots)
-        if cache_key in self.plan_cache.keys() and False:
+        if cache_key in self.plan_cache.keys():
             plan, world_states = self.plan_cache[cache_key]
         else:
             plan, world_states = self.gen_plan_single(obs_preds, goal_preds)
