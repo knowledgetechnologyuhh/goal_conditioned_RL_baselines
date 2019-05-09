@@ -30,8 +30,6 @@ def goal_distance(goal_a, goal_b):
         return norm_dist
 
 
-
-
 class TowerEnv(robot_env.RobotEnv):
     """Superclass for all Tower environments.
     """
