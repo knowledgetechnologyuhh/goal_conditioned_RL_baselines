@@ -40,7 +40,7 @@ class Propositional_Planner:
                         now = time.clock()
                         dur = now - start
                         early_stop = dur > max_time
-                        # This early stopping thing is ugly. Should be improved by using a better planning backend.
+                        # TODO: This early stopping thing is ugly. Should be improved by using a better planning backend.
                         if self.applicable(new_state, goal_pos, goal_not) or early_stop:
                             full_plan = [act]
                             # full_state_history = [initial_state, new_state]
