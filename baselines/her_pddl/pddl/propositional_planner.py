@@ -1,5 +1,6 @@
 
 from baselines.her_pddl.pddl.PDDL import PDDL_Parser
+import time
 
 class Propositional_Planner:
 
@@ -7,7 +8,7 @@ class Propositional_Planner:
     # Solve
     #-----------------------------------------------
 
-    def solve(self, domain, problem, return_states=False):
+    def solve(self, domain, problem, return_states=False, max_time=None):
         # Parser
         parser = PDDL_Parser()
         parser.parse_domain(domain)
@@ -27,6 +28,7 @@ class Propositional_Planner:
         # Search
         visited = [state]
         fringe = [state, None]
+        start = time.clock()
         while fringe:
             state = fringe.pop(0)
             plan = fringe.pop(0)
@@ -34,7 +36,11 @@ class Propositional_Planner:
                 if self.applicable(state, act.positive_preconditions, act.negative_preconditions):
                     new_state = self.apply(state, act.add_effects, act.del_effects)
                     if new_state not in visited:
-                        if self.applicable(new_state, goal_pos, goal_not):
+                        # if self.applicable(new_state, goal_pos, goal_not):
+                        now = time.clock()
+                        dur = now - start
+                        early_stop = dur > max_time
+                        if self.applicable(new_state, goal_pos, goal_not) or early_stop:
                             full_plan = [act]
                             # full_state_history = [initial_state, new_state]
                             while plan:
