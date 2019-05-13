@@ -30,18 +30,19 @@ class Propositional_Planner:
         fringe = [state, None]
         start = time.clock()
         while fringe:
+            now = time.clock()
+            dur = now - start
+            early_stop = dur > max_time
+            if early_stop:
+                return [], [initial_state]
             state = fringe.pop(0)
             plan = fringe.pop(0)
             for act in actions:
                 if self.applicable(state, act.positive_preconditions, act.negative_preconditions):
                     new_state = self.apply(state, act.add_effects, act.del_effects)
                     if new_state not in visited:
-                        # if self.applicable(new_state, goal_pos, goal_not):
-                        now = time.clock()
-                        dur = now - start
-                        early_stop = dur > max_time
                         # TODO: This early stopping thing is ugly. Should be improved by using a better planning backend.
-                        if self.applicable(new_state, goal_pos, goal_not) or early_stop:
+                        if self.applicable(new_state, goal_pos, goal_not):
                             full_plan = [act]
                             # full_state_history = [initial_state, new_state]
                             while plan:
