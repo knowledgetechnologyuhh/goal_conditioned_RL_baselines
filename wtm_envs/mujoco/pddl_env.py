@@ -25,13 +25,17 @@ class PDDLEnv:
         return preds, one_hot
 
     def gen_plan_single(self, obs_preds, goal_preds):
+
         problem = self.gen_pddl_problem(obs_preds, goal_preds)
+        max_time = 120
         plan_start = time.time()
-        plan, state_history = self.planner.solve(self.domain, problem, return_states=True, max_time=60)
+        plan, state_history = self.planner.solve(self.domain, problem, return_states=True, max_time=max_time)
         duration = time.time() - plan_start
-        if duration > 10.0:
-            print("Plan generation took {:.2f} sec.".format(time.time() - plan_start))
+        if duration > max_time:
+            print("Aborted planning. Plan generation took {:.2f} sec.".format(time.time() - plan_start))
+
         plan_acts = []
+        # world_states = [state_history[0]]
         goal_achieved = False
         if plan is None:
             print('No plan was found')
@@ -84,7 +88,6 @@ class PDDLEnv:
         obs_preds, obs_n_hots = self.obs2preds_single(obs['observation'], g)
         padded_goal_obs = self._goal2obs(g)
         goal_preds, goal_n_hots = self.obs2preds_single(padded_goal_obs, g)
-
 
         cache_key = str(obs_n_hots) + str(goal_n_hots)
         if cache_key in self.plan_cache.keys():
