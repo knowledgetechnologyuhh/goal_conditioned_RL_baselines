@@ -357,3 +357,4 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         assert(len(vars) == len(state["tf"]))
         node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
         self.sess.run(node)
+
