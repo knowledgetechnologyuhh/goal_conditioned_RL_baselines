@@ -71,6 +71,8 @@ ROLLOUT_PARAMS = {
                                  'compute_Q': False,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
+                                 # 'noise_eps': 0.2,
+                                 # 'random_eps': 0.3,
                                  'use_target_net': False}
     }
 
@@ -79,8 +81,8 @@ EVAL_PARAMS = {
         'T': 50,
         'policy_action_params': {'exploit': True,
                                  'compute_Q': True,
-                                 'noise_eps': 0.2,
-                                 'random_eps': 0.3,
+                                 'noise_eps': 0.0,
+                                 'random_eps': 0.0,
                                  'use_target_net': False
                                  # 'use_target_net': params['test_with_polyak'],
                                  }
