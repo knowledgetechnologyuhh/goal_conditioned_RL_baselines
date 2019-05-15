@@ -117,8 +117,8 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
 
     def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
                     compute_Q=False, exploit=True, **kwargs):
-        noise_eps = noise_eps if not exploit else 0.
-        random_eps = random_eps if not exploit else 0.
+        # noise_eps = noise_eps if not exploit else 0.
+        # random_eps = random_eps if not exploit else 0.
 
         o, g = self._preprocess_og(o, ag, g)
         policy = self.target if use_target_net else self.main
