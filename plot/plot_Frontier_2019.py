@@ -154,6 +154,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
         plot_idx = maxlen_ys_2nd + 1    # this to remove the effect of early stopping on median plot
+        # plot_idx = min(35, maxlen_ys_2nd + 1)  # this line to cut the graph where you like
         # plot_idx = maxlen_ys          # this to plot normally
         if lin_log == 'lin':
             plt.plot(x_vals[:plot_idx], median[:plot_idx], label=label, color=color)
@@ -177,9 +178,9 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # sort both labels and handles by labels
     if len(labels) > 0:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        plt.legend(handles, labels, loc='center right', fontsize=16)
+        plt.legend(handles, labels, loc='upper left', fontsize=16)
     fig.tight_layout()
-    plt.savefig(os.path.join(fig_dir, 'fig_{}.png'.format(y_axis_title.replace("/", "_"))))
+    plt.savefig(os.path.join(fig_dir, 'fig_{}.jpg'.format(y_axis_title.replace("/", "_"))))
     plt.savefig(os.path.join(fig_dir, 'fig_{}.pdf'.format(y_axis_title.replace("/", "_"))))
 
 
