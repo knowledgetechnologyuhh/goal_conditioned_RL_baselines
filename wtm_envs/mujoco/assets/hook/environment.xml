@@ -29,8 +29,16 @@
 
 		<include file="robot.xml"></include>
 
-		<body pos="1.25 0.25 0.25" name="table0">
+
+        <body pos="1.25 0.25 0.25" name="table0">
 			<geom size="0.6 0.6 0.25" type="box" mass="2000" material="table_mat_wood"></geom>
+        <!--
+        <body pos="1.25 0.25 0.47" name="table0">
+			<geom size="0.6 0.6 0.025" type="box" mass="2000" material="table_mat_wood"></geom>
+			<geom contype="0" conaffinity="0" type="cylinder" fromto=".4 .4 -0.47 .4 .4 -0.001" size="0.04"/>
+			<geom contype="0" conaffinity="0" type="cylinder" fromto="-.4 .4 -0.47 -.4 .4 -0.001" size="0.04"/>
+			<geom contype="0" conaffinity="0" type="cylinder" fromto=".4 -.4 -0.47 .4 -.4 -0.001" size="0.04"/>
+			<geom contype="0" conaffinity="0" type="cylinder" fromto="-.4 -.4 -0.47 -.4 -.4 -0.001" size="0.04"/>-->
 		</body>
 
 		<include file="hook.xml"></include>
