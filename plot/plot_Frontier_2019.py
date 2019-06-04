@@ -178,7 +178,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # sort both labels and handles by labels
     if len(labels) > 0:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        plt.legend(handles, labels, loc='upper left', fontsize=16)
+        plt.legend(handles, labels, loc='upper right', fontsize=16)
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.jpg'.format(y_axis_title.replace("/", "_"))))
     plt.savefig(os.path.join(fig_dir, 'fig_{}.pdf'.format(y_axis_title.replace("/", "_"))))
@@ -521,8 +521,13 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
     except Exception as e:
         pass
     if 'algorithm' in var_param_keys:
-        var_param_keys = set()
-        var_param_keys.add('algorithm')
+        if 'obs_noise_coeff' in var_param_keys:
+            var_param_keys = set()
+            var_param_keys.add('algorithm')
+            var_param_keys.add('obs_noise_coeff')
+        else:
+            var_param_keys = set()
+            var_param_keys.add('algorithm')
     if 'early_stop_success_rate' in var_param_keys:
         var_param_keys.remove('early_stop_success_rate')
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
