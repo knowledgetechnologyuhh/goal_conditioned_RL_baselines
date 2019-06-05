@@ -1,5 +1,5 @@
 import tensorflow as tf
-from baselines.util import store_args, nn
+from baselines.util import store_args, nn, critic_nn
 
 
 class ActorCritic:
@@ -29,6 +29,7 @@ class ActorCritic:
         o = self.o_stats.normalize(self.o_tf)
         g = self.g_stats.normalize(self.g_tf)
         input_pi = tf.concat(axis=1, values=[o, g])  # for actor
+        q_limit = -kwargs["T"]
 
         # Networks.
         with tf.variable_scope('pi'):
@@ -38,7 +39,9 @@ class ActorCritic:
             # for policy training
             input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf / self.max_u])
             self.Q_pi_tf = nn(input_Q, [self.hidden] * self.layers + [1])
+            # self.Q_pi_tf = critic_nn(input_Q, [self.hidden] * self.layers + [1], q_limit=q_limit)
             # for critic training
             input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
             self._input_Q = input_Q  # exposed for tests
-            self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
+            # self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
+            self.Q_tf = critic_nn(input_Q, [self.hidden] * self.layers + [1], q_limit=q_limit, reuse=True)
