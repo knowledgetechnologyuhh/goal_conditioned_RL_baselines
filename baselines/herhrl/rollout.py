@@ -6,6 +6,7 @@ from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
+from PIL import Image
 
 class RolloutWorker(Rollout):
 
@@ -48,6 +49,7 @@ class RolloutWorker(Rollout):
         self.subgoals_achieved = [0 for _ in range(self.rollout_batch_size)]
         self.final_goal_achieved = False
         self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
+        self.render_mode = 'human'
 
         # self.total_rollouts = 0
         self.total_steps = 0
@@ -110,7 +112,7 @@ class RolloutWorker(Rollout):
             self.subgoals_given[0].append(self.g.copy())
             if self.render:
                 for i in range(self.rollout_batch_size):
-                    self.envs[i].render()
+                    self.envs[i].render(mode=self.render_mode)
         for i, env in enumerate(self.envs):
             if self.is_leaf:
                 self.envs[i].env.goal = self.g[i].copy()
@@ -170,7 +172,11 @@ class RolloutWorker(Rollout):
 
                 success[i] = this_success
                 if self.render:
-                    self.envs[i].render()
+                    self.envs[i].render(mode=self.render_mode)
+                    # if t==0:
+                    #     im = Image.fromarray(img).resize(size=[480, 295])
+                    #     im.save("your_file.jpeg")
+                    # self.envs[i].render(mode='rgb_array')
 
             if self.is_leaf is False:
                 # Add penalization depending on child subgoal success
