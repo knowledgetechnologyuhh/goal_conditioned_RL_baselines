@@ -72,10 +72,10 @@ def nn(input, layers_sizes, reuse=None, flatten=False, name=""):
 
 def critic_nn(input, layers_sizes, q_limit, reuse=None, flatten=False, name=""):
     ret_nn = nn(input, layers_sizes, reuse=reuse, flatten=flatten, name=name)
-    # q_init = -0.067
+    q_init = -0.067
     # q_limit = q_limit
-    # q_offset = -np.log(q_limit / q_init - 1)
-    output = tf.sigmoid(ret_nn) * q_limit
+    q_offset = -np.log(q_limit / q_init - 1)
+    output = tf.sigmoid(ret_nn + q_offset) * q_limit
     return output
 
 
