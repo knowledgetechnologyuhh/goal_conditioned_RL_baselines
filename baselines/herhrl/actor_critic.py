@@ -39,10 +39,10 @@ class ActorCritic:
         with tf.variable_scope('Q'):
             # for policy training
             input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf / self.max_u])
-            # self.Q_pi_tf = nn(input_Q, [self.hidden] * self.layers + [1])
-            self.Q_pi_tf = critic_nn(input_Q, [self.hidden] * self.layers + [1], q_limit=q_limit)
+            self.Q_pi_tf = nn(input_Q, [self.hidden] * self.layers + [1])
+            # self.Q_pi_tf = critic_nn(input_Q, [self.hidden] * self.layers + [1], q_limit=q_limit)
             # for critic training
             input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
             self._input_Q = input_Q  # exposed for tests
-            # self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
-            self.Q_tf = critic_nn(input_Q, [self.hidden] * self.layers + [1], q_limit=q_limit, reuse=True)
+            self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
+            # self.Q_tf = critic_nn(input_Q, [self.hidden] * self.layers + [1], q_limit=q_limit, reuse=True)
