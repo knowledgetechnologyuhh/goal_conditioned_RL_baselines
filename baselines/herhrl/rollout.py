@@ -98,7 +98,7 @@ class RolloutWorker(Rollout):
         if self.is_leaf:
             return self.current_t[0] == self.this_T
         else:
-            return self.child_rollout.finished()
+            return self.current_t[0] == self.this_T and self.child_rollout.finished()
 
 
     def generate_rollouts(self, return_states=False):
@@ -108,7 +108,7 @@ class RolloutWorker(Rollout):
         :return:
         '''
         if self.h_level == 0:
-            self.reset_all_rollouts()
+            self.reset_all_rollouts()   # self.g is set here
             self.subgoals_given[0].append(self.g.copy())
             if self.render:
                 for i in range(self.rollout_batch_size):
@@ -125,6 +125,7 @@ class RolloutWorker(Rollout):
         ag = np.zeros((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
         last_subgoals_achieved = self.subgoals_achieved[0]
         for t in range(self.current_t[0], self.this_T):
+            # print(t)
             self.total_steps += self.rollout_batch_size
             # At the first step add the current observation.
             if t == 0:
@@ -153,12 +154,15 @@ class RolloutWorker(Rollout):
                     u = self.policy.inverse_scale_and_offset_action(scaled_u)
                 self.child_rollout.g = scaled_u.copy()
                 self.child_rollout.subgoals_given[0].append(scaled_u.copy())
-                if not self.child_rollout.finished():
-                    self.child_rollout.generate_rollouts()
+                # if not self.child_rollout.finished():
+                if self.child_rollout.finished():
+                    self.child_rollout.current_t[0] = 0
+                self.child_rollout.generate_rollouts()
             else: # In final layer execute physical action
                 for i in range(self.rollout_batch_size):
                     self.envs[i].step(scaled_u[i])
 
+            # check success condition and rendering
             for i in range(self.rollout_batch_size):
                 obs_dict = self.envs[i].env._get_obs()
                 non_noisy_ag = self.envs[i].env._obs2goal(obs_dict['non_noisy_obs'])
@@ -208,6 +212,14 @@ class RolloutWorker(Rollout):
         if self.is_leaf and np.mean(self.current_episode['penalties']) > 0:
             assert False, "For lowest layer, penalty should always be zero."
 
+        if self.is_leaf:
+            self.finalize_episode()
+            for i in range(self.rollout_batch_size):
+                self.subgoals_achieved[i] = 0
+                self.subgoals_given[i] = []
+            for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']:
+                self.current_episode[key] = []
+
         if self.h_level == 0:
             if self.finished() or self.final_goal_achieved:
                 self.finalize_episode()
@@ -230,7 +242,7 @@ class RolloutWorker(Rollout):
         # self.all_succ_history.append(success_rate)
         if self.exploit == False:
             self.policy.store_episode(ret)
-            if any(np.isclose(self.current_episode['penalties'], 1.)):
+            if (not self.is_leaf) and any(np.isclose(self.current_episode['penalties'], 1.)):
                 episode_other = episode.copy()
                 episode_other['p'] = np.zeros_like(self.current_episode['penalties'])
                 # print(self.current_episode['penalties'])
@@ -240,8 +252,8 @@ class RolloutWorker(Rollout):
         self.n_episodes += self.rollout_batch_size
         self.subgoals_achieved_history.append(self.subgoals_achieved[0])
         self.subgoals_given_history.append(len(self.subgoals_given[0]))
-        if self.is_leaf is False:
-            self.child_rollout.finalize_episode()
+        # if self.is_leaf is False:
+        #     self.child_rollout.finalize_episode()
 
     def zero_pad_episode(self, episode):
         for key in episode.keys():
