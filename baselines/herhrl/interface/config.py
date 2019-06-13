@@ -99,7 +99,7 @@ use_target_net=self.use_target_net)
 OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
 
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -164,7 +164,7 @@ def configure_her(params):
     her_params = {
         'reward_fun': reward_fun,
     }
-    for name in ['replay_strategy', 'replay_k', 'penalty_magnitude']:
+    for name in ['replay_strategy', 'replay_k', 'penalty_magnitude', 'use_penalty']:
         her_params[name] = params[name]
         params['_' + name] = her_params[name]
         del params[name]
@@ -179,7 +179,7 @@ def simple_goal_subtract(a, b):
 
 
 def configure_policy(dims, params):
-    sample_her_transitions = configure_her(params)
+    # sample_her_transitions = configure_her(params)
     # Extract relevant parameters.
     gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
@@ -206,7 +206,7 @@ def configure_policy(dims, params):
                         'reuse': reuse,
                         'use_mpi': use_mpi,
                         'n_preds': n_preds,
-                        'sample_transitions': sample_her_transitions,
+                        # 'sample_transitions': sample_her_transitions,
                         'clip_pos_returns': True,  # clip positive returns for Q-values
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'h_level': 0,
@@ -230,10 +230,17 @@ def configure_policy(dims, params):
             n_s = params['T']
             subgoal_scale = np.ones(input_dims['u'])
             subgoal_offset = np.zeros(input_dims['u'])
+            use_penalty = False
         else:
             input_dims = dims.copy()
             # TODO: start preds2subgoals by adapting subgoal dimensions right here!
             input_dims['u'] = input_dims['g']
+            use_penalty = True # penalty only apply for the high-level hierarchical
+        print(params)
+        _params = params.copy()
+        _params['use_penalty'] = use_penalty
+        sample_her_transitions = configure_her(_params)
+        ddpg_params['sample_transitions'] = sample_her_transitions
         this_params = ddpg_params.copy()
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
                             'T': n_s,
