@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_magnitude):
+def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_magnitude, use_penalty):
     """Creates a sample function that can be used for HER experience replay.
 
     Args:
@@ -61,11 +61,25 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         # Re-compute reward since we may have substituted the goal.
         reward_params = {k: transitions[k] for k in ['ag_2', 'g']}
         reward_params['info'] = info
+        # transitions['r'] = reward_fun(**reward_params)
         transitions['r'] = reward_fun(**reward_params)
 
         penalties = np.reshape(transitions['p'], transitions['r'].shape)
-        idx = np.argwhere(np.isclose(penalties, 1.))
-        transitions['r'][idx] *= penalty_magnitude
+        if not use_penalty:
+            # transitions['r'] = reward_fun(**reward_params)
+            if np.mean(penalties) > 0:
+                assert False, "this lowest level should not have any penalties"
+        else:
+            print(penalties)
+            idx = np.argwhere(np.isclose(penalties, 1.))
+            print(idx)
+            transitions['r'] = np.zeros_like(transitions['r'])
+            transitions['r'][idx] = -penalty_magnitude
+        print(use_penalty)
+        print(transitions['r'])
+        # idx = np.argwhere(np.isclose(penalties, 1.))
+        # transitions['r'][idx] *= penalty_magnitude  # test to replace this to use only penalty as reward for the
+                                                    # high-level
         # transitions['r'][idx] -= penalty_magnitude
 
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:])

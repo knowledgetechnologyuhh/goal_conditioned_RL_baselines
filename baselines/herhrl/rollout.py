@@ -242,13 +242,14 @@ class RolloutWorker(Rollout):
         # self.all_succ_history.append(success_rate)
         if self.exploit == False:
             self.policy.store_episode(ret)
-            if (not self.is_leaf) and any(np.isclose(self.current_episode['penalties'], 1.)):
-                episode_other = episode.copy()
-                episode_other['p'] = np.zeros_like(self.current_episode['penalties'])
-                # print(self.current_episode['penalties'])
-                # print(episode_other['p'])
-                ret_other = convert_episode_to_batch_major(episode_other)
-                self.policy.store_episode(ret_other)
+            # this if block to store an original espisode without penalty for high-level, similar to Levy's HAC
+            # if (not self.is_leaf) and any(np.isclose(self.current_episode['penalties'], 1.)):
+            #     episode_other = episode.copy()
+            #     episode_other['p'] = np.zeros_like(self.current_episode['penalties'])
+            #     # print(self.current_episode['penalties'])
+            #     # print(episode_other['p'])
+            #     ret_other = convert_episode_to_batch_major(episode_other)
+            #     self.policy.store_episode(ret_other)
         self.n_episodes += self.rollout_batch_size
         self.subgoals_achieved_history.append(self.subgoals_achieved[0])
         self.subgoals_given_history.append(len(self.subgoals_given[0]))
