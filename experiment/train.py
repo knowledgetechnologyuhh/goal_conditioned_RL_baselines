@@ -168,7 +168,8 @@ def launch(
             'https://github.com/openai/baselines/issues/314 for further details.')
         logger.warn('****************')
         logger.warn()
-
+    if 'use_penalty' not in params.keys():
+        params['use_penalty'] = False
     dims = config.configure_dims(params)
     if restore_policy is None:
         policy = config.configure_policy(dims=dims, params=params)
