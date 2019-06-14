@@ -56,6 +56,7 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5, # normalized observations are cropped to this values
     # 'test_subgoal_perc' : 1.0
+    'use_penalty': False
 }
 
 POLICY_ACTION_PARAMS = {
@@ -236,7 +237,6 @@ def configure_policy(dims, params):
             # TODO: start preds2subgoals by adapting subgoal dimensions right here!
             input_dims['u'] = input_dims['g']
             use_penalty = True # penalty only apply for the high-level hierarchical
-        print(params)
         _params = params.copy()
         _params['use_penalty'] = use_penalty
         sample_her_transitions = configure_her(_params)
