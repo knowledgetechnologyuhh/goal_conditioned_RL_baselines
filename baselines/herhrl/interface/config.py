@@ -270,11 +270,15 @@ def load_policy(restore_policy_file, params):
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
-    policy = set_policy_params(policy, params)
+    _params = params.copy()
+    policy = set_policy_params(policy, _params)
     return policy
 
 def set_policy_params(policy, params):
     child_params = params.copy()
+    print(policy.h_level, params['use_penalty'])
+    if policy.h_level == 0:
+        params['use_penalty'] = True
     policy.sample_transitions = configure_her(params)
     policy.rollout_batch_size = params['rollout_batch_size']
     if policy.buffer is not None:

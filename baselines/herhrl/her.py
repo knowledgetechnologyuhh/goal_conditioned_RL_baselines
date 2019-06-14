@@ -70,13 +70,12 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
             if np.mean(penalties) > 0:
                 assert False, "this lowest level should not have any penalties"
         else:
-            print(penalties)
+            # print(penalties)
             idx = np.argwhere(np.isclose(penalties, 1.))
-            print(idx)
             transitions['r'] = np.zeros_like(transitions['r'])
             transitions['r'][idx] = -penalty_magnitude
-        print(use_penalty)
-        print(transitions['r'])
+        # print(use_penalty)
+        # print(transitions['r'])
         # idx = np.argwhere(np.isclose(penalties, 1.))
         # transitions['r'][idx] *= penalty_magnitude  # test to replace this to use only penalty as reward for the
                                                     # high-level
