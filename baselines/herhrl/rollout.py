@@ -149,9 +149,9 @@ class RolloutWorker(Rollout):
 
             # Action execution
             if self.is_leaf is False:
-                if t == self.this_T-1:
-                    scaled_u = self.g.copy()  # For last step use final goal
-                    u = self.policy.inverse_scale_and_offset_action(scaled_u)
+                # if t == self.this_T-1:
+                #     scaled_u = self.g.copy()  # For last step use final goal
+                #     u = self.policy.inverse_scale_and_offset_action(scaled_u)
                 self.child_rollout.g = scaled_u.copy()
                 self.child_rollout.subgoals_given[0].append(scaled_u.copy())
                 # if not self.child_rollout.finished():
