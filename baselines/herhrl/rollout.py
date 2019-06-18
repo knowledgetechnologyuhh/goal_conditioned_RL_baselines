@@ -214,9 +214,9 @@ class RolloutWorker(Rollout):
 
         if self.is_leaf:
             self.finalize_episode()
-            for i in range(self.rollout_batch_size):
-                self.subgoals_achieved[i] = 0
-                self.subgoals_given[i] = []
+            # for i in range(self.rollout_batch_size):
+            #     self.subgoals_achieved[i] = 0
+            #     self.subgoals_given[i] = []
             for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']:
                 self.current_episode[key] = []
 
