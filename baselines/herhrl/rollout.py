@@ -187,8 +187,8 @@ class RolloutWorker(Rollout):
                 child_success = self.child_rollout.success.copy()
                 for i in range(self.rollout_batch_size):
                     # TODO: For future work, compare this on-policy subgoal testing with off-policy.
-                    if np.random.random_sample() < self.test_subgoal_perc:
-                        penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
+                    # if np.random.random_sample() < self.test_subgoal_perc:
+                    penalty[i, 0] = True if np.isclose(child_success[i], 0.) else False
 
             o = o_new
             ag = ag_new
