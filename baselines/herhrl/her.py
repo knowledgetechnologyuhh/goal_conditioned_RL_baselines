@@ -64,12 +64,19 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         # transitions['r'] = reward_fun(**reward_params)
         transitions['r'] = reward_fun(**reward_params)
 
-        penalties = np.reshape(transitions['p'], transitions['r'].shape)
+        # if in HL:
+
+        # penalties = np.reshape(transitions['p'], transitions['r'].shape)
         if not use_penalty:
             # transitions['r'] = reward_fun(**reward_params)
-            if np.mean(penalties) > 0:
+            if np.mean(transitions['p']) > 0:
                 assert False, "this lowest level should not have any penalties"
         else:
+
+            # HER for penalty
+            transitions['u'][her_indexes] = transitions['ag'][her_indexes]
+            transitions['p'][her_indexes] = 0
+            penalties = np.reshape(transitions['p'], transitions['r'].shape)
             # print(penalties)
             idx = np.argwhere(np.isclose(penalties, 1.))
             transitions['r'] = np.zeros_like(transitions['r'])
