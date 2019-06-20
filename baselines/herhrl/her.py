@@ -78,14 +78,11 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
             transitions['u'][her_indexes] = transitions['ag'][her_indexes]
             transitions['p'][her_indexes] = 0
             penalties = np.reshape(transitions['p'], transitions['r'].shape)
-            print(her_indexes)
-            print(penalties)
             idx = np.argwhere(np.isclose(penalties, 1.))
-            print(idx)
             transitions['r'] = np.zeros_like(transitions['r'])
             transitions['r'][idx] = -penalty_magnitude
         # print(use_penalty)
-            print(transitions['r'])
+        #     print(transitions['r'])
         # idmhx = np.argwhere(np.isclose(penalties, 1.))
         # transitions['r'][idx] *= penalty_magnitude  # test to replace this to use only penalty as reward for the
                                                     # high-level
