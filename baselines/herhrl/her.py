@@ -49,8 +49,9 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         # Replace goal with achieved goal but only for the previously-selected
         # HER transitions (as defined by her_indexes). For the other transitions,
         # keep the original goal.
-        future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
-        transitions['g'][her_indexes] = future_ag
+        if not use_penalty:
+            future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
+            transitions['g'][her_indexes] = future_ag
 
         # Reconstruct info dictionary for reward  computation.
         info = {}
@@ -77,13 +78,15 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
             transitions['u'][her_indexes] = transitions['ag'][her_indexes]
             transitions['p'][her_indexes] = 0
             penalties = np.reshape(transitions['p'], transitions['r'].shape)
-            # print(penalties)
+            print(her_indexes)
+            print(penalties)
             idx = np.argwhere(np.isclose(penalties, 1.))
+            print(idx)
             transitions['r'] = np.zeros_like(transitions['r'])
             transitions['r'][idx] = -penalty_magnitude
         # print(use_penalty)
-        # print(transitions['r'])
-        # idx = np.argwhere(np.isclose(penalties, 1.))
+            print(transitions['r'])
+        # idmhx = np.argwhere(np.isclose(penalties, 1.))
         # transitions['r'][idx] *= penalty_magnitude  # test to replace this to use only penalty as reward for the
                                                     # high-level
         # transitions['r'][idx] -= penalty_magnitude
