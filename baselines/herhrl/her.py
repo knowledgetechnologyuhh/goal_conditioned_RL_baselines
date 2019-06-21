@@ -46,10 +46,11 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
             assert et <= ep_len, "Episode index too high"
             assert et <= ft, "Episode index {} higher than future index {}:".format(et, ft)
 
+        choose_action_replay = np.random.random_sample() > 0.5
         # Replace goal with achieved goal but only for the previously-selected
         # HER transitions (as defined by her_indexes). For the other transitions,
         # keep the original goal.
-        if not use_penalty:
+        if (not use_penalty) or (use_penalty and not choose_action_replay):
             future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
             transitions['g'][her_indexes] = future_ag
 
@@ -73,14 +74,14 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
             if np.mean(transitions['p']) > 0:
                 assert False, "this lowest level should not have any penalties"
         else:
-
-            # HER for penalty
-            transitions['u'][her_indexes] = transitions['ag'][her_indexes]
-            transitions['p'][her_indexes] = 0
-            penalties = np.reshape(transitions['p'], transitions['r'].shape)
-            idx = np.argwhere(np.isclose(penalties, 1.))
-            transitions['r'] = np.zeros_like(transitions['r'])
-            transitions['r'][idx] = -penalty_magnitude
+            if choose_action_replay:
+                # HER for penalty
+                transitions['u'][her_indexes] = transitions['ag'][her_indexes]
+                transitions['p'][her_indexes] = 0
+                penalties = np.reshape(transitions['p'], transitions['r'].shape)
+                idx = np.argwhere(np.isclose(penalties, 1.))
+                transitions['r'] = np.zeros_like(transitions['r'])
+                transitions['r'][idx] = -penalty_magnitude
         # print(use_penalty)
         #     print(transitions['r'])
         # idmhx = np.argwhere(np.isclose(penalties, 1.))
