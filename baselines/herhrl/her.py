@@ -69,6 +69,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         # if in HL:
 
         # penalties = np.reshape(transitions['p'], transitions['r'].shape)
+        choose_penalty_replay = np.random.random_sample() < 0.5
         if not use_penalty:
             # transitions['r'] = reward_fun(**reward_params)
             if np.mean(transitions['p']) > 0:
@@ -80,10 +81,11 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
                 transitions['p'][her_indexes] = 0
                 penalties = np.reshape(transitions['p'], transitions['r'].shape)
                 idx = np.argwhere(np.isclose(penalties, 1.))
-                transitions['r'] = np.zeros_like(transitions['r'])
-                transitions['r'][idx] = -penalty_magnitude
-        # print(use_penalty)
-        #     print(transitions['r'])
+                if choose_penalty_replay:
+                    transitions['r'] = np.zeros_like(transitions['r'])
+                    transitions['r'][idx] = -penalty_magnitude
+        # print(use_penalty, choose_action_replay, choose_penalty_replay)
+        # print(transitions['r'])
         # idmhx = np.argwhere(np.isclose(penalties, 1.))
         # transitions['r'][idx] *= penalty_magnitude  # test to replace this to use only penalty as reward for the
                                                     # high-level
