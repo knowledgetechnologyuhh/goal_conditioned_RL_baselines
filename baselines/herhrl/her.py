@@ -69,7 +69,8 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
         # if in HL:
 
         # penalties = np.reshape(transitions['p'], transitions['r'].shape)
-        choose_penalty_replay = np.random.random_sample() < 0.5
+        # to keep the balance ratio between penalty and reward in high-level
+        choose_penalty_replay = np.random.random_sample() < 1./penalty_magnitude
         if not use_penalty:
             # transitions['r'] = reward_fun(**reward_params)
             if np.mean(transitions['p']) > 0:
