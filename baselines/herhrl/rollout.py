@@ -94,21 +94,21 @@ class RolloutWorker(Rollout):
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
-    # def finished(self):
-    #     if self.is_leaf:
-    #         return self.current_t[0] == self.this_T
-    #     else:
-    #         return self.current_t[0] == self.this_T and self.child_rollout.finished()
-
     def finished(self):
-        if self.final_goal_achieved:
-            return True
-        elif self.current_t[0] == self.this_T:
-            return True
-        elif not self.is_leaf:
-            return self.child_rollout.finished()
+        if self.is_leaf:
+            return self.current_t[0] == self.this_T
         else:
-            return False
+            return self.current_t[0] == self.this_T and self.child_rollout.finished()
+
+    # def finished(self):
+    #     if self.final_goal_achieved:
+    #         return True
+    #     elif self.current_t[0] == self.this_T:
+    #         return True
+    #     elif not self.is_leaf:
+    #         return self.child_rollout.finished()
+    #     else:
+    #         return False
 
 
     def generate_rollouts(self, return_states=False):
@@ -233,7 +233,7 @@ class RolloutWorker(Rollout):
                 self.current_episode[key] = []
 
         if self.h_level == 0:
-            if self.finished():# or self.final_goal_achieved:
+            if self.finished() or self.final_goal_achieved:
                 self.finalize_episode()
 
     def finalize_episode(self):
