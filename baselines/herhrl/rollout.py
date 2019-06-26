@@ -233,7 +233,8 @@ class RolloutWorker(Rollout):
                        info_is_success=self.current_episode['info_is_success'],
                        steps=list(np.ones_like(self.current_episode['info_is_success']) * len(self.current_episode['acts']))
                        )
-        episode = self.zero_pad_episode(episode)
+        if not self.exploit:
+            episode = self.latest_pad_episode(episode)
         self.success = np.array(self.current_episode['successes'])[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
         ret = convert_episode_to_batch_major(episode)
@@ -264,6 +265,17 @@ class RolloutWorker(Rollout):
             assert len(episode[key]) > 0, "Empty episodes not allowed."
             for t in range(len(episode[key]), max_t):
                 episode[key].append(np.zeros_like(episode[key][0]))
+        return episode
+
+    def latest_pad_episode(self, episode):
+        for key in episode.keys():
+            max_t = self.this_T
+            if key in ['o', 'ag']:
+                max_t += 1
+            assert len(episode[key]) > 0, "Empty episodes not allowed."
+            latest = len(episode[key])
+            for t in range(len(episode[key]), max_t):
+                episode[key].append(episode[key][latest-1])
         return episode
 
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
