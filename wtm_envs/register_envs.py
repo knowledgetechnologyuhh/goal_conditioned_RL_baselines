@@ -140,3 +140,12 @@ for n_objects in range(-1, 5):
                             kwargs=kwargs,
                             max_episode_steps=max_ep_steps,
                         )
+
+
+# Ant Envs:
+
+# Ant Four Rooms:
+max_ep_steps = 700
+register(id='AntFourRoomsEnv-v0',
+         entry_point='wtm_envs.mujoco.ant_four_rooms.navigate:AntFourRoomsEnv',
+         max_episode_steps=max_ep_steps)
