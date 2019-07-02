@@ -25,8 +25,9 @@ class AntEnv(WTMEnv):
             reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
         """
 
-        self.name = ""
+        self.name = name
         self.step_ctr = 0
+        self.reward_type = reward_type
 
         self.obs_limits = [None, None]
         self.obs_noise_coefficient = 0.0
@@ -55,6 +56,9 @@ class AntEnv(WTMEnv):
         max_range = 6
         self.goal_space_train = [[-max_range, max_range], [-max_range, max_range], [0.45, 0.55]]
         self.goal_space_test = [[-max_range, max_range], [-max_range, max_range], [0.45, 0.55]]
+        self.goal_space_offset = [np.mean(limits) for limits in self.goal_space_train]
+        self.goal_space_scale = [self.goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
+                                 for limits_idx in range(len(self.goal_space_train))]
 
         # Provide a function that maps from the state space to the end goal space.
         # This is used to
@@ -100,6 +104,8 @@ class AntEnv(WTMEnv):
         self.distance_threshold = self.end_goal_thresholds
         # TODO: use separate distance threshold for subgoals (it already exists, but is not used yet)
 
+        #self.reset()
+
     # Execute low-level action for number of frames specified by num_frames_skip
     # def execute_action(self, action):
     #    self.sim.data.ctrl[:] = action
@@ -111,8 +117,8 @@ class AntEnv(WTMEnv):
 
     def _set_action(self, action):
         # Apply action to simulation.
-        #self.sim.data.ctrl[:] = action # from the Levy code
-        utils.ctrl_set_action(self.sim, action)
+        self.sim.data.ctrl[:] = action # from the Levy code
+        #utils.ctrl_set_action(self.sim, action)
         #utils.mocap_set_action(self.sim, action)
         self.step_ctr += 1
 
@@ -141,6 +147,23 @@ class AntEnv(WTMEnv):
 
         return obs
 
+    def _viewer_setup(self, mode='human'):
+        return
+    # TODO: if learning from pixels should be enabled, the camera needs to look from the bird's eye view
+
+    def compute_reward(self, achieved_goal, goal, info):
+        individual_differences = achieved_goal - goal
+        d = np.linalg.norm(individual_differences, axis=-1)
+
+        if self.reward_type == 'sparse':
+            return -1 * np.all(np.abs(individual_differences) > self.distance_threshold, axis=-1).astype(np.float32)
+        else:
+            return -1 * d
+
+    def _is_success(self, achieved_goal, desired_goal):
+        d = np.abs(achieved_goal - desired_goal)
+        return np.all(d < self.distance_threshold).astype(np.float32)
+
     # Visualize end goal.  This function may need to be adjusted for new environments.
     def display_end_goal(self, end_goal):
         # Goal can be visualized by changing the location of the relevant site object.
@@ -154,15 +177,16 @@ class AntEnv(WTMEnv):
         else:
             subgoal_ind = len(subgoals) - 11
 
-        for i in range(1, min(len(subgoals), 11)):
+        for i in range(1, min(len(subgoals) + 1, 11)):
             self.sim.data.mocap_pos[i][:3] = np.copy(subgoals[subgoal_ind][:3])
             self.sim.model.site_rgba[i][3] = 1
 
             subgoal_ind += 1
 
     def _render_callback(self):
-        self.display_end_goal(self.goal)
-        self.display_subgoals(self.final_goal)
+        if self.final_goal != []:
+            self.display_end_goal(self.final_goal)
+        self.display_subgoals([self.goal])
         # Visualize target.
         # sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
         #
@@ -204,8 +228,14 @@ class AntEnv(WTMEnv):
         #
         # self.sim.forward()
 
+    def reset(self):
+        self.goal = self._sample_goal().copy()
+        obs = self._reset_sim(self.goal)
+        return obs
+
+
     # Reset simulation to state within initial state specified by user
-    def reset_sim(self, next_goal=None):
+    def _reset_sim(self, next_goal=None):
         self.step_ctr = 0
 
         # Reset controls
@@ -276,7 +306,7 @@ class AntEnv(WTMEnv):
         self.sim.step()
 
         # Return state
-        return self._get_state()
+        return self._get_obs()
 
     # Function returns an end goal
     def _sample_goal(self):
@@ -304,7 +334,7 @@ class AntEnv(WTMEnv):
             end_goal[1] *= -1
 
         # Visualize End Goal
-        self.display_end_goal(end_goal)
+        #self.display_end_goal(end_goal)
 
         return end_goal
 
@@ -335,8 +365,7 @@ class AntEnv(WTMEnv):
         #     self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
     def get_scale_and_offset_for_normalized_subgoal(self):
-        return 1, np.zeros_like(self.goal)
-        # TODO: this obviously does not normalize, check out how it can be done for this env.
+        return self.goal_space_scale, self.goal_space_offset
 
         # n_objects = self.n_objects
         # obj_height = self.obj_height
