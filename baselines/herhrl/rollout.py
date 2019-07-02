@@ -233,7 +233,8 @@ class RolloutWorker(Rollout):
                 self.current_episode[key] = []
 
         if self.h_level == 0:
-            if self.finished() or self.final_goal_achieved:
+            # if self.finished() or self.final_goal_achieved:
+            if self.current_t[0] == self.this_T or self.final_goal_achieved:
                 self.finalize_episode()
 
     def finalize_episode(self):
