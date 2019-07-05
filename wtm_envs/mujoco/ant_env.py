@@ -156,13 +156,16 @@ class AntEnv(WTMEnv):
         d = np.linalg.norm(individual_differences, axis=-1)
 
         if self.reward_type == 'sparse':
-            return -1 * np.all(np.abs(individual_differences) > self.distance_threshold, axis=-1).astype(np.float32)
+            reward = -1 * np.any(np.abs(individual_differences) > self.distance_threshold, axis=-1).astype(np.float32)
+
+            #print("Actual goal: ", goal, " achieved: ", achieved_goal, " reward: ", reward)
+            return reward
         else:
             return -1 * d
 
     def _is_success(self, achieved_goal, desired_goal):
         d = np.abs(achieved_goal - desired_goal)
-        return np.all(d < self.distance_threshold).astype(np.float32)
+        return np.all(d < self.distance_threshold, axis=-1).astype(np.float32)
 
     # Visualize end goal.  This function may need to be adjusted for new environments.
     def display_end_goal(self, end_goal):
@@ -184,8 +187,12 @@ class AntEnv(WTMEnv):
             subgoal_ind += 1
 
     def _render_callback(self):
+        #print(self.final_goal)
+        #print(self.goal)
+
         if self.final_goal != []:
             self.display_end_goal(self.final_goal)
+
         self.display_subgoals([self.goal])
         # Visualize target.
         # sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
