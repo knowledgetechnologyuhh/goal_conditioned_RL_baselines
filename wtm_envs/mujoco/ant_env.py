@@ -15,8 +15,13 @@ class AntEnv(WTMEnv):
     """Superclass for all Ant environments.
     """
 
+    #goal_space_train, goal_space_test, project_state_to_end_goal, end_goal_thresholds, initial_state_space, subgoal_bounds, project_state_to_subgoal, subgoal_thresholds,
+
+
     def __init__(
-            self, model_path, n_substeps, reward_type, name):
+            self, model_path, n_substeps, reward_type, name, goal_space_train, goal_space_test,
+            project_state_to_end_goal, project_state_to_subgoal, end_goal_thresholds, initial_state_space,
+            subgoal_bounds, subgoal_thresholds):
         """Initializes a new Ant environment.
 
         Args:
@@ -40,65 +45,25 @@ class AntEnv(WTMEnv):
 
         self._viewers = {}
 
-        # Provide initial state space consisting of the ranges for all joint angles and velocities.
-        # In the Ant Reacher task, we use a random initial torso position and use fixed values for the remainder.
-        self.initial_joint_pos = np.array([0, 0, 0.55, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0, -1.0, 0.0, 1.0])
-        self.initial_joint_pos = np.reshape(self.initial_joint_pos, (len(self.initial_joint_pos), 1))
-        self.initial_joint_ranges = np.concatenate((self.initial_joint_pos, self.initial_joint_pos), 1)
-        self.initial_joint_ranges[0] = np.array([-6, 6])
-        self.initial_joint_ranges[1] = np.array([-6, 6])
+        self.initial_state_space = initial_state_space
+        self.end_goal_thresholds = end_goal_thresholds
+        self.sub_goal_thresholds = subgoal_thresholds
+        self.project_state_to_end_goal = project_state_to_end_goal
+        self.project_state_to_sub_goal = project_state_to_subgoal
+        self.goal_space_train = goal_space_train
+        self.goal_space_test = goal_space_test
+        self.subgoal_bounds = subgoal_bounds
 
-        # Concatenate velocity ranges
-        self.initial_state_space = np.concatenate(
-            (self.initial_joint_ranges, np.zeros((len(self.initial_joint_ranges) - 1, 2))), 0)
+        self.goal_space_offset = [np.mean(limits) for limits in goal_space_train]
+        self.goal_space_scale = [goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
+                            for limits_idx in range(len(goal_space_train))]
 
-        # Provide end goal space.
-        max_range = 6
-        self.goal_space_train = [[-max_range, max_range], [-max_range, max_range], [0.45, 0.55]]
-        self.goal_space_test = [[-max_range, max_range], [-max_range, max_range], [0.45, 0.55]]
-        self.goal_space_offset = [np.mean(limits) for limits in self.goal_space_train]
-        self.goal_space_scale = [self.goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
-                                 for limits_idx in range(len(self.goal_space_train))]
+        #num_actions = len(self.sim.model.actuator_ctrlrange)
 
-        # Provide a function that maps from the state space to the end goal space.
-        # This is used to
-        # (i)  determine whether the agent should be given the sparse reward and
-        # (ii) for Hindsight Experience Replay to determine which end goal was achieved after a sequence of actions.
-        self.project_state_to_end_goal = lambda sim, state: state[:3]
 
-        # Set end goal achievement thresholds.  If the agent is within the threshold for each dimension,
-        # the end goal has been achieved and the reward of 0 is granted.
-        # For the Ant Reacher task, the end goal will be the desired (x,y) position of the torso
-        len_threshold = 0.4
-        height_threshold = 0.2
-        self.end_goal_thresholds = np.array([len_threshold, len_threshold, height_threshold])
-
-        # Provide range for each dimension of subgoal space in order to configure subgoal actor networks.
-        # Subgoal space can be the same as the state space or some other projection out of the state space.
-        # The subgoal space in the Ant Reacher task is the desired (x,y,z) position and (x,y,z) translational velocity of the torso
-        cage_max_dim = 8
-        max_height = 1
-        max_velo = 3
-        subgoal_bounds = np.array(
-            [[-cage_max_dim, cage_max_dim], [-cage_max_dim, cage_max_dim], [0, max_height], [-max_velo, max_velo],
-             [-max_velo, max_velo]])
-
-        # Provide state to subgoal projection function.
-        # a = np.concatenate((sim.data.qpos[:2], np.array([4 if sim.data.qvel[i] > 4 else -4 if sim.data.qvel[i] < -4 else sim.data.qvel[i] for i in range(3)])))
-        project_state_to_subgoal = lambda sim, state: np.concatenate((sim.data.qpos[:2], np.array(
-            [1 if sim.data.qpos[2] > 1 else sim.data.qpos[2]]), np.array(
-            [3 if sim.data.qvel[i] > 3 else -3 if sim.data.qvel[i] < -3 else sim.data.qvel[i] for i in range(2)])))
-
-        # Set subgoal achievement thresholds
-        velo_threshold = 0.8
-        quat_threshold = 0.5
-        # subgoal_thresholds = np.array([len_threshold, len_threshold, height_threshold, quat_threshold, quat_threshold, quat_threshold, quat_threshold, velo_threshold, velo_threshold, velo_threshold])
-        subgoal_thresholds = np.array([len_threshold, len_threshold, height_threshold, velo_threshold, velo_threshold])
-
-        num_actions = 8
 
         WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_state_space,
-                        num_actions=num_actions, is_fetch_env=False)
+                        is_fetch_env=False)
         # PDDLHookEnv.__init__(self, n_objects=self.n_objects)
 
         self.distance_threshold = self.end_goal_thresholds
@@ -125,7 +90,10 @@ class AntEnv(WTMEnv):
     def _obs2goal(self, obs):
         return self.project_state_to_end_goal(self.sim, obs)
 
-    # TODO: what about projections to sub goals?
+    def _obs2subgoal(self, obs):
+        return self.project_state_to_sub_goal(self.sim, obs)
+        # TODO: Not used.
+
 
     # Get state, which concatenates joint positions and velocities
     def _get_state(self):

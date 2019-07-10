@@ -45,7 +45,7 @@ class PercDeque(deque):
 
 
 class WTMEnv(robot_env.RobotEnv):
-    def __init__(self, model_path, n_substeps, initial_qpos, num_actions=4, is_fetch_env=True):
+    def __init__(self, model_path, n_substeps, initial_qpos, is_fetch_env=True):
         """Initializes a new WTM environment.
 
         Args:
@@ -67,7 +67,7 @@ class WTMEnv(robot_env.RobotEnv):
         self.is_fetch_env = is_fetch_env
 
         super(WTMEnv, self).__init__(
-            model_path=model_path, n_substeps=n_substeps, n_actions=num_actions,
+            model_path=model_path, n_substeps=n_substeps,
             initial_qpos=initial_qpos)
         if self.is_fetch_env:
             assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"

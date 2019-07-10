@@ -150,3 +150,8 @@ max_ep_steps = 27
 register(id='AntFourRoomsEnv-v0',
          entry_point='wtm_envs.mujoco.ant_four_rooms.navigate:AntFourRoomsEnv',
          max_episode_steps=max_ep_steps)
+
+register(id='AntReacherEnv-v0',
+         entry_point='wtm_envs.mujoco.ant_reacher.reach:AntReacherEnv',
+         max_episode_steps=max_ep_steps)
+
