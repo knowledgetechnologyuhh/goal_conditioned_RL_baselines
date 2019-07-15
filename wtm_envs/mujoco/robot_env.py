@@ -37,7 +37,10 @@ class RobotEnv(gym.GoalEnv):
         self.goal = self._sample_goal()
         obs = self._get_obs()
 
+        # TODO: the line below assumes that a mujoco simulation is used to determine the number of actions.
+        # TODO  This might need to be generalized
         n_actions = len(self.sim.model.actuator_ctrlrange)
+
 
         self.action_space = spaces.Box(-1., 1., shape=(n_actions,), dtype='float32')
         self.observation_space = spaces.Dict(dict(
