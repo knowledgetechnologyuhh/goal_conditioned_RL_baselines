@@ -140,3 +140,18 @@ for n_objects in range(-1, 5):
                             kwargs=kwargs,
                             max_episode_steps=max_ep_steps,
                         )
+
+
+# Ant Envs:
+
+# Ant Four Rooms:
+max_ep_steps = 27
+# TODO: how to set this up correctly? The episodes should have  a length of 700 steps (* 15 for n_substeps), but the horizon of the agents should be 10
+register(id='AntFourRoomsEnv-v0',
+         entry_point='wtm_envs.mujoco.ant_four_rooms.navigate:AntFourRoomsEnv',
+         max_episode_steps=max_ep_steps)
+
+register(id='AntReacherEnv-v0',
+         entry_point='wtm_envs.mujoco.ant_reacher.reach:AntReacherEnv',
+         max_episode_steps=max_ep_steps)
+
