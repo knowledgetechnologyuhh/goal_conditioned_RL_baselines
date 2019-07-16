@@ -116,10 +116,6 @@ class Rollout:
                     # We fully ignore the reward here because it will have to be re-computed
                     # for HER.
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
-                    #print("generate_rollouts() in rollout.py:")
-                    #print("curr_o_new: ", curr_o_new)
-                    #print("info: ", info)
-
                     if 'is_success' in info:
                         success[i] = info['is_success']
                     o_new[i] = curr_o_new['observation']
