@@ -13,7 +13,7 @@ keys/
 
 # Virtualenv
 /env
-
+/venv
 
 *.sublime-project
 *.sublime-workspace
@@ -34,3 +34,4 @@ src
 .cache
 
 MUJOCO_LOG.TXT
+data/

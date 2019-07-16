@@ -64,9 +64,9 @@ class RolloutWorker(Rollout):
                          rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, **kwargs)
         self.env_name = self.envs[0].env.spec._env_name
-        self.n_objects = self.envs[0].env.n_objects
-        self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
-        self.tower_height = self.envs[0].env.goal_tower_height
+        #self.n_objects = self.envs[0].env.n_objects
+        #self.gripper_has_target = self.envs[0].env.gripper_goal != 'gripper_none'
+        #self.tower_height = self.envs[0].env.goal_tower_height
 
         # Set Noise coefficient for environments
         self.obs_noise_coefficient = kwargs['obs_noise_coeff']
