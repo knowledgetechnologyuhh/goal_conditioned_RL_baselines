@@ -217,6 +217,7 @@ def draw_all_data_plot_rg_c_conv(data, fig_dir, y_axis_title=None):
     # fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig.png'))
 
+
 def draw_stochastic_surface_plot(data, percent_to_achieve, fig_dir):
     plt.clf()
     # fig = plt.figure(figsize=(20, 8))
@@ -347,6 +348,7 @@ def draw_stochastic_surface_plot(data, percent_to_achieve, fig_dir):
     # plt.title("Number of epochs to achieve {}% success rate".format(int(percent_to_achieve*100)), loc='center', pad=-20)
     plt.savefig(os.path.join(fig_dir, 'c_rg_.png'))
 
+
 def get_var_param_keys(paths):
     # all_params = []
     inter_dict = {}
@@ -374,6 +376,7 @@ def get_var_param_keys(paths):
                 var_param_keys.add(k)
         max_epochs = max(max_epochs, len(results['epoch']))
     return var_param_keys, inter_dict, max_epochs
+
 
 def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, col_to_display='test/success_rate', data_lastval_threshold=0.0):
     data = {}
@@ -478,6 +481,7 @@ def get_min_len_data(data, min_len):
             new_data.pop(key)
     return new_data
 
+
 def get_paths_with_symlinks(data_dir, maxdepth=8):
     glob_path = data_dir
     paths = []
@@ -487,6 +491,7 @@ def get_paths_with_symlinks(data_dir, maxdepth=8):
                   glob2.glob(path_to_use)]
         glob_path = os.path.join(glob_path, '*')
     return paths
+
 
 def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
@@ -504,6 +509,7 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
     #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
+
 
 def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer_size']):
     cols = []
@@ -526,6 +532,7 @@ def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer
 
 
     return ret_cols
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

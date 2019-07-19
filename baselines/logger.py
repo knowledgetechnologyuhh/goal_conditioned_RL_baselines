@@ -177,6 +177,7 @@ class TensorBoardOutputFormat(KVWriter):
     def __init__(self, dir):
         os.makedirs(dir, exist_ok=True)
         self.dir = dir
+        self.data_read_dir = "/".join(self.dir.split("/")[:-3])
         self.step = 1
         prefix = 'events'
         path = osp.join(osp.abspath(dir), prefix)
@@ -196,16 +197,17 @@ class TensorBoardOutputFormat(KVWriter):
 
     def launchTensorBoard(self):
         # This is nicer but does not show scalars...
-        from tensorboard import default
+        # from tensorboard import default
         from tensorboard import program
         import logging
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
-        tb = program.TensorBoard(default.get_plugins(), default.get_assets_zip_provider())
+        tb = program.TensorBoard()
+        # tb = program.TensorBoard(default.get_plugins(), default.get_assets_zip_provider())
         port = 6006
-        data_read_dir = "/".join(self.dir.split("/")[:-3])
         while True:
             # tb.configure(argv=[None, '--logdir', self.path, '--port', str(port)])
-            tb.configure(argv=[None, '--logdir', data_read_dir, '--port', str(port)])
+            tb.configure(argv=[None, '--logdir', self.data_read_dir, '--port', str(port)])
+            # tb.configure(argv=[None, '--logdir', self.data_read_dir, '--port', str(port), '--embeddings_data', 'None'])
             try:
                 url = tb.launch()
                 break
@@ -217,8 +219,6 @@ class TensorBoardOutputFormat(KVWriter):
                 return
         self.tb_port = port
         info("Tensorboard running at {}".format(url))
-
-
 
     def writekvs(self, kvs):
         def summary_val(k, v):
