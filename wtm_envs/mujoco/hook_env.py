@@ -177,14 +177,23 @@ class HookEnv(WTMEnv, PDDLHookEnv):
 
         return obs
 
-    def _viewer_setup(self,mode='human'):
-        body_id = self.sim.model.body_name2id('robot0:gripper_link')
-        lookat = self.sim.data.body_xpos[body_id]
-        for idx, value in enumerate(lookat):
-            self._viewers[mode].cam.lookat[idx] = value
-        self._viewers[mode].cam.distance = 2.5
-        self._viewers[mode].cam.azimuth = 132.
-        self._viewers[mode].cam.elevation = -14.
+    # def _viewer_setup(self,mode='human'):
+    #     if mode == 'human':
+    #         body_id = self.sim.model.body_name2id('robot0:gripper_link')
+    #         lookat = self.sim.data.body_xpos[body_id]
+    #         for idx, value in enumerate(lookat):
+    #             self._viewers[mode].cam.lookat[idx] = value
+    #         self._viewers[mode].cam.distance = 2.5
+    #         self._viewers[mode].cam.azimuth = 132.
+    #         self._viewers[mode].cam.elevation = -14.
+    #     elif mode == 'rgb_array':
+    #         body_id = self.sim.model.body_name2id('robot0:gripper_link')
+    #         lookat = self.sim.data.body_xpos[body_id]
+    #         for idx, value in enumerate(lookat):
+    #             self._viewers[mode].cam.lookat[idx] = value
+    #         self._viewers[mode].cam.distance = 1.
+    #         self._viewers[mode].cam.azimuth = 180.
+    #         self._viewers[mode].cam.elevation = -40.
 
     def _render_callback(self):
         # Visualize target.

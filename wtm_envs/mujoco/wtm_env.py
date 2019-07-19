@@ -156,19 +156,29 @@ class WTMEnv(robot_env.RobotEnv):
                 viewer = mujoco_py.MjViewer(self.sim)
                 # The following should work but it does not. Therefore, replaced by human rendering (with MjViewer, the line above) now.
                 # viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
+                # viewer = mujoco_py.MjRenderContext(self.sim, -1)
             self._viewers[mode] = viewer
             self._viewer_setup(mode=mode)
 
         return self._viewers[mode]
 
     def _viewer_setup(self, mode='human'):
-        body_id = self.sim.model.body_name2id('robot0:gripper_link')
-        lookat = self.sim.data.body_xpos[body_id]
-        for idx, value in enumerate(lookat):
-            self._viewers[mode].cam.lookat[idx] = value
-        self._viewers[mode].cam.distance = 2.5
-        self._viewers[mode].cam.azimuth = 132.
-        self._viewers[mode].cam.elevation = -14.
+        if mode == 'human':
+            body_id = self.sim.model.body_name2id('robot0:gripper_link')
+            lookat = self.sim.data.body_xpos[body_id]
+            for idx, value in enumerate(lookat):
+                self._viewers[mode].cam.lookat[idx] = value
+            self._viewers[mode].cam.distance = 2.5
+            self._viewers[mode].cam.azimuth = 132.
+            self._viewers[mode].cam.elevation = -14.
+        elif mode == 'rgb_array':
+            body_id = self.sim.model.body_name2id('robot0:gripper_link')
+            lookat = self.sim.data.body_xpos[body_id]
+            for idx, value in enumerate(lookat):
+                self._viewers[mode].cam.lookat[idx] = value
+            self._viewers[mode].cam.distance = 1.
+            self._viewers[mode].cam.azimuth = 180.
+            self._viewers[mode].cam.elevation = -40.
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
