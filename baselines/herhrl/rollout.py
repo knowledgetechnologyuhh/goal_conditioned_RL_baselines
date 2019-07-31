@@ -100,6 +100,16 @@ class RolloutWorker(Rollout):
         else:
             return self.current_t[0] == self.this_T and self.child_rollout.finished()
 
+    # def finished(self):
+    #     if self.final_goal_achieved:
+    #         return True
+    #     elif self.current_t[0] == self.this_T:
+    #         return True
+    #     elif not self.is_leaf:
+    #         return self.child_rollout.finished()
+    #     else:
+    #         return False
+
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -124,7 +134,8 @@ class RolloutWorker(Rollout):
         o = np.zeros((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
         ag = np.zeros((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
         last_subgoals_achieved = self.subgoals_achieved[0]
-        for t in range(self.current_t[0], self.this_T):
+        # for t in range(self.current_t[0], self.this_T):
+        for t in range(self.this_T):
             # print(t)
             self.total_steps += self.rollout_batch_size
             # At the first step add the current observation.
@@ -215,13 +226,15 @@ class RolloutWorker(Rollout):
         if self.is_leaf:
             self.finalize_episode()
             # for i in range(self.rollout_batch_size):
+            #     self.current_t[i] = 0
             #     self.subgoals_achieved[i] = 0
             #     self.subgoals_given[i] = []
             for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']:
                 self.current_episode[key] = []
 
         if self.h_level == 0:
-            if self.finished() or self.final_goal_achieved:
+            # if self.finished() or self.final_goal_achieved:
+            if self.current_t[0] == self.this_T or self.final_goal_achieved:
                 self.finalize_episode()
 
     def finalize_episode(self):
@@ -233,7 +246,8 @@ class RolloutWorker(Rollout):
                        info_is_success=self.current_episode['info_is_success'],
                        steps=list(np.ones_like(self.current_episode['info_is_success']) * len(self.current_episode['acts']))
                        )
-        episode = self.zero_pad_episode(episode)
+        # if not self.exploit:
+        episode = self.latest_pad_episode(episode)
         self.success = np.array(self.current_episode['successes'])[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
         ret = convert_episode_to_batch_major(episode)
@@ -264,6 +278,17 @@ class RolloutWorker(Rollout):
             assert len(episode[key]) > 0, "Empty episodes not allowed."
             for t in range(len(episode[key]), max_t):
                 episode[key].append(np.zeros_like(episode[key][0]))
+        return episode
+
+    def latest_pad_episode(self, episode):
+        for key in episode.keys():
+            max_t = self.this_T
+            if key in ['o', 'ag']:
+                max_t += 1
+            assert len(episode[key]) > 0, "Empty episodes not allowed."
+            latest = len(episode[key])
+            for t in range(len(episode[key]), max_t):
+                episode[key].append(episode[key][latest-1])
         return episode
 
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):

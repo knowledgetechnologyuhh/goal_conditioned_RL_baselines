@@ -79,7 +79,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             self.clip_return = np.inf
 
         self.create_actor_critic = import_function(self.network_class)
-
+        self.stage_shapes['gamma'] = (None,)
         # Create network.
         with tf.variable_scope(self.scope):
             self.staging_tf = StagingArea(
@@ -288,7 +288,8 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         # loss functions
         target_Q_pi_tf = self.target.Q_pi_tf
         clip_range = (-self.clip_return, 0. if self.clip_pos_returns else np.inf)
-        target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
+        # target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
+        target_tf = tf.clip_by_value(batch_tf['r'] + tf.transpose(self.gamma * batch_tf['gamma'])* target_Q_pi_tf, *clip_range)
         self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
         self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
