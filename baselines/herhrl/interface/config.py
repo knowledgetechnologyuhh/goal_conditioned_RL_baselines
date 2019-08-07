@@ -97,7 +97,9 @@ use_target_net=self.use_target_net)
 
 # OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 # OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
-OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
+# OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
+OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
+
 
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'replay_strategy', 'env_name']
@@ -126,8 +128,11 @@ def prepare_params(kwargs):
         return gym.make(env_name)
     kwargs['make_env'] = make_env
     tmp_env = cached_make_env(kwargs['make_env'])
-    assert hasattr(tmp_env, '_max_episode_steps')
-    kwargs['T'] = tmp_env._max_episode_steps
+    # assert hasattr(tmp_env, '_max_episode_steps')
+    # kwargs['T'] = tmp_env._max_episode_steps
+    action_steps = [int(n_s) for n_s in kwargs['action_steps'][1:-1].split(",") if n_s != '']
+    kwargs['action_steps'] = action_steps
+    kwargs['T'] = action_steps[-1]
     tmp_env.reset()
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
@@ -223,7 +228,8 @@ def configure_policy(dims, params):
     }
 
     # t_remaining = params['T']
-    n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
+    # n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
+    n_subgoals = params['action_steps'][:-1]
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
                     policy_str in params['policies_layers'][1:-1].split(",") if policy_str != ''] + [DDPG_HER_HRL_POLICY]
     policies = []
