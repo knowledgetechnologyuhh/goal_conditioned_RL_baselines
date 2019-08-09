@@ -175,17 +175,17 @@ class PDDLAntEnv(PDDLEnv):
         move_to_door_act_template = "(:action move_to_door_{}_from_{} \n\t" \
                                     ":parameters () \n\t" \
                                     ":precondition (ag_at_room_center_{}) \n\t" \
-                                    ":effect (ag_at_door_{})\n)\n\n"
+                                    ":effect (and (ag_at_door_{}) (not (ag_at_room_center_{})) )\n)\n\n"
 
         move_to_room_center_act_template = "(:action move_to_room_center_{} \n\t" \
                                            ":parameters () \n\t" \
-                                           ":precondition (ag_in_room_{}) \n\t" \
+                                           ":precondition (and (ag_in_room_{}) {})\n\t" \
                                            ":effect (ag_at_room_center_{})\n)\n\n"
 
         move_to_room_center_from_door_act_template = "(:action move_to_room_center_{}_from_door_{} \n\t" \
                                            ":parameters () \n\t" \
                                            ":precondition (ag_at_door_{}) \n\t" \
-                                           ":effect (ag_at_room_center_{})\n)\n\n"
+                                           ":effect (and (ag_at_room_center_{}) (not (ag_at_door_{})) )\n)\n\n"
 
         move_to_target_act_template = "(:action move_to_target_in_room_{} \n\t" \
                                            ":parameters () \n\t" \
@@ -195,9 +195,7 @@ class PDDLAntEnv(PDDLEnv):
         for room_x in range(self.n_rooms_x):
             for room_y in range(self.n_rooms_y):
                 room_str = "{}_{}".format(room_x, room_y)
-
-                move_to_room_center_act = move_to_room_center_act_template.format(room_str, room_str, room_str)
-                actions.append(move_to_room_center_act)
+                not_at_door_str = ""
                 for room_x2 in range(self.n_rooms_x):
                     for room_y2 in range(self.n_rooms_y):
                         if not (room_x2 < self.n_rooms_x and room_y2 < self.n_rooms_y):
@@ -206,22 +204,29 @@ class PDDLAntEnv(PDDLEnv):
                                 room_y2 == room_y + 1 and room_x == room_x2):
                             door_str = "{}_{}_{}_{}".format(room_x, room_y, room_x2, room_y2)
 
-                            move_to_room_center_from_door_act = move_to_room_center_from_door_act_template.format(room_str, door_str, door_str, room_str)
+                            move_to_room_center_from_door_act = move_to_room_center_from_door_act_template.format(
+                                room_str, door_str, door_str, room_str, door_str)
                             actions.append(move_to_room_center_from_door_act)
 
                             room_str2 = "{}_{}".format(room_x2, room_y2)
                             move_to_room_center_from_door_act = move_to_room_center_from_door_act_template.format(
-                                room_str2, door_str, door_str, room_str2)
+                                room_str2, door_str, door_str, room_str2, door_str)
                             actions.append(move_to_room_center_from_door_act)
 
-                            move_to_door_act = move_to_door_act_template.format(door_str, room_str, room_str, door_str)
+                            move_to_door_act = move_to_door_act_template.format(door_str, room_str, room_str, door_str, room_str)
                             actions.append(move_to_door_act)
+                            not_at_door_str += " (not (ag_at_door_{}))".format(door_str)
 
                         if (room_x2 == room_x - 1 and room_y == room_y2) or (
                                 room_y2 == room_y - 1 and room_x == room_x2):
                             door_str = "{}_{}_{}_{}".format(room_x2, room_y2, room_x, room_y)
-                            move_to_door_act = move_to_door_act_template.format(door_str, room_str, room_str, door_str)
+                            move_to_door_act = move_to_door_act_template.format(door_str, room_str, room_str, door_str, room_str)
                             actions.append(move_to_door_act)
+                            not_at_door_str += " (not (ag_at_door_{}))".format(door_str)
+
+
+                move_to_room_center_act = move_to_room_center_act_template.format(room_str, room_str, not_at_door_str, room_str)
+                actions.append(move_to_room_center_act)
 
                 move_to_target_act = move_to_target_act_template.format(room_str, room_str, room_str, room_str)
                 actions.append(move_to_target_act)

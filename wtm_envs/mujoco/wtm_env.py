@@ -43,7 +43,6 @@ class PercDeque(deque):
         self.ctr += 1
 
 
-
 class WTMEnv(robot_env.RobotEnv):
     def __init__(
         self, model_path, n_substeps, initial_qpos, n_actions=4
