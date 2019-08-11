@@ -51,7 +51,7 @@ do
         --render 0
         --early_stop_success_rate ${early_stop_threshold}
         "
-    for i in 1 2 3
+    for i in 1 2
     do
         for obs_noise_coeff in '0.0'
         do
