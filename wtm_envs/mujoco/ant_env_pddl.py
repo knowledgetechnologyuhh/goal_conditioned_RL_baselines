@@ -2,7 +2,7 @@ import numpy as np
 from wtm_envs.mujoco.pddl_env import PDDLEnv
 
 class PDDLAntEnv(PDDLEnv):
-    distance_threshold = 0.3
+    distance_threshold = 0.4
 
     area_width = 18.0
     area_height = 18.0
