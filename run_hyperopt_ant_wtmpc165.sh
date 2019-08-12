@@ -39,7 +39,7 @@ krenew -K 60 -b
 
 n_subgoals_layers='[15,700]'
 
-for n_episodes in 20 40 80
+for n_episodes in 100
 do
     n_epochs=$(( 4000 / $n_episodes ))
     cmd="python3 experiment/train.py
@@ -55,7 +55,7 @@ do
         "
     for i in 1 2
     do
-        for obs_noise_coeff in '0.0'
+        for obs_noise_coeff in '0.0' '0.005' '0.01' '0.02'
         do
             noise_cmd="${cmd} --obs_noise_coeff ${obs_noise_coeff}"
             shallow_noise_cmd="${noise_cmd} --policies_layers [] --n_subgoals_layers []"
