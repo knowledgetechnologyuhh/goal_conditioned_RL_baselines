@@ -119,20 +119,8 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         label = "|".join(sorted(config.split("|"), reverse=True))
 
         # Some custom modifications of label:
-        label = label.replace("stochastic3_0_0_0_1", 'uniform')
-        label = label.replace("stochastic3_0_0_0_1", 'uniform')
-        label = label.replace("replay_k: 6", "DDPG+HER")
-        label = label.replace("replay_k: 0", "DDPG")
-        label = label.replace("+curriculum_sampling: none", '')
-        if 'stochastic3_' in label:
-            rg = label.split("stochastic3_")[1].split("_")[0]
-            kappa = label.split("stochastic3_")[1].split("_")[2]
-            h = label.split("stochastic3_")[1].split("_")[3].split("+")[0]
-            gl_str = "curriculum_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
-            label = label.replace(gl_str, "CGM")
         label = label.replace("model_network_class: ", 'model: ')
         label = label.replace("baselines.model_based.model_rnn:", '')
-
         label = label.replace("algorithm: baselines.herhrl", 'PDDL+HER')
         label = label.replace("algorithm: baselines.her", 'HER')
         label = label.replace("obs_noise_coeff:", 'obs noise:')
@@ -141,7 +129,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         xs, ys = zip(*data[config])
         # label = label + "|N:{}".format(len(ys))
         len_ys = sorted([len(y) for y in ys])
-        maxlen_ys_2nd = len_ys[-2]
+        # maxlen_ys_2nd = len_ys[-2]
         maxlen_ys = max([len(x) for x in xs])
         xs, ys = pad(xs), pad(ys, value=np.nan)
         median = np.nanmedian(ys, axis=0)
@@ -153,9 +141,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
 
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
-        plot_idx = maxlen_ys_2nd + 1    # this to remove the effect of early stopping on median plot
-        # plot_idx = min(35, maxlen_ys_2nd + 1)  # this line to cut the graph where you like
-        # plot_idx = maxlen_ys          # this to plot normally
+        plot_idx = maxlen_ys
         if lin_log == 'lin':
             plt.plot(x_vals[:plot_idx], median[:plot_idx], label=label, color=color)
         elif lin_log == 'log':
@@ -397,7 +383,7 @@ def get_var_param_keys(paths):
         max_epochs = max(max_epochs, len(results['epoch']))
     return var_param_keys, inter_dict, max_epochs
 
-def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, col_to_display='test/success_rate', data_lastval_threshold=0.0):
+def get_data(paths, var_param_keys, max_epochs, x_vals, smoothen=False, padding=True, col_to_display='test/success_rate', data_lastval_threshold=0.0):
     data = {}
     for curr_path in paths:
         if not os.path.isdir(curr_path):
@@ -414,8 +400,10 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
             continue
         this_data = np.array(results[col_to_display])
 
-        epoch = np.array(results['epoch']) + 1
-        if len(epoch) < 3:
+        xs = np.array(results[x_vals])
+
+        # epoch = np.array(results['epoch']) + 1
+        if len(xs) < 3:
             continue
         env_id = params['env_name']
 
@@ -426,26 +414,37 @@ def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, co
         config = config[:-1]
 
         # Process and smooth data.
-        assert this_data.shape == epoch.shape
-        x = epoch
+        assert this_data.shape == xs.shape
+        x = xs
         y = np.array(this_data)
         if padding:
-            x = np.array(range(1, max_epochs+1))
-            pad_val = y[-1]
-            y_pad = np.array([pad_val] * (max_epochs - len(y)))
-            y = np.concatenate((y,y_pad))
+            print("Padding currently not supported")
+            raise NotImplementedError
+            #TODO: implement extrapolation of x-values.
+            # x = np.array(range(max_x))
+            # pad_val = y[-1]
+            # y_pad = np.array([pad_val] * (max_x - len(y)))
+            # y = np.concatenate((y,y_pad))
 
         if smoothen:
-            x, y = smooth_reward_curve(epoch, this_data)
+            x, y = smooth_reward_curve(xs, this_data)
         if x.shape != y.shape:
             continue
 
-        if y[-1] >= data_lastval_threshold or (len(epoch) == max_epochs):
+        if y[-1] >= data_lastval_threshold or (len(xs) == max_epochs):
             if config not in data.keys():
                 data[config] = []
             data[config].append((x, y))
+    cut_data = {}
+    for k,v in data.items():
+        cut_data[k] = []
+        for idx,d in enumerate(data[k]):
+            cut_data[k].append([data[k][idx][0][:max_epochs]])
+            cut_data[k][-1].append(data[k][idx][1][:max_epochs])
+            # data[k][idx][0] = data[k][idx][0][:max_epochs]
+            # data[k][idx][1] = data[k][idx][1][:max_epochs]
 
-    return data
+    return cut_data
 
 
 def get_best_data(data, sort_order, n_best=5, avg_last_steps=5, sort_order_least_val=None):
@@ -510,12 +509,14 @@ def get_paths_with_symlinks(data_dir, maxdepth=8):
         glob_path = os.path.join(glob_path, '*')
     return paths
 
-def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
+def do_plot(data_dir, x_vals='epoch', smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin', min_len=10, cut_early_epochs=None):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
     paths = get_paths_with_symlinks(data_dir, maxdepth=8)
     # paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
     var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
+    if cut_early_epochs is not None:
+        max_epochs = min(max_epochs,cut_early_epochs)
     try:
         var_param_keys.remove('base_logdir')
     except Exception as e:
@@ -525,17 +526,20 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
             var_param_keys = set()
             var_param_keys.add('algorithm')
             var_param_keys.add('obs_noise_coeff')
+            # var_param_keys.add('n_episodes')
         else:
             var_param_keys = set()
             var_param_keys.add('algorithm')
     if 'early_stop_success_rate' in var_param_keys:
         var_param_keys.remove('early_stop_success_rate')
-    data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
-    data = get_min_len_data(data, min_len=10)
+    data = get_data(paths, var_param_keys, max_epochs, x_vals=x_vals, smoothen=smoothen, padding=padding, col_to_display=col_to_display)
+    data = get_min_len_data(data, min_len=min_len)
     # if get_best != '':
     #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
-
-    draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
+    try:
+        draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
+    except Exception as e:
+        print("This does not work for some reason: {}".format(e))
 
 def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer_size']):
     cols = []
@@ -555,8 +559,6 @@ def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer
                 remove = True
         if remove == False:
             ret_cols.append(c)
-
-
     return ret_cols
 
 if __name__ == '__main__':
@@ -565,11 +567,13 @@ if __name__ == '__main__':
     parser.add_argument('--smooth', type=int, default=0)
     parser.add_argument('--pad', type=int, default=0)
     parser.add_argument('--column', type=str, default='')
+    parser.add_argument('--cut_early_epochs', type=int, default=None)
+    parser.add_argument('--x_vals', type=str, default='epoch', choices=['epoch', 'train/rollouts'])
     args = parser.parse_args()
     cols = get_all_columns(args.data_dir)
     if args.column == '':
         for c in cols:
-            do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c)
+            do_plot(args.data_dir, args.x_vals, args.smooth, args.pad, col_to_display=c, cut_early_epochs=args.cut_early_epochs)
     else:
     # data_lastval_threshold = 0.0
-        do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)
+        do_plot(args.data_dir, args.x_vals, args.smooth, args.pad, col_to_display=args.column, cut_early_epochs=args.cut_early_epochs)

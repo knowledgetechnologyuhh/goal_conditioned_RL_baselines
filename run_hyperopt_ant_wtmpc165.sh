@@ -47,9 +47,11 @@ do
         --env ${env}
         --algorithm baselines.herhrl
         --n_epochs ${n_epochs}
+        --n_episodes ${n_episodes}
         --base_logdir /data/$(whoami)/herhrl
         --render 0
         --early_stop_success_rate ${early_stop_threshold}
+        --info nepi${n_episodes}
         "
     for i in 1 2
     do
