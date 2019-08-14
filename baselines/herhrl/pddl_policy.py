@@ -66,8 +66,6 @@ class PDDL_POLICY(HRL_Policy):
         for i in range(self.rollout_batch_size):
             plan, world_states = self.envs[i].env.get_plan(return_states=True)
             if len(plan) > 0:
-                # print([k for k,v in world_states[1].items() if v == 1])
-                # print(plan)
                 this_u = self.envs[i].env.preds2subgoal(world_states[1])
             else:
                 this_u = g[i].copy()

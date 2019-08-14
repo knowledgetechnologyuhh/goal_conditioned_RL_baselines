@@ -98,7 +98,7 @@ def draw_var_param_plots(data, var_param_keys, inter_dict, fig_dir,  y_axis_titl
             plt.savefig(os.path.join(fig_dir, 'fig-{}:{}_{}.png'.format(config_split, conf_val, y_axis_title.replace("/", "_"))))
 
 
-def draw_all_data_plot(data, fig_dir, x_axis_title=None, y_axis_title=None, lin_log='lin'):
+def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     plt.clf()
     # plt.figure(figsize=(20, 8))
     fig = plt.figure(figsize=(20, 8))
@@ -119,8 +119,20 @@ def draw_all_data_plot(data, fig_dir, x_axis_title=None, y_axis_title=None, lin_
         label = "|".join(sorted(config.split("|"), reverse=True))
 
         # Some custom modifications of label:
+        label = label.replace("stochastic3_0_0_0_1", 'uniform')
+        label = label.replace("stochastic3_0_0_0_1", 'uniform')
+        label = label.replace("replay_k: 6", "DDPG+HER")
+        label = label.replace("replay_k: 0", "DDPG")
+        label = label.replace("+curriculum_sampling: none", '')
+        if 'stochastic3_' in label:
+            rg = label.split("stochastic3_")[1].split("_")[0]
+            kappa = label.split("stochastic3_")[1].split("_")[2]
+            h = label.split("stochastic3_")[1].split("_")[3].split("+")[0]
+            gl_str = "curriculum_sampling: stochastic3_{}_0_{}_{}".format(rg,kappa,h)
+            label = label.replace(gl_str, "CGM")
         label = label.replace("model_network_class: ", 'model: ')
         label = label.replace("baselines.model_based.model_rnn:", '')
+
         label = label.replace("algorithm: baselines.herhrl", 'PDDL+HER')
         label = label.replace("algorithm: baselines.her", 'HER')
         label = label.replace("obs_noise_coeff:", 'obs noise:')
@@ -129,23 +141,21 @@ def draw_all_data_plot(data, fig_dir, x_axis_title=None, y_axis_title=None, lin_
         xs, ys = zip(*data[config])
         # label = label + "|N:{}".format(len(ys))
         len_ys = sorted([len(y) for y in ys])
-        # maxlen_ys_2nd = len_ys[-2]
+        maxlen_ys_2nd = len_ys[-2]
         maxlen_ys = max([len(x) for x in xs])
-        ys = pad(ys, value=np.nan)
-        x_max = [max(x) for x in xs]
-        x_vals = xs[np.argmax(x_max)]
-        # xs, ys = pad(xs), pad(ys, value=np.nan)
+        xs, ys = pad(xs), pad(ys, value=np.nan)
         median = np.nanmedian(ys, axis=0)
         mean = np.mean(ys, axis=0)
-        # assert xs.shape == ys.shape
-        # x_vals = range(1,xs.shape[1]+1)
-        # x_vals = xs
+        assert xs.shape == ys.shape
+        x_vals = range(1,xs.shape[1]+1)
 
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
-        plot_idx = maxlen_ys
+        plot_idx = maxlen_ys_2nd + 1    # this to remove the effect of early stopping on median plot
+        # plot_idx = min(35, maxlen_ys_2nd + 1)  # this line to cut the graph where you like
+        # plot_idx = maxlen_ys          # this to plot normally
         if lin_log == 'lin':
             plt.plot(x_vals[:plot_idx], median[:plot_idx], label=label, color=color)
         elif lin_log == 'log':
@@ -162,26 +172,208 @@ def draw_all_data_plot(data, fig_dir, x_axis_title=None, y_axis_title=None, lin_
     # plt.title(env_id)
     # ax.set_xlim([0, 150])
     ax.tick_params(labelsize=20)
-    y_axis_display_title = y_axis_title.replace("/", " ")
-    y_axis_display_title = y_axis_display_title.replace("_", " ")
-    plt.xlabel(x_axis_title, fontsize=20)
-    plt.ylabel(y_axis_display_title, fontsize=20)
+    plt.xlabel('epoch', fontsize=20)
+    plt.ylabel(y_axis_title, fontsize=20)
     handles, labels = ax.get_legend_handles_labels()
     # sort both labels and handles by labels
     if len(labels) > 0:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        plt.legend(handles, labels, loc='upper left', fontsize=16)
+        plt.legend(handles, labels, loc='upper right', fontsize=16)
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.jpg'.format(y_axis_title.replace("/", "_"))))
     plt.savefig(os.path.join(fig_dir, 'fig_{}.pdf'.format(y_axis_title.replace("/", "_"))))
 
 
+def draw_all_data_plot_rg_c_conv(data, fig_dir, y_axis_title=None):
+    plt.clf()
+    # plt.figure(figsize=(20, 8))
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.gca()
+    new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+                  '#bcbd22', '#17becf']
+    plt.rc('axes', prop_cycle=(cycler('linestyle', ['-', '--', ':']) * cycler('color', new_colors)))
+    for idx, config in enumerate(sorted(data.keys(), reverse=True)):
+        label = config + " - n: {}".format(len(data[config]))
+        label = config
 
-def get_var_param_keys(paths, x_vals):
+        # Some custom modifications of label:
+        label = label.replace("stochastic3_0_0_0_1", 'uniform')
+        label = label.replace("stochastic3_0_0_0_1", 'uniform')
+        label = label.replace("curriculum_sampling: none", 'no CGM')
+        label = label.replace("curriculum_sampling: ", "")
+        if 'stochastic3_' in label:
+            rg = label.split("stochastic3_")[1].split("_")[0]
+            kappa= label.split("stochastic3_")[1].split("_")[2]
+            h = label.split("stochastic3_")[1].split("_")[3].split(" ")[0]
+            # label = label.replace("stochastic3_{}_0_{}_{}".format(rg,c,h), 'rg={}, c={}'.format(rg,kappa))
+            label = label.replace("stochastic3_{}_0_{}_{}".format(rg,kappa,h), 'CGM - $r_g$={}'.format(rg))
+        # End custom modifications of label
+
+        xs, ys = zip(*data[config])
+        xs, ys = pad(xs), pad(ys, value=1.0)
+        median = np.nanmedian(ys, axis=0)
+        mean = np.mean(ys, axis=0)
+        assert xs.shape == ys.shape
+        x_vals = range(1,xs.shape[1]+1)
+
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        # plt.xticks(loc=range(170))
+
+        c_idx = idx % len(new_colors)
+        color = new_colors[c_idx]
+
+        plt.plot(x_vals, median, label=label, color=color)
+        plt.fill_between(x_vals, np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25, color=color)
+
+        # plt.plot(x_vals, mean, label=label+"-mean")
+        # dev = np.std(ys, axis=0)
+        # min_vals=mean-dev
+        # max_vals = mean + dev
+        # plt.fill_between(x_vals, min_vals, max_vals, alpha=0.25)
+    # plt.title(env_id)
+    ax.set_xlim([4, 15])
+    plt.xlabel('epoch')
+    plt.ylabel(y_axis_title)
+    plt.legend(loc='upper left')
+    # fig.tight_layout()
+    plt.savefig(os.path.join(fig_dir, 'fig.png'))
+
+def draw_stochastic_surface_plot(data, percent_to_achieve, fig_dir):
+    plt.clf()
+    # fig = plt.figure(figsize=(20, 8))
+    plt.figure(figsize=(9, 4.5))
+    new_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+                  '#bcbd22', '#17becf']
+    # plt.rc('axes', prop_cycle=(cycler('linestyle', ['-', '--', ':']) * cycler('color', new_colors)))
+    surf_plot_data = {}
+    uniform_sampling_epochs = []
+    none_sampling_epochs = []
+    kappa_s = set()
+    rg_s = set()
+    for config in sorted(data.keys()):
+
+        epochs = []
+        for d in data[config]:
+            try:
+                epoch = min(np.argwhere(d[1] > percent_to_achieve))[0]
+            except:
+                print("Not enough data for {}".format(config))
+                continue
+            epochs.append(epoch)
+        # epochs = [len(d[0]) for d in data[config]]
+        if 'curriculum_sampling: none' in config:
+            none_sampling_epochs += epochs
+            kappa_s.add(-1)
+            continue
+
+        median_epochs = np.median(epochs)
+        min_perc = np.nanpercentile(epochs, 25, axis=0)
+        max_perc = np.nanpercentile(epochs, 75, axis=0)
+        avg_epochs = np.mean(epochs)
+        n_runs = len(epochs)
+        std_epochs = np.std(epochs)
+
+        if 'stochastic3_' not in config:
+            continue
+
+        rg = float(config.split("stochastic3_")[1].split("_")[0])
+        rg_s.add(rg)
+        kappa = float(config.split("stochastic3_")[1].split("_")[2])
+        kappa_s.add(kappa)
+
+        if rg not in surf_plot_data.keys():
+            surf_plot_data[rg] = {}
+        if kappa == 0.0:
+            uniform_sampling_epochs += epochs
+        surf_plot_data[rg][kappa] = (avg_epochs, std_epochs, n_runs, median_epochs, min_perc, max_perc)
+
+    uniform_avg_epochs = np.mean(uniform_sampling_epochs)
+    none_avg_epochs = np.mean(none_sampling_epochs)
+    uniform_std_epochs = np.std(uniform_sampling_epochs)
+    none_std_epochs = np.std(none_sampling_epochs)
+    uniform_median_epochs = np.median(uniform_sampling_epochs)
+    none_median_epochs = np.median(none_sampling_epochs)
+    uniform_min_perc = np.nanpercentile(uniform_sampling_epochs, 25, axis=0)
+    none_min_perc = np.nanpercentile(none_sampling_epochs, 25, axis=0)
+    uniform_max_perc = np.nanpercentile(uniform_sampling_epochs, 75, axis=0)
+    none_max_perc = np.nanpercentile(none_sampling_epochs, 75, axis=0)
+    for rg in surf_plot_data.keys():
+        surf_plot_data[rg][0.0] = (
+        uniform_avg_epochs, uniform_std_epochs, len(uniform_sampling_epochs), uniform_median_epochs, uniform_min_perc,
+        uniform_max_perc)
+        surf_plot_data[rg][-1] = (
+        none_avg_epochs, none_std_epochs, len(none_sampling_epochs), none_median_epochs, none_min_perc,
+        none_max_perc)
+
+
+    kappa_s = sorted(list(kappa_s))
+    # kappa_s.insert(1,0)
+    rg_s = sorted(list(rg_s))
+    # surf_plot_data_arr = np.array(list(surf_plot_data.items()))
+    for idx, kappa in enumerate(kappa_s):
+        # label = "c={} -n: {}".format(c, len(surf_plot_data[0][kappa]))
+        # n_runs = ''
+        # n_runs = np.mean(0)
+        c_label = "$\kappa$={}".format(kappa)
+        if kappa== -1:
+            c_label = "no CGM"
+            continue
+        if kappa== 0:
+            c_label = "uniform GM"
+            continue
+        label = "{}".format(c_label)
+        xs = sorted(list(surf_plot_data.keys()))
+        xs = np.array([k for k in sorted(surf_plot_data.keys()) if kappa in surf_plot_data[k].keys()])
+
+        # ys = np.array([surf_plot_data[k][kappa][0] for k in sorted(surf_plot_data.keys()) if kappain surf_plot_data[k].keys()])
+        # std_ys = np.array([surf_plot_data[k][kappa][1] for k in sorted(surf_plot_data.keys()) if kappa in surf_plot_data[k].keys()])
+        # min_vals = ys + std_ys
+        # max_vals = ys - std_ys
+
+        ys = np.array([surf_plot_data[k][kappa][3] for k in sorted(surf_plot_data.keys()) if kappa in surf_plot_data[k].keys()])
+        n_runs = np.array([surf_plot_data[k][kappa][2] for k in sorted(surf_plot_data.keys()) if kappa in surf_plot_data[k].keys()])
+        min_vals = np.array([surf_plot_data[k][kappa][4] for k in sorted(surf_plot_data.keys()) if kappa in surf_plot_data[k].keys()])
+        max_vals = np.array([surf_plot_data[k][kappa][5] for k in sorted(surf_plot_data.keys()) if kappa in surf_plot_data[k].keys()])
+
+        if np.array(xs).shape != ys.shape:
+            print("This data probably has not all kappas")
+            continue
+
+        color = new_colors[idx]
+
+        print("C {} has color {}".format(kappa,color))
+
+        # Add median points
+        plt.scatter(xs, ys, color=color)
+        # Add number of runs
+        # for d_idx, n in enumerate(n_runs):
+        #     plt.gca().annotate(str(n), (xs[d_idx], ys[d_idx]))
+        # Add lines
+        plt.plot(xs, ys, label=label, color=color)
+        # Add quartiles
+        plt.plot(xs, min_vals, linestyle='dashed', color=color, alpha=0.25)
+        plt.plot(xs, max_vals, linestyle='dashed', color=color, alpha=0.25)
+        # break
+        # plt.fill_between(xs, min_vals, max_vals, alpha=0.25)
+        # plt.fill_between(xs, min_vals, max_vals, alpha=0.1)
+    # plt.legend(loc='upper left', bbox_to_anchor=(5.05,1.83))
+    ax = plt.gca()
+    # ax.set_xlim([0, 70])
+    ax.set_ylim([20, 80])
+    plt.xlabel('$c_g$')
+    plt.ylabel('epochs to achieve {}% success rate'.format(int(percent_to_achieve*100)))
+
+    plt.legend(loc='upper left')
+    # plt.title("Number of epochs to achieve {}% success rate".format(int(percent_to_achieve*100)), loc='center', pad=-20)
+    plt.savefig(os.path.join(fig_dir, 'c_rg_.png'))
+
+def get_var_param_keys(paths):
     # all_params = []
     inter_dict = {}
     var_param_keys = set()
-    max_x = 0
+    max_epochs = 0
     for curr_path in paths:
         if not os.path.isdir(curr_path):
             continue
@@ -202,12 +394,11 @@ def get_var_param_keys(paths, x_vals):
             if v not in inter_dict[k]:
                 inter_dict[k].append(v)
                 var_param_keys.add(k)
-        max_x = max(max_x, max(results[x_vals]))
-    return var_param_keys, inter_dict, max_x
+        max_epochs = max(max_epochs, len(results['epoch']))
+    return var_param_keys, inter_dict, max_epochs
 
-def get_data(paths, var_param_keys, max_x, x_vals, smoothen=False, padding=True, col_to_display='test/success_rate'):
+def get_data(paths, var_param_keys, max_epochs, smoothen=False, padding=True, col_to_display='test/success_rate', data_lastval_threshold=0.0):
     data = {}
-    max_x_idx = {}
     for curr_path in paths:
         if not os.path.isdir(curr_path):
             continue
@@ -223,10 +414,10 @@ def get_data(paths, var_param_keys, max_x, x_vals, smoothen=False, padding=True,
             continue
         this_data = np.array(results[col_to_display])
 
-        xs = np.array(results[x_vals])
-
-        if len(xs) < 3:
+        epoch = np.array(results['epoch']) + 1
+        if len(epoch) < 3:
             continue
+        env_id = params['env_name']
 
         config = ''
         for k in var_param_keys:
@@ -235,36 +426,26 @@ def get_data(paths, var_param_keys, max_x, x_vals, smoothen=False, padding=True,
         config = config[:-1]
 
         # Process and smooth data.
-        assert this_data.shape == xs.shape
-        x = xs
+        assert this_data.shape == epoch.shape
+        x = epoch
         y = np.array(this_data)
         if padding:
-            print("Padding currently not supported")
-            raise NotImplementedError
-            #TODO: implement extrapolation of x-values.
-            # x = np.array(range(max_x))
-            # y_pad_val = y[-1]
-            # y_pad = np.array([y_pad_val] * (max_x - len(y)))
-            # y = np.concatenate((y,y_pad))
+            x = np.array(range(1, max_epochs+1))
+            pad_val = y[-1]
+            y_pad = np.array([pad_val] * (max_epochs - len(y)))
+            y = np.concatenate((y,y_pad))
 
         if smoothen:
-            x, y = smooth_reward_curve(xs, this_data)
+            x, y = smooth_reward_curve(epoch, this_data)
         if x.shape != y.shape:
             continue
-        max_x_idx[config] = int(max(np.argwhere(xs <= max_x)))
-        if config not in data.keys():
-            data[config] = []
-        data[config].append((x, y))
-    cut_data = {}
-    for k,v in data.items():
-        cut_data[k] = []
-        for idx,d in enumerate(data[k]):
-            cut_data[k].append([data[k][idx][0][:max_x_idx[k]]])
-            cut_data[k][-1].append(data[k][idx][1][:max_x_idx[k]])
-            # data[k][idx][0] = data[k][idx][0][:max_epochs]
-            # data[k][idx][1] = data[k][idx][1][:max_epochs]
 
-    return cut_data
+        if y[-1] >= data_lastval_threshold or (len(epoch) == max_epochs):
+            if config not in data.keys():
+                data[config] = []
+            data[config].append((x, y))
+
+    return data
 
 
 def get_best_data(data, sort_order, n_best=5, avg_last_steps=5, sort_order_least_val=None):
@@ -329,14 +510,12 @@ def get_paths_with_symlinks(data_dir, maxdepth=8):
         glob_path = os.path.join(glob_path, '*')
     return paths
 
-def do_plot(data_dir, x_vals='epoch', smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin', min_len=2, cut_early_x=None):
+def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin'):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
     paths = get_paths_with_symlinks(data_dir, maxdepth=8)
     # paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(data_dir, '**', 'progress.csv'))]
-    var_param_keys, inter_dict, max_x = get_var_param_keys(paths, x_vals)
-    if cut_early_x is not None:
-        max_x = min(max_x, cut_early_x)
+    var_param_keys, inter_dict, max_epochs = get_var_param_keys(paths)
     try:
         var_param_keys.remove('base_logdir')
     except Exception as e:
@@ -346,23 +525,17 @@ def do_plot(data_dir, x_vals='epoch', smoothen=True, padding=False, col_to_displ
             var_param_keys = set()
             var_param_keys.add('algorithm')
             var_param_keys.add('obs_noise_coeff')
-            # var_param_keys.add('n_episodes')
         else:
             var_param_keys = set()
             var_param_keys.add('algorithm')
     if 'early_stop_success_rate' in var_param_keys:
         var_param_keys.remove('early_stop_success_rate')
-    data = get_data(paths, var_param_keys, max_x, x_vals=x_vals, smoothen=smoothen, padding=padding, col_to_display=col_to_display)
-    data = get_min_len_data(data, min_len=min_len)
+    data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
+    data = get_min_len_data(data, min_len=10)
     # if get_best != '':
     #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
-    # try:
-    #     draw_all_data_plot(data, data_dir, x_axis_title=x_vals, y_axis_title=col_to_display, lin_log=lin_log)
-    # except Exception as e:
-    #     print("This does not work for some reason: {}".format(e))
-    draw_all_data_plot(data, data_dir, x_axis_title=x_vals, y_axis_title=col_to_display, lin_log=lin_log)
-    # draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
+    draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
 def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer_size']):
     cols = []
@@ -382,6 +555,8 @@ def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer
                 remove = True
         if remove == False:
             ret_cols.append(c)
+
+
     return ret_cols
 
 if __name__ == '__main__':
@@ -390,13 +565,11 @@ if __name__ == '__main__':
     parser.add_argument('--smooth', type=int, default=0)
     parser.add_argument('--pad', type=int, default=0)
     parser.add_argument('--column', type=str, default='')
-    parser.add_argument('--cut_early_x', type=int, default=None)
-    parser.add_argument('--x_vals', type=str, default='epoch', choices=['epoch', 'train/rollouts'])
     args = parser.parse_args()
     cols = get_all_columns(args.data_dir)
     if args.column == '':
         for c in cols:
-            do_plot(args.data_dir, args.x_vals, args.smooth, padding=args.pad, col_to_display=c, cut_early_x=args.cut_early_x)
+            do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c)
     else:
     # data_lastval_threshold = 0.0
-        do_plot(args.data_dir, args.x_vals, args.smooth, args.pad, col_to_display=args.column, cut_early_x=args.cut_early_x)
+        do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column)

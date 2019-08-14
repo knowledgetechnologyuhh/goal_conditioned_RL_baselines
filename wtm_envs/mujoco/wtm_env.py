@@ -43,9 +43,10 @@ class PercDeque(deque):
         self.ctr += 1
 
 
+
 class WTMEnv(robot_env.RobotEnv):
     def __init__(
-        self, model_path, n_substeps, initial_qpos, n_actions=4
+        self, model_path, n_substeps, initial_qpos
     ):
         """Initializes a new Fetch environment.
 
@@ -79,10 +80,10 @@ class WTMEnv(robot_env.RobotEnv):
         self.final_goal = []
 
         super(WTMEnv, self).__init__(
-            model_path=model_path, n_substeps=n_substeps, n_actions=n_actions,
+            model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
-        # assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
+        assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
 
     # GoalEnv methods
     # ----------------------------
@@ -97,11 +98,10 @@ class WTMEnv(robot_env.RobotEnv):
     # RobotEnv methods
     # ----------------------------
     def _step_callback(self):
-        if "block_gripper" in self.__dict__.keys():
-            if self.block_gripper:
-                self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
-                self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
-                self.sim.forward()
+        if self.block_gripper:
+            self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
+            self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
+            self.sim.forward()
 
     def _goal2obs(self, goal):
         if len(goal.shape) == 1:
