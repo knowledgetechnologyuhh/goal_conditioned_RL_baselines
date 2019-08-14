@@ -243,8 +243,8 @@ def get_data(paths, var_param_keys, max_x, x_vals, smoothen=False, padding=True,
             raise NotImplementedError
             #TODO: implement extrapolation of x-values.
             # x = np.array(range(max_x))
-            # pad_val = y[-1]
-            # y_pad = np.array([pad_val] * (max_x - len(y)))
+            # y_pad_val = y[-1]
+            # y_pad = np.array([y_pad_val] * (max_x - len(y)))
             # y = np.concatenate((y,y_pad))
 
         if smoothen:
@@ -329,7 +329,7 @@ def get_paths_with_symlinks(data_dir, maxdepth=8):
         glob_path = os.path.join(glob_path, '*')
     return paths
 
-def do_plot(data_dir, x_vals='epoch', smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin', min_len=10, cut_early_x=None):
+def do_plot(data_dir, x_vals='epoch', smoothen=True, padding=False, col_to_display='test/success_rate', get_best='least', lin_log='lin', min_len=2, cut_early_x=None):
     matplotlib.rcParams['font.family'] = "serif"
     matplotlib.rcParams['font.weight'] = 'normal'
     paths = get_paths_with_symlinks(data_dir, maxdepth=8)
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     cols = get_all_columns(args.data_dir)
     if args.column == '':
         for c in cols:
-            do_plot(args.data_dir, args.x_vals, args.smooth, args.pad, col_to_display=c, cut_early_x=args.cut_early_x)
+            do_plot(args.data_dir, args.x_vals, args.smooth, padding=args.pad, col_to_display=c, cut_early_x=args.cut_early_x)
     else:
     # data_lastval_threshold = 0.0
         do_plot(args.data_dir, args.x_vals, args.smooth, args.pad, col_to_display=args.column, cut_early_x=args.cut_early_x)
