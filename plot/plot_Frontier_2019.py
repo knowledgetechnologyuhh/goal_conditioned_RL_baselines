@@ -162,13 +162,15 @@ def draw_all_data_plot(data, fig_dir, x_axis_title=None, y_axis_title=None, lin_
     # plt.title(env_id)
     # ax.set_xlim([0, 150])
     ax.tick_params(labelsize=20)
+    y_axis_display_title = y_axis_title.replace("/", " ")
+    y_axis_display_title = y_axis_display_title.replace("_", " ")
     plt.xlabel(x_axis_title, fontsize=20)
-    plt.ylabel(y_axis_title, fontsize=20)
+    plt.ylabel(y_axis_display_title, fontsize=20)
     handles, labels = ax.get_legend_handles_labels()
     # sort both labels and handles by labels
     if len(labels) > 0:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        plt.legend(handles, labels, loc='upper right', fontsize=16)
+        plt.legend(handles, labels, loc='upper left', fontsize=16)
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.jpg'.format(y_axis_title.replace("/", "_"))))
     plt.savefig(os.path.join(fig_dir, 'fig_{}.pdf'.format(y_axis_title.replace("/", "_"))))
@@ -354,11 +356,12 @@ def do_plot(data_dir, x_vals='epoch', smoothen=True, padding=False, col_to_displ
     data = get_min_len_data(data, min_len=min_len)
     # if get_best != '':
     #     data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
-    try:
-        draw_all_data_plot(data, data_dir, x_axis_title=x_vals, y_axis_title=col_to_display, lin_log=lin_log)
-    except Exception as e:
-        print("This does not work for some reason: {}".format(e))
-    draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
+    # try:
+    #     draw_all_data_plot(data, data_dir, x_axis_title=x_vals, y_axis_title=col_to_display, lin_log=lin_log)
+    # except Exception as e:
+    #     print("This does not work for some reason: {}".format(e))
+    draw_all_data_plot(data, data_dir, x_axis_title=x_vals, y_axis_title=col_to_display, lin_log=lin_log)
+    # draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
 
 def get_all_columns(data_dir, exclude_cols=['epoch','rollouts', 'steps', 'buffer_size']):
