@@ -247,7 +247,7 @@ class RolloutWorker(Rollout):
                        steps=list(np.ones_like(self.current_episode['info_is_success']) * len(self.current_episode['acts']))
                        )
         # if not self.exploit:
-        episode = self.latest_pad_episode(episode)
+        episode = self.zero_pad_episode(episode)
         self.success = np.array(self.current_episode['successes'])[-1, :]
         assert self.success.shape == (self.rollout_batch_size,)
         ret = convert_episode_to_batch_major(episode)
