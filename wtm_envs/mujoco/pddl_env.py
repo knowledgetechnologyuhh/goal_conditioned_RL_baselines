@@ -56,14 +56,15 @@ class PDDLEnv:
 
     def preds2subgoal_obs(self, preds, obs, goal):
         subgoal_obs = obs.copy()
-        true_preds = [p for p,v in preds.items() if v == 1]
+        true_preds = [p for p, v in preds.items() if v == 1]
         iter_ctr = 0
         while True:
             new_subgoal_obs = subgoal_obs.copy()
             for p in true_preds:
                 pred_subgoal = self.pred2subg_functs[p](new_subgoal_obs, goal)
-                obs_start_idx = pred_subgoal[0] * 3
-                new_subgoal_obs[obs_start_idx:obs_start_idx + 3] = pred_subgoal[1:]
+                if pred_subgoal is not None:
+                    obs_start_idx = pred_subgoal[0] * 3
+                    new_subgoal_obs[obs_start_idx:obs_start_idx + 3] = pred_subgoal[1:]
 
             if str(new_subgoal_obs) == str(subgoal_obs):
                 break
