@@ -139,7 +139,6 @@ def launch(
     logdir = logger.get_dir()
     assert logdir is not None
 
-
     # Seed everything.
     rank_seed = seed + 1000000 * rank
     set_global_seeds(rank_seed)
@@ -168,7 +167,6 @@ def launch(
             'https://github.com/openai/baselines/issues/314 for further details.')
         logger.warn('****************')
         logger.warn()
-
     dims = config.configure_dims(params)
     if restore_policy is None:
         policy = config.configure_policy(dims=dims, params=params)
@@ -180,13 +178,9 @@ def launch(
     # Rollout and evaluation parameters
     rollout_params = config.ROLLOUT_PARAMS
     rollout_params.update(kwargs)
-    # rollout_params['render'] = bool(kwargs['render'])
 
     eval_params = config.EVAL_PARAMS
     eval_params.update(kwargs)
-    # eval_params['render'] = bool(kwargs['render'])
-
-    # eval_params['test_subgoal_perc'] = 0.
 
     for name in config.ROLLOUT_PARAMS_LIST:
         rollout_params[name] = params[name]
@@ -257,7 +251,6 @@ def main(ctx, **kwargs):
 
     kwargs['logdir'] = logdir
     kwargs['seed'] = int(time.time())
-    # os.makedirs(logdir, exist_ok=False)
 
     do_train = True
     trial_no = ctr - 1
@@ -285,8 +278,6 @@ def main(ctx, **kwargs):
     if trial_no > max_ctr:
         print("Already collected enough data for this parameterization")
         do_train = False
-    # if subdir_exists:
-    #     do_train = False
     if do_train:
         print("Launching training")
         launch(**kwargs)

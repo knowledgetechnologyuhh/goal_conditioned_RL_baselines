@@ -18,7 +18,7 @@ class TowerBuildMujocoEnv(tower_env.TowerEnv, utils.EzPickle):
         tower_env.TowerEnv.__init__(
             self, 'tower/environment.xml', block_gripper=False, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
-            obj_range=0.15, target_range=0.15,
+            obj_range=0.12, target_range=0.12,
             # distance_threshold=0.02,
             distance_threshold=PDDLTowerEnv.distance_threshold,
             initial_qpos=initial_qpos, reward_type=reward_type,
