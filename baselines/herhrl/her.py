@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_magnitude, use_penalty):
+def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_magnitude, has_child):
     """Creates a sample function that can be used for HER experience replay.
 
     Args:
@@ -46,52 +46,54 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun, penalty_m
             assert et <= ep_len, "Episode index too high"
             assert et <= ft, "Episode index {} higher than future index {}:".format(et, ft)
 
-        choose_action_replay = np.random.random_sample() > 0.5
-        # Replace goal with achieved goal but only for the previously-selected
-        # HER transitions (as defined by her_indexes). For the other transitions,
-        # keep the original goal.
-        if (not use_penalty) or (use_penalty and not choose_action_replay):
+        def recompute_reward_info(transitions):
+            # Reconstruct info dictionary for reward  computation.
+            info = {}
+            for key, value in transitions.items():
+                if key.startswith('info_'):
+                    info[key.replace('info_', '')] = value
+
+            # Re-compute reward since we may have substituted the goal.
+            reward_params = {k: transitions[k] for k in ['ag_2', 'g']}
+            reward_params['info'] = info
+            # transitions['r'] = reward_fun(**reward_params)
+            transitions['r'] = reward_fun(**reward_params)
+            transitions['gamma'] = np.ones_like(transitions['r'])
+            return transitions
+
+
+        # We apply goal replay if the transitions are on the lowest layer
+        if not has_child:
             future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
             transitions['g'][her_indexes] = future_ag
-
-        # Reconstruct info dictionary for reward  computation.
-        info = {}
-        for key, value in transitions.items():
-            if key.startswith('info_'):
-                info[key.replace('info_', '')] = value
-
-        # Re-compute reward since we may have substituted the goal.
-        reward_params = {k: transitions[k] for k in ['ag_2', 'g']}
-        reward_params['info'] = info
-        # transitions['r'] = reward_fun(**reward_params)
-        transitions['r'] = reward_fun(**reward_params)
-        transitions['gamma'] = np.ones_like(transitions['r'])
-
-        # if in HL:
-
-        # penalties = np.reshape(transitions['p'], transitions['r'].shape)
-        # to keep the balance ratio between penalty and reward in high-level
-        choose_penalty_replay = np.random.random_sample() < 1./np.abs(penalty_magnitude)
-        if not use_penalty:
-            # transitions['r'] = reward_fun(**reward_params)
-            if np.mean(transitions['p']) > 0:
-                assert False, "this lowest level should not have any penalties"
+            transitions = recompute_reward_info(transitions)
         else:
-            if choose_action_replay:
-                # HER for penalty
-                transitions['u'][her_indexes] = transitions['ag'][her_indexes]
-                transitions['p'][her_indexes] = 0
+            # Otherwise, we select between three options
+            # 1 Goal replay
+            # 2.a Action replay
+            # 2.b Penalization
+            choose_penalty_replay = np.random.random_sample() < 1. / np.abs(penalty_magnitude)
+            transitions = recompute_reward_info(transitions)
+            if choose_penalty_replay:
                 penalties = np.reshape(transitions['p'], transitions['r'].shape)
                 idx = np.argwhere(np.isclose(penalties, 1.))
-                if choose_penalty_replay:
-                    transitions['r'] = np.zeros_like(transitions['r'])
-                    transitions['r'][idx] = -penalty_magnitude
-                    transitions['gamma'][idx] = 0.
-        # print(use_penalty, choose_action_replay, choose_penalty_replay)
-        # idmhx = np.argwhere(np.isclose(penalties, 1.))
-        # transitions['r'][idx] *= penalty_magnitude  # test to replace this to use only penalty as reward for the
-                                                    # high-level
-        # transitions['r'][idx] -= penalty_magnitude
+                transitions['r'] = np.zeros_like(transitions['r'])
+                transitions['r'][idx] = -penalty_magnitude
+                transitions['gamma'][idx] = 0.
+            else:
+                choose_action_replay = np.random.random_sample() > 0.5
+                choose_goal_replay = 1 - choose_action_replay
+                if choose_action_replay:
+                    transitions['u'][her_indexes] = transitions['ag_2'][her_indexes] # TODO: Why not use ag_2?
+                    transitions['p'][her_indexes] = 0
+                    # TODO: Why no reward recomputation here?
+                elif choose_goal_replay:
+                    future_ag = episode_batch['ag'][episode_idxs[her_indexes], future_t]
+                    transitions['g'][her_indexes] = future_ag
+                    transitions = recompute_reward_info(transitions)
+                else:
+                    assert False, "Either do goal or action replay"
+
 
         transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:])
                        for k in transitions.keys()}

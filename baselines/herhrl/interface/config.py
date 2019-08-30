@@ -56,7 +56,7 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5, # normalized observations are cropped to this values
     # 'test_subgoal_perc' : 1.0
-    'use_penalty': False
+    'has_child': False
 }
 
 POLICY_ACTION_PARAMS = {
@@ -67,7 +67,7 @@ CACHED_ENVS = {}
 
 ROLLOUT_PARAMS = {
         'use_demo_states': True,
-        'T': 50,
+        # 'T': 50,
         'policy_action_params': {'exploit': False,
                                  'compute_Q': False,
                                  'noise_eps': 0.2,
@@ -79,7 +79,7 @@ ROLLOUT_PARAMS = {
 
 EVAL_PARAMS = {
         'use_demo_states': False,
-        'T': 50,
+        # 'T': 50,
         'policy_action_params': {'exploit': True,
                                  'compute_Q': True,
                                  'noise_eps': 0.0,
@@ -102,7 +102,7 @@ OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 
 
 
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', 'replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['rollout_batch_size', 'noise_eps', 'random_eps', 'replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -128,14 +128,12 @@ def prepare_params(kwargs):
         return gym.make(env_name)
     kwargs['make_env'] = make_env
     tmp_env = cached_make_env(kwargs['make_env'])
-    # assert hasattr(tmp_env, '_max_episode_steps')
-    # kwargs['T'] = tmp_env._max_episode_steps
     action_steps = [int(n_s) for n_s in kwargs['action_steps'][1:-1].split(",") if n_s != '']
     kwargs['action_steps'] = action_steps
-    kwargs['T'] = action_steps[-1]
+    # kwargs['T'] = action_steps[-1]
     tmp_env.reset()
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
-    kwargs['gamma'] = 1. - 1. / kwargs['T']
+    # kwargs['gamma'] = 1. - 1. / kwargs['T'] #TODO Gamma should be different for each layer!
     if 'lr' in kwargs:
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr']
@@ -170,7 +168,7 @@ def configure_her(params):
     her_params = {
         'reward_fun': reward_fun,
     }
-    for name in ['replay_strategy', 'replay_k', 'penalty_magnitude', 'use_penalty']:
+    for name in ['replay_strategy', 'replay_k', 'penalty_magnitude', 'has_child']:
         her_params[name] = params[name]
         params['_' + name] = her_params[name]
         del params[name]
@@ -187,37 +185,35 @@ def simple_goal_subtract(a, b):
 def configure_policy(dims, params):
     # sample_her_transitions = configure_her(params)
     # Extract relevant parameters.
-    gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
     ddpg_params = params['ddpg_params']
     reuse = params['reuse']
     use_mpi = params['use_mpi']
-    input_dims = dims.copy()
+    # input_dims = dims.copy()
     # p_threshold = params['mix_p_threshold']
     p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
-    # obs = env.env._get_obs()
+    # obs = env.env._get_obs() # TODO Move this to policy
     # obs_preds, _ = env.env.obs2preds_single(obs['observation'], obs['desired_goal'])
-    if "preds" in env.env.__dict__:
-        n_preds = len(env.env.preds)
-    else:
-        n_preds = None
+    # if "preds" in env.env.__dict__:
+    #     n_preds = len(env.env.preds)
+    # else:
+    #     n_preds = None
     subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
     units_per_obs_len = 12
     n_obs = len(env.env._get_obs()['observation'])
     ddpg_params.update({
-                        'T': params['T'],
+                        # 'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
-                        'gamma': gamma,
+                        # 'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
-                        'n_preds': n_preds,
+                        # 'n_preds': n_preds,
                         # 'sample_transitions': sample_her_transitions,
                         'clip_pos_returns': True,  # clip positive returns for Q-values
-                        'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'h_level': 0,
                         # 'p_threshold': p_threshold,
                         'p_steepness': p_steepness,
@@ -227,40 +223,36 @@ def configure_policy(dims, params):
         'env_name': params['env_name'],
     }
 
-    # t_remaining = params['T']
-    # n_subgoals = [int(n_s) for n_s in params['n_subgoals_layers'][1:-1].split(",") if n_s != '']
-    n_subgoals = params['action_steps'][:-1]
+    n_subgoals = params['action_steps']
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
-                    policy_str in params['policies_layers'][1:-1].split(",") if policy_str != ''] + [DDPG_HER_HRL_POLICY]
+                    policy_str in params['policies_layers'][1:-1].split(",") if policy_str != '']
     policies = []
-    # next_buffer_size = ddpg_params['buffer_size']
     for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
-        if n_s is None: # If this is the final lowest layer
+
+        if l == (len(n_subgoals) - 1): # If this is the final lowest layer
             input_dims = dims.copy()
-            n_s = params['T']
             subgoal_scale = np.ones(input_dims['u'])
             subgoal_offset = np.zeros(input_dims['u'])
-            use_penalty = False
+            has_child = False
         else:
             input_dims = dims.copy()
-            # TODO: start preds2subgoals by adapting subgoal dimensions right here!
             input_dims['u'] = input_dims['g']
-            use_penalty = True # penalty only apply for the high-level hierarchical
+            has_child = True # penalty only apply for the non-leaf hierarchical layers
         _params = params.copy()
-        _params['use_penalty'] = use_penalty
+        _params['has_child'] = has_child
         sample_her_transitions = configure_her(_params)
         ddpg_params['sample_transitions'] = sample_her_transitions
         this_params = ddpg_params.copy()
+        gamma = 1. - 1. / n_s
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
                             'T': n_s,
                             'subgoal_scale': subgoal_scale,
                             'subgoal_offset': subgoal_offset,
                             'h_level': l,
-                            'buffer_size': ddpg_params['buffer_size'] * n_s
-                            # 'buffer_size': next_buffer_size * n_s,
+                            'gamma': gamma,
+                            'buffer_size': ddpg_params['buffer_size'] * n_s,
+                            'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,
                             })
-        # next_buffer_size *= n_s
-        # t_remaining = int(t_remaining / n_s)
         this_params['scope'] += '_l_{}'.format(l)
         policy = ThisPolicy(**this_params)
         policies.append(policy)
@@ -285,9 +277,10 @@ def load_policy(restore_policy_file, params):
 
 def set_policy_params(policy, params):
     child_params = params.copy()
-    print(policy.h_level, params['use_penalty'])
-    if policy.h_level == 0:
-        params['use_penalty'] = True
+    if policy.child_policy is None: # Don't use a penalty for the leaf policy
+        params['has_child'] = False
+    else:
+        params['has_child'] = True
     policy.sample_transitions = configure_her(params)
     policy.rollout_batch_size = params['rollout_batch_size']
     if policy.buffer is not None:
