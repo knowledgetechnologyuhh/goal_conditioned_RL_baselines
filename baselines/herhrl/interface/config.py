@@ -39,7 +39,7 @@ DEFAULT_PARAMS = {
     'use_mpi': True,
     # training
     'n_cycles': 50,  # per epoch
-    'rollout_batch_size': 2,  # per mpi thread
+    'rollout_batch_size': 1,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
     'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
@@ -100,9 +100,7 @@ use_target_net=self.use_target_net)
 # OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
 OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
 
-
-
-ROLLOUT_PARAMS_LIST = ['rollout_batch_size', 'noise_eps', 'random_eps', 'replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['noise_eps', 'random_eps', 'replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
