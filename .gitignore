@@ -2,6 +2,7 @@
 *.pyc
 *.pkl
 *.py~
+*.pddl
 .pytest_cache
 .DS_Store
 .idea
@@ -35,3 +36,5 @@ src
 
 MUJOCO_LOG.TXT
 data/
+
+emb_metadata.tsv
