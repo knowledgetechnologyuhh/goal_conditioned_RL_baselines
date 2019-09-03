@@ -70,7 +70,7 @@ class WTMEnv(robot_env.RobotEnv):
             model_path=model_path, n_substeps=n_substeps,
             initial_qpos=initial_qpos, is_fetch_env=is_fetch_env)
         if self.is_fetch_env:
-            assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
+            assert self.gripper_goal in ['gripper_above', 'gripper_random', 'gripper_none'], "gripper_none is not supported anymore"
 
     # GoalEnv methods
     # ----------------------------

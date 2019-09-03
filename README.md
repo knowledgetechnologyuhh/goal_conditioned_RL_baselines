@@ -7,7 +7,7 @@
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
 6. Run script with `experiment/train.py`
 
-Logs will be stored in a directory according to the `--logs` command line parameter (by default `data`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far.
+Logs will be stored in a directory according to the `--base_logdir` command line parameter (by default `data`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far.
 
 # Currently supported algorithms
 The algorithm can be selected using the command line option `--algorithm` (see below).
