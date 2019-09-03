@@ -65,7 +65,9 @@ class TowerEnv(WTMEnv,PDDLTowerEnv):
             self.goal_size += 3
         self.gripper_has_target = (gripper_goal != 'gripper_none')
 
-        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos)
+        n_actions = 4
+        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos,
+                        n_actions=n_actions)
         PDDLTowerEnv.__init__(self, n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
 
     def _obs2goal(self, obs):

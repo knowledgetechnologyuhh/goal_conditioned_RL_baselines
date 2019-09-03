@@ -76,8 +76,9 @@ class HookEnv(WTMEnv, PDDLHookEnv):
         self._viewers = {}
 
         self.easy = easy
+        n_actions = 4
 
-        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos)
+        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos, n_actions=n_actions)
         PDDLHookEnv.__init__(self, n_objects=self.n_objects)
 
 

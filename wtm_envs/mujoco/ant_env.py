@@ -7,11 +7,11 @@ from mujoco_py.generated import const as mj_const
 from wtm_envs.mujoco.hook_env_pddl import *
 from wtm_envs.mujoco.wtm_env import goal_distance
 from wtm_envs.mujoco.wtm_env import WTMEnv
-from wtm_envs.mujoco.hook_env_pddl import PDDLHookEnv
+from wtm_envs.mujoco.ant_env_pddl import PDDLAntEnv
 import mujoco_py
 
 
-class AntEnv(WTMEnv):
+class AntEnv(WTMEnv, PDDLAntEnv):
     """Superclass for all Ant environments.
     """
 
@@ -58,11 +58,13 @@ class AntEnv(WTMEnv):
         self.goal_space_scale = [goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
                             for limits_idx in range(len(goal_space_train))]
 
-        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_state_space,
-                        is_fetch_env=False)
-        # PDDLHookEnv.__init__(self, n_objects=self.n_objects)
+        n_actions = 8 #len(self.sim.model.actuator_ctrlrange)
 
-        self.distance_threshold = self.end_goal_thresholds
+        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_state_space,
+                        n_actions=n_actions)
+        PDDLAntEnv.__init__(self)
+
+        # self.distance_threshold = self.end_goal_thresholds
         # TODO: use separate distance threshold for subgoals (it already exists, but is not used yet)
 
     def _set_action(self, action):
@@ -83,6 +85,13 @@ class AntEnv(WTMEnv):
 
     def _get_obs(self, grip_pos=None, grip_velp=None):
         obs = self._get_state()
+        ## Torso qpos refers to the first three coordinates of qpos.
+        # torso_qpos = self.sim.data.get_joint_qpos('root')
+
+        # torso_id = self.sim.model.body_name2id('torso')
+        # torso_pos = self.sim.data.get_body_xpos('torso')
+        # torso_quat = self.sim.data.get_body_xquat('torso')
+        # torso_geom_pos = self.sim.data.get_geom_xpos('torso_geom')
 
         noisy_obs = self.add_noise(obs.copy(), self.obs_history, self.obs_noise_coefficient)
         achieved_goal = self._obs2goal(noisy_obs)

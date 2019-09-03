@@ -170,6 +170,7 @@ class CSVOutputFormat(KVWriter):
 #             self.writer.Close()
 #             self.writer = None
 
+
 class TensorBoardOutputFormat(KVWriter):
     """
     Dumps key/value pairs into TensorBoard's numeric format.

@@ -13,7 +13,7 @@ except ImportError as e:
 
 
 class RobotEnv(gym.GoalEnv):
-    def __init__(self, model_path, initial_qpos, n_substeps, is_fetch_env):
+    def __init__(self, model_path, initial_qpos, n_substeps, n_actions):
         if model_path.startswith('/'):
             fullpath = model_path
         else:
@@ -36,11 +36,6 @@ class RobotEnv(gym.GoalEnv):
 
         self.goal = self._sample_goal()
         obs = self._get_obs()
-
-        if is_fetch_env:
-            n_actions = 4
-        else:
-            n_actions = len(self.sim.model.actuator_ctrlrange)
 
         self.action_space = spaces.Box(-1., 1., shape=(n_actions,), dtype='float32')
         self.observation_space = spaces.Dict(dict(

@@ -43,15 +43,28 @@ class PercDeque(deque):
         self.ctr += 1
 
 
-
 class WTMEnv(robot_env.RobotEnv):
-    def __init__(self, model_path, n_substeps, initial_qpos, is_fetch_env=True):
-        """Initializes a new WTM environment.
+    def __init__(
+        self, model_path, n_substeps, initial_qpos, n_actions=4
+    ):
+        """Initializes a new Fetch environment.
 
         Args:
             model_path (string): path to the environments XML file
             n_substeps (int): number of substeps the simulation runs on every call to step
+            gripper_extra_height (float): additional height above the table when positioning the gripper
+            block_gripper (boolean): whether or not the gripper is blocked (i.e. not movable) or not
+            target_in_the_air (boolean): whether or not the target should be in the air above the table or on the table surface
+            target_offset (float or array with 3 elements): offset of the target
+            obj_range (float): range of a uniform distribution for sampling initial object positions
+            target_range (float): range of a uniform distribution for sampling a target
+            distance_threshold (float): the threshold after which a goal is considered achieved
             initial_qpos (dict): a dictionary of joint names and values that define the initial configuration
+            reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
+            gripper_goal ('gripper_none', 'gripper_above', 'gripper_random'): the gripper's goal location
+            n_objects (int): no of objects in the environment. If none, then no_of_objects=0
+            min_tower_height (int): the minimum height of the tower.
+            max_tower_height (int): the maximum height of the tower.
         """
 
         self._viewers = {}
@@ -64,13 +77,12 @@ class WTMEnv(robot_env.RobotEnv):
         self.goal_hierarchy = {}
         self.goal = []
         self.final_goal = []
-        self.is_fetch_env = is_fetch_env
 
         super(WTMEnv, self).__init__(
-            model_path=model_path, n_substeps=n_substeps,
-            initial_qpos=initial_qpos, is_fetch_env=is_fetch_env)
-        if self.is_fetch_env:
-            assert self.gripper_goal in ['gripper_above', 'gripper_random', 'gripper_none'], "gripper_none is not supported anymore"
+            model_path=model_path, n_substeps=n_substeps, n_actions=n_actions,
+            initial_qpos=initial_qpos)
+
+        # assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
 
     # GoalEnv methods
     # ----------------------------
@@ -85,10 +97,11 @@ class WTMEnv(robot_env.RobotEnv):
     # RobotEnv methods
     # ----------------------------
     def _step_callback(self):
-        if self.is_fetch_env and self.block_gripper:
-            self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
-            self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
-            self.sim.forward()
+        if "block_gripper" in self.__dict__.keys():
+            if self.block_gripper:
+                self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
+                self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
+                self.sim.forward()
 
     def _goal2obs(self, goal):
         if len(goal.shape) == 1:
