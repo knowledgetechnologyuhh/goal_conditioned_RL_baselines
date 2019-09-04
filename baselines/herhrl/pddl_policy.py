@@ -63,16 +63,16 @@ class PDDL_POLICY(HRL_Policy):
 
     def get_actions(self, o, ag, g, **kwargs):
         u = []
-        for i in range(self.rollout_batch_size):
-            plan, world_states = self.envs[i].env.get_plan(return_states=True)
-            if len(plan) > 0:
-                this_u = self.envs[i].env.preds2subgoal(world_states[1])
-            else:
-                this_u = g[i].copy()
-            u.append(this_u)
+        # for i in range(self.rollout_batch_size):
+        plan, world_states = self.envs[0].env.get_plan(return_states=True)
+        if len(plan) > 0:
+            this_u = self.envs[0].env.preds2subgoal(world_states[1])
+        else:
+            this_u = g.copy()
+        u.append(this_u)
         u = np.array(u)
         u = u.copy()
-        return u, np.zeros(u.shape[0])
+        return u[0], np.zeros(u.shape[0])
 
     def store_episode(self, episode_batch, update_stats=True):
         pass
