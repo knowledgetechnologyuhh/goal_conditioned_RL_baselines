@@ -288,8 +288,7 @@ class RolloutWorker(Rollout):
         """
         self.policy.set_envs(self.envs)
         self.final_goal_achieved = False
-        for i in range(self.rollout_batch_size):
-            self.reset_rollout(i)
+        self.reset_rollout()
 
     def reset_rollout(self, i=0):
         """Resets the `i`-th rollout environment, re-samples a new goal, and updates the `initial_o`
