@@ -104,9 +104,7 @@ class RolloutWorker(Rollout):
             self.reset_all_rollouts()   # self.g is set here
             # self.subgoals_given[0].append(self.g.copy())
             if self.render:
-                # for i in range(self.rollout_batch_size):
                 self.first_env.render(mode=self.render_mode)
-        # for i, env in enumerate(self.envs):
         if self.is_leaf:
             self.first_env.env.goal = self.g.copy()
         if self.h_level == 0:
