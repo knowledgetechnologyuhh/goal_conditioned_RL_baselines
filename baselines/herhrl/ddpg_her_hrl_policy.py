@@ -242,7 +242,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
 
     def _vars(self, scope):
         res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + '/' + scope)
-        assert len(res) > 0
+        # assert len(res) > 0
         return res
 
     def _global_vars(self, scope):

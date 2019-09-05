@@ -31,6 +31,9 @@ class ActorCritic:
         input_pi = tf.concat(axis=1, values=[o, g])  # for actor
 
         # Networks.
+        with tf.variable_scope('shared_preproc'):
+            # self.preproc_in = input_pi
+            self.preproc_in = input_pi
         with tf.variable_scope('pi'):
             self.pi_tf = self.max_u * tf.tanh(nn(
                 input_pi, [self.hidden] * self.layers + [self.dimu]))
