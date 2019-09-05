@@ -191,20 +191,23 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
     def _sync_optimizers(self):
         self.Q_adam.sync()
         self.pi_adam.sync()
+        self.shared_preproc_adam.sync()
 
     def _grads(self):
         # Avoid feed_dict here for performance!
-        critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run([
+        critic_loss, actor_loss, Q_grad, pi_grad, shared_preproc_grad = self.sess.run([
             self.Q_loss_tf,
             self.main.Q_pi_tf,
             self.Q_grad_tf,
-            self.pi_grad_tf
+            self.pi_grad_tf,
+            self.shared_preproc_grad_tf
         ])
-        return critic_loss, actor_loss, Q_grad, pi_grad
+        return critic_loss, actor_loss, Q_grad, pi_grad, shared_preproc_grad
 
-    def _update(self, Q_grad, pi_grad):
+    def _update(self, Q_grad, pi_grad, shared_preproc_grad):
         self.Q_adam.update(Q_grad, self.Q_lr)
         self.pi_adam.update(pi_grad, self.pi_lr)
+        self.shared_preproc_adam.update(shared_preproc_grad, (self.pi_lr + self.Q_lr) / 2.0)
 
     def sample_batch(self):
         transitions = self.buffer.sample(self.batch_size)
@@ -224,8 +227,8 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
     def train(self, stage=True):
         if stage:
             self.stage_batch()
-        critic_loss, actor_loss, Q_grad, pi_grad = self._grads()
-        self._update(Q_grad, pi_grad)
+        critic_loss, actor_loss, Q_grad, pi_grad, shared_preproc_grad = self._grads()
+        self._update(Q_grad, pi_grad, shared_preproc_grad)
         return critic_loss, actor_loss
 
     def _init_target_net(self):
@@ -296,20 +299,25 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars('main/Q'))
         pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/pi'))
+        shared_preproc_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/shared_preproc')) + tf.gradients(self.Q_loss_tf, self._vars('main/shared_preproc')) / 2
         assert len(self._vars('main/Q')) == len(Q_grads_tf)
         assert len(self._vars('main/pi')) == len(pi_grads_tf)
+        assert len(self._vars('main/shared_preproc')) == len(shared_preproc_grads_tf)
         self.Q_grads_vars_tf = zip(Q_grads_tf, self._vars('main/Q'))
         self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars('main/pi'))
+        self.shared_preproc_grads_vars_tf = zip(shared_preproc_grads_tf, self._vars('main/shared_preproc'))
         self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self._vars('main/Q'))
         self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars('main/pi'))
+        self.shared_preproc_grad_tf = flatten_grads(grads=shared_preproc_grads_tf, var_list=self._vars('main/shared_preproc'))
 
         # optimizers
         self.Q_adam = MpiAdam(self._vars('main/Q'), scale_grad_by_procs=False)
         self.pi_adam = MpiAdam(self._vars('main/pi'), scale_grad_by_procs=False)
+        self.shared_preproc_adam = MpiAdam(self._vars('main/shared_preproc'), scale_grad_by_procs=False)
 
         # polyak averaging
-        self.main_vars = self._vars('main/Q') + self._vars('main/pi')
-        self.target_vars = self._vars('target/Q') + self._vars('target/pi')
+        self.main_vars = self._vars('main/Q') + self._vars('main/pi') + self._vars('main/shared_preproc')
+        self.target_vars = self._vars('target/Q') + self._vars('target/pi') + self._vars('target/shared_preproc')
         self.stats_vars = self._global_vars('o_stats') + self._global_vars('g_stats')
         self.init_target_net_op = list(
             map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
