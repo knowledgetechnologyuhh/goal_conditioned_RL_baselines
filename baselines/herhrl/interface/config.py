@@ -146,7 +146,6 @@ def prepare_params(kwargs):
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
     kwargs['ddpg_params'] = ddpg_params
-
     return kwargs
 
 

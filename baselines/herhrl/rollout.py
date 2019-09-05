@@ -167,6 +167,7 @@ class RolloutWorker(Rollout):
             success = this_success
             if self.render:
                 self.first_env.render(mode=self.render_mode)
+
                 # if t==0:
                 #     im = Image.fromarray(img).resize(size=[480, 295])
                 #     im.save("your_file.jpeg")

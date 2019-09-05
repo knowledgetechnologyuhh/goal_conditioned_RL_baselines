@@ -69,7 +69,6 @@ class WTMEnv(robot_env.RobotEnv):
 
         self._viewers = {}
 
-
         self.obs_history = PercDeque(maxlen=5000)
         self.obs_noise_coefficient = 0.0
 
