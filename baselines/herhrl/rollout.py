@@ -39,16 +39,15 @@ class RolloutWorker(Rollout):
         self.q_loss_history = deque(maxlen=history_len)
         self.pi_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
-        # self.all_succ_history = deque(maxlen=history_len)
         self.subgoals_achieved_history = deque(maxlen=history_len)
         self.subgoals_given_history = deque(maxlen=history_len)
-        self.success = np.zeros(self.rollout_batch_size)
+        self.success = 0
         self.this_T = policy.T
-        self.current_t = [0 for _ in range(self.rollout_batch_size)]
+        self.current_t = 0
         self.current_episode = {}
-        self.subgoals_achieved = [0 for _ in range(self.rollout_batch_size)]
+        self.subgoals_achieved = 0
         self.final_goal_achieved = False
-        self.subgoals_given = [[] for _ in range(self.rollout_batch_size)]
+        self.subgoals_given = []
         self.render_mode = 'human'
 
         self.total_steps = 0
@@ -62,15 +61,14 @@ class RolloutWorker(Rollout):
         Rollout.__init__(self, make_env, policy, dims, logger,
                          rollout_batch_size=rollout_batch_size,
                          history_len=history_len, render=render, T=self.this_T, **kwargs)
-        self.env_name = self.envs[0].env.spec._env_name
+        self.env_name = self.first_env.env.spec._env_name
 
         # Set Noise coefficient for environments
         self.obs_noise_coefficient = kwargs['obs_noise_coeff']
-        for i in range(self.rollout_batch_size):
-            self.envs[i].env.obs_noise_coefficient = self.obs_noise_coefficient
+        self.first_env.env.obs_noise_coefficient = self.obs_noise_coefficient
 
         self.n_train_batches = 0
-        assert self.rollout_batch_size == 1, "For hierarchical rollouts, only rollout_batch_size=1 is allowed."
+        # assert self.rollout_batch_size == 1, "For hierarchical rollouts, only rollout_batch_size=1 is allowed."
 
     def make_env_from_child(self):
         env = self.child_rollout.envs[self.tmp_env_ctr]
@@ -92,20 +90,9 @@ class RolloutWorker(Rollout):
 
     def finished(self):
         if self.is_leaf:
-            return self.current_t[0] == self.this_T
+            return self.current_t == self.this_T
         else:
-            return self.current_t[0] == self.this_T and self.child_rollout.finished()
-
-    # def finished(self):
-    #     if self.final_goal_achieved:
-    #         return True
-    #     elif self.current_t[0] == self.this_T:
-    #         return True
-    #     elif not self.is_leaf:
-    #         return self.child_rollout.finished()
-    #     else:
-    #         return False
-
+            return self.current_t == self.this_T and self.child_rollout.finished()
 
     def generate_rollouts(self, return_states=False):
         '''
@@ -117,18 +104,16 @@ class RolloutWorker(Rollout):
             self.reset_all_rollouts()   # self.g is set here
             # self.subgoals_given[0].append(self.g.copy())
             if self.render:
-                for i in range(self.rollout_batch_size):
-                    self.envs[i].render(mode=self.render_mode)
-        for i, env in enumerate(self.envs):
-            if self.is_leaf:
-                self.envs[i].env.goal = self.g[i].copy()
-            if self.h_level == 0:
-                self.envs[i].env.final_goal = self.g[i].copy()
-            self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
+                self.first_env.render(mode=self.render_mode)
+        if self.is_leaf:
+            self.first_env.env.goal = self.g.copy()
+        if self.h_level == 0:
+            self.first_env.env.final_goal = self.g.copy()
+        self.first_env.env.goal_hierarchy[self.h_level] = self.g.copy()
 
         # compute observations
-        o = np.zeros((self.rollout_batch_size, self.dims['o']), np.float32)  # observations
-        ag = np.zeros((self.rollout_batch_size, self.dims['g']), np.float32)  # achieved goals
+        o = np.zeros((self.dims['o']), np.float32)  # observations
+        ag = np.zeros((self.dims['g']), np.float32)  # achieved goals
         # last_subgoals_achieved = self.subgoals_achieved[0]
         # for t in range(self.current_t[0], self.this_T):
         for t in range(self.this_T):
@@ -136,21 +121,20 @@ class RolloutWorker(Rollout):
             self.total_steps += self.rollout_batch_size
             # At the first step add the current observation.
             if t == 0:
-                for i in range(self.rollout_batch_size):
-                    this_obs = self.envs[i].env._get_obs()
-                    o[i] = this_obs['observation']
-                    ag[i] = this_obs['achieved_goal']
-                self.current_episode['obs'].append(o.copy())
-                self.current_episode['achieved_goals'].append(ag.copy())
+                this_obs = self.first_env.env._get_obs()
+                o = this_obs['observation']
+                ag = this_obs['achieved_goal']
+                self.current_episode['obs'].append(np.expand_dims(o.copy(), axis=0))
+                self.current_episode['achieved_goals'].append(np.expand_dims(ag.copy(), axis=0))
 
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             scaled_u = self.policy.scale_and_offset_action(u)
 
-            o_new = np.zeros((self.rollout_batch_size, self.dims['o']))
-            ag_new = np.zeros((self.rollout_batch_size, self.dims['g']))
-            success = np.zeros(self.rollout_batch_size)
-            penalty = np.zeros((self.rollout_batch_size, 1))
+            o_new = np.zeros((self.dims['o']))
+            ag_new = np.zeros((self.dims['g']))
+            success = 0
+            penalty = 0
             self.q_history.append(np.mean(q))
             g = self.g
 
@@ -160,57 +144,55 @@ class RolloutWorker(Rollout):
                 #     scaled_u = self.g.copy()  # For last step use final goal
                 #     u = self.policy.inverse_scale_and_offset_action(scaled_u)
                 self.child_rollout.g = scaled_u.copy()
-                self.subgoals_given[0].append(scaled_u.copy())
+                self.subgoals_given.append(scaled_u.copy())
 
                 if self.child_rollout.finished():
-                    self.child_rollout.current_t[0] = 0
+                    self.child_rollout.current_t = 0
                 self.child_rollout.generate_rollouts()
             else: # In final layer execute physical action
-                for i in range(self.rollout_batch_size):
-                    self.envs[i].step(scaled_u[i])
+                self.first_env.step(scaled_u)
 
             # check success condition and rendering
-            for i in range(self.rollout_batch_size):
-                obs_dict = self.envs[i].env._get_obs()
-                non_noisy_ag = self.envs[i].env._obs2goal(obs_dict['non_noisy_obs'])
-                o_new[i] = obs_dict['observation']
-                ag_new[i] = obs_dict['achieved_goal']
-                # On the top level, i.e., for the final goal, assess success by objective non-noisy comparison. On other levels, success is subjective.
-                if self.h_level == 0:
-                    this_success = self.envs[i].env._is_success(non_noisy_ag, self.g[i])
-                else:
-                    this_success = self.envs[i].env._is_success(ag_new[i], self.g[i])
+            obs_dict = self.first_env.env._get_obs()
+            non_noisy_ag = self.first_env.env._obs2goal(obs_dict['non_noisy_obs'])
+            o_new = obs_dict['observation']
+            ag_new = obs_dict['achieved_goal']
+            # On the top level, i.e., for the final goal, assess success by objective non-noisy comparison.
+            # On other levels, success is subjective.
+            if self.h_level == 0:
+                this_success = self.first_env.env._is_success(non_noisy_ag, self.g)
+            else:
+                this_success = self.first_env.env._is_success(ag_new, self.g)
 
-                success[i] = this_success
-                if self.render:
-                    self.envs[i].render(mode=self.render_mode)
-                    # if t==0:
-                    #     im = Image.fromarray(img).resize(size=[480, 295])
-                    #     im.save("your_file.jpeg")
-                    # self.envs[i].render(mode='rgb_array')
+            success = this_success
+            if self.render:
+                self.first_env.render(mode=self.render_mode)
+                # if t==0:
+                #     im = Image.fromarray(img).resize(size=[480, 295])
+                #     im.save("your_file.jpeg")
+                # self.first_env.render(mode='rgb_array')
 
             if self.is_leaf is False:
                 # Add penalization depending on child subgoal success
-                child_success = np.isclose(self.child_rollout.success.copy()[0], 1.)
-                # bool_child_success = np.isclose(child_success[0], 1.)
+                child_success = np.isclose(self.child_rollout.success, 1.)
                 if child_success:
-                    self.subgoals_achieved[0] += 1
-                    penalty[0, 0] = False
+                    self.subgoals_achieved += 1
+                    penalty = False
                 else:
-                    penalty[0, 0] = True
+                    penalty = True
 
             o = o_new
             ag = ag_new
-            self.current_episode['obs'].append(o_new.copy())
-            self.current_episode['achieved_goals'].append(ag_new.copy())
-            # self.current_episode['successes'].append(success.copy())
-            self.current_episode['info_is_success'].append(np.expand_dims(success.copy(), axis=-1))
-            self.current_episode['penalties'].append(penalty.copy())
-            self.current_episode['acts'].append(u.copy())
-            self.current_episode['goals'].append(g.copy())
 
-            self.current_t[0] = t + 1
-            if success[0] == 1:
+            self.current_episode['obs'].append(np.expand_dims(o_new.copy(), axis=0))
+            self.current_episode['achieved_goals'].append(np.expand_dims(ag_new.copy(), axis=0))
+            self.current_episode['info_is_success'].append(np.expand_dims([success.copy()], axis=-1))
+            self.current_episode['penalties'].append(np.expand_dims([penalty], axis=0))
+            self.current_episode['acts'].append(np.expand_dims(u.copy(), axis=0))
+            self.current_episode['goals'].append(np.expand_dims(g.copy(), axis=0))
+
+            self.current_t = t + 1
+            if int(success):
                 if self.h_level == 0:
                     self.set_final_goal_achieved()
                 break
@@ -220,13 +202,15 @@ class RolloutWorker(Rollout):
         if self.is_leaf and np.mean(self.current_episode['penalties']) > 0:
             assert False, "For lowest layer, penalty should always be zero."
 
-        if self.is_leaf:  # TODO Why distinguish here betwen leaf and h_level==0? Should this not always mean finalize_episode?
+        # Distinguish here between leaf and h_level==0? Should this not always mean finalize_episode?
+        # 1 time finalize episode in high level should include 'action_steps' times finalize episode in lower level
+        if self.is_leaf:
             self.finalize_episode()
             for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']: #TODO What is this current_episode stuff for?
                 self.current_episode[key] = []
 
         if self.h_level == 0:
-            if self.current_t[0] == self.this_T or self.final_goal_achieved:
+            if self.current_t == self.this_T or self.final_goal_achieved:
                 self.finalize_episode()
 
     def finalize_episode(self):
@@ -245,8 +229,8 @@ class RolloutWorker(Rollout):
         if self.exploit == False:
             self.policy.store_episode(ret)
         self.n_episodes += self.rollout_batch_size
-        self.subgoals_achieved_history.append(self.subgoals_achieved[0])
-        self.subgoals_given_history.append(len(self.subgoals_given[0]))
+        self.subgoals_achieved_history.append(self.subgoals_achieved)
+        self.subgoals_given_history.append(len(self.subgoals_given))
 
     def zero_pad_episode(self, episode):
         for key in episode.keys():
@@ -270,7 +254,8 @@ class RolloutWorker(Rollout):
         return episode
 
     def generate_rollouts_update(self, n_episodes, n_train_batches, store_episode=True):
-        # Make sure that envs of policy are those of the respective rollout worker. Important, because otherwise envs of evaluator and worker will be confused.
+        # Make sure that envs of policy are those of the respective rollout worker.
+        # Important, because otherwise envs of evaluator and worker will be confused.
         self.n_train_batches = n_train_batches
         dur_ro = 0
         dur_train = 0
@@ -288,10 +273,10 @@ class RolloutWorker(Rollout):
         ret = updated_policy, time_durations
         return ret
 
-    def init_rollout(self, obs, i):
-        self.g[i] = obs['desired_goal']
+    def init_rollout(self, obs):
+        self.g = obs['desired_goal']
         if self.is_leaf == False:
-            self.child_rollout.init_rollout(obs, i)
+            self.child_rollout.init_rollout(obs)
 
     def set_final_goal_achieved(self):
         self.final_goal_achieved = True
@@ -303,23 +288,22 @@ class RolloutWorker(Rollout):
         """
         self.policy.set_envs(self.envs)
         self.final_goal_achieved = False
-        for i in range(self.rollout_batch_size):
-            self.reset_rollout(i)
+        self.reset_rollout()
 
-    def reset_rollout(self, i):
+    def reset_rollout(self, i=0):
         """Resets the `i`-th rollout environment, re-samples a new goal, and updates the `initial_o`
         and `g` arrays accordingly.
         """
         if self.h_level == 0:
-            obs = self.envs[i].reset()
-            self.init_rollout(obs, i)
-        self.current_t[i] = 0
-        self.subgoals_achieved[i] = 0
-        self.subgoals_given[i] = []
+            obs = self.first_env.reset()
+            self.init_rollout(obs)
+        self.current_t = 0
+        self.subgoals_achieved = 0
+        self.subgoals_given = []
         for key in ['obs', 'achieved_goals', 'acts', 'goals', 'successes', 'penalties', 'info_is_success']:
             self.current_episode[key] = []
         if not self.is_leaf:
-            self.child_rollout.reset_rollout(i)
+            self.child_rollout.reset_rollout()
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.

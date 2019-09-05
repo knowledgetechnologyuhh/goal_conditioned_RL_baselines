@@ -98,7 +98,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         buffer_shapes['ag'] = (self.T+1, self.dimg)
         buffer_shapes['p'] = (buffer_shapes['g'][0], 1)
         buffer_shapes['steps'] = buffer_shapes['p']
-        buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
+        buffer_size = self.buffer_size #// self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
     def _random_action(self, n):
@@ -140,7 +140,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         u = np.clip(noisy_u, -self.max_u, self.max_u)
         random_u = np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - noisy_u)  # eps-greedy
         u += random_u
-        u = u.copy()
+        u = u[0].copy()
         return u, q
 
 
@@ -169,6 +169,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
 
             episode_batch['o_2'] = episode_batch['o'][:, 1:, :]
             episode_batch['ag_2'] = episode_batch['ag'][:, 1:, :]
+            # num_normalizing_transitions = episode_batch['u'].shape[1]
             num_normalizing_transitions = transitions_in_episode_batch(episode_batch)
             transitions = self.sample_transitions(episode_batch, num_normalizing_transitions)
 

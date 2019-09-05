@@ -34,7 +34,7 @@ Markdown==3.0.1
 matplotlib==3.0.0
 more-itertools==4.3.0
 mpi4py==3.0.0
-mujoco-py==1.50.1.65
+mujoco-py==2.0.2.5
 networkx==2.2
 numpy==1.15.2
 pandas==0.23.4

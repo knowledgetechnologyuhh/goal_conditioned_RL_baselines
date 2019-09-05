@@ -12,6 +12,19 @@ action_steps_combinations=( '[4,20]' )
 
 for env in "${environments[@]}"
 do
+  cmd="python3 experiment/train.py
+                --num_cpu ${n_cpu}
+                --env ${env}
+                --algorithm baselines.her
+                --rollout_batch_size ${rollout_batch_size}
+                --n_epochs ${n_epochs}
+                --n_episodes ${n_episodes}
+                --base_logdir /data/$(whoami)/herhrl
+                --render 0
+                --n_test_rollouts ${n_test_rollouts}
+                --early_stop_success_rate 99"
+                echo ${cmd}
+                ${cmd}
   for action_steps in "${action_steps_combinations[@]}"
   do
     for policy_combination in "${policy_combinations[@]}"
@@ -35,16 +48,3 @@ do
     done
   done
 done
-
-
-#python3 experiment/train.py --n_episodes ${n_episodes} --n_test_rollouts ${n_test_rollouts} --env TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-1-v1 --algorithm baselines.herhrl --render 0 --num_cpu ${num_cpu} --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_subgoals_layers [7] --policies_layers [DDPG_HER_HRL_POLICY]
-#
-#python3 experiment/train.py --n_episodes ${n_episodes} --n_test_rollouts ${n_test_rollouts} --env TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-1-v1 --algorithm baselines.herhrl --render 0 --num_cpu ${num_cpu} --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_subgoals_layers [7] --policies_layers [PDDL_POLICY]
-#
-#python3 experiment/train.py --n_episodes ${n_episodes} --n_test_rollouts ${n_test_rollouts} --env TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-1-v1 --algorithm baselines.herhrl --render 0 --num_cpu ${num_cpu} --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs} --n_subgoals_layers [7] --policies_layers [MIX_PDDL_HRL_POLICY]
-#
-#python3 experiment/train.py --n_episodes ${n_episodes} --n_test_rollouts ${n_test_rollouts} --env TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-1-v1 --algorithm baselines.her_pddl --render 0 --num_cpu ${num_cpu} --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs}
-#
-#python3 experiment/train.py --n_episodes ${n_episodes} --n_test_rollouts ${n_test_rollouts} --env TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-1-v1 --algorithm baselines.her --render 0 --num_cpu ${num_cpu} --rollout_batch_size ${rollout_batch_size} --n_epochs ${n_epochs}
-#
-#
