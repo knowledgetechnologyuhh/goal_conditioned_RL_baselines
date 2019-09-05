@@ -297,9 +297,10 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
         self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+        self.shared_preproc_loss_tf = (self.Q_loss_tf + self.pi_loss_tf) / 2
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars('main/Q'))
         pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/pi'))
-        shared_preproc_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/shared_preproc')) + tf.gradients(self.Q_loss_tf, self._vars('main/shared_preproc')) / 2
+        shared_preproc_grads_tf = tf.gradients(self.shared_preproc_loss_tf, self._vars('main/shared_preproc'))
         assert len(self._vars('main/Q')) == len(Q_grads_tf)
         assert len(self._vars('main/pi')) == len(pi_grads_tf)
         assert len(self._vars('main/shared_preproc')) == len(shared_preproc_grads_tf)
