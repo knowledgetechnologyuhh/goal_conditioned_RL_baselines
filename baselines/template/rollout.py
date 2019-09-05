@@ -36,6 +36,7 @@ class Rollout:
         self.policy_action_params = kwargs['policy_action_params']
 
         self.envs = [make_env() for _ in range(rollout_batch_size)]
+        self.first_env = self.envs[0]
         assert self.T > 0
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
