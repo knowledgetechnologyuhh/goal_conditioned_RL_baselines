@@ -1,7 +1,7 @@
 # Getting started
 
-1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro150 folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to ~/.mujoco
-2. Set environment variables according to your Graphics driver version as in `set_paths.sh`. It should be possible to do this by executing `source set_paths.sh`.
+1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to folders of your choice
+2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. If you are using an IDE, set the variables there as well. 
 3. Set up virtual environment using `virtualenv -p python3 venv`
 4. Activate virtualenvironment using `source venv/bin/activate`
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.

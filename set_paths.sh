@@ -1,5 +1,5 @@
 export MUJOCO_PY_MUJOCO_PATH=/data/$(whoami)/mujoco200_linux
-export MUJOCO_PY_MJKEY_PATH=/data/$(whoami)/mujoco_getid
+export MUJOCO_PY_MJKEY_PATH=/data/$(whoami)/mujoco_getid/mjkey.txt
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MUJOCO_PY_MUJOCO_PATH/bin
 nv_version_long=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader)
