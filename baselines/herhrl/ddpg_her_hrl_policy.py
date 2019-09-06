@@ -195,14 +195,15 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
 
     def _grads(self):
         # Avoid feed_dict here for performance!
-        critic_loss, actor_loss, Q_grad, pi_grad, shared_preproc_grad = self.sess.run([
+        critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, shared_preproc_grad = self.sess.run([
             self.Q_loss_tf,
             self.main.Q_pi_tf,
+            self.shared_preproc_loss_tf,
             self.Q_grad_tf,
             self.pi_grad_tf,
             self.shared_preproc_grad_tf
         ])
-        return critic_loss, actor_loss, Q_grad, pi_grad, shared_preproc_grad
+        return critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, shared_preproc_grad
 
     def _update(self, Q_grad, pi_grad, shared_preproc_grad):
         self.Q_adam.update(Q_grad, self.Q_lr)
@@ -227,9 +228,9 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
     def train(self, stage=True):
         if stage:
             self.stage_batch()
-        critic_loss, actor_loss, Q_grad, pi_grad, shared_preproc_grad = self._grads()
+        critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, shared_preproc_grad = self._grads()
         self._update(Q_grad, pi_grad, shared_preproc_grad)
-        return critic_loss, actor_loss
+        return critic_loss, actor_loss, preproc_loss
 
     def _init_target_net(self):
         self.sess.run(self.init_target_net_op)
