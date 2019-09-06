@@ -1,6 +1,7 @@
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mjpro150/bin
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco200/bin
 export MUJOCO_PY_MUJOCO_PATH=/data/$(whoami)/mujoco200_linux
+export LD_LIBRARY_PATH=MUJOCO_PY_MUJOCO_PATH/bin
 export MUJOCO_PY_MJKEY_PATH=/data/$(whoami)/mujoco_getid
 #nv_version=$(modinfo $(find /lib/modules/$(uname -r) -iname nvidia_*.ko | head -1) | grep ^version: | cut -d' ' -f 9 | cut -d'.' -f 1)
 #echo "Nvidia version: ${nv_version}."
