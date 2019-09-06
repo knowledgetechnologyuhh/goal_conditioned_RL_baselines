@@ -33,7 +33,6 @@ do
         --try_start_idx ${initial_trial_idx}
         --max_try_idx ${end_trial_idx}
         --base_logdir /data/$(whoami)/herhrl
-        --info ${policies_layers}
         --network_class ${network_class}"
         echo ${cmd}
     #    cmd="sleep 7"
