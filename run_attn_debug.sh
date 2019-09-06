@@ -55,6 +55,7 @@ do
     echo "Now executing ${cmd}"
     ${cmd} &
     ((total_commands++))
+    sleep 30
 done
 
 
