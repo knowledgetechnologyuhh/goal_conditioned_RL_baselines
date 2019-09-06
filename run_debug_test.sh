@@ -21,19 +21,30 @@ base_cmd="python3 experiment/train.py
                   --n_test_rollouts ${n_test_rollouts}
                   --early_stop_success_rate 99"
 
+# Iterate through environments
 for env in "${environments[@]}"
 do
   env_cmd="${base_cmd} --env ${env}"
+
+  # Iterate through network classes
   for network_class in "${network_classes[@]}"
   do
     net_cmd="${env_cmd} --network_class ${network_class}"
+
+    # Generate and execute HER command
     her_cmd="${net_cmd} --algorithm baselines.her"
     echo ${her_cmd}
     ${her_cmd}
+
+    # Generate and execute HERHRL commands
     herhrl_cmd="${net_cmd} --algorithm baselines.herhrl"
+
+    # Iterate through action_steps
     for action_steps in "${action_steps_combinations[@]}"
     do
       action_steps_cmd="${herhrl_cmd} --action_steps ${action_steps}"
+
+      # Iterate through policy_combinations
       for policy_combination in "${policy_combinations[@]}"
       do
         policy_comb_cmd="${action_steps_cmd} --policies_layers ${policy_combination}"
