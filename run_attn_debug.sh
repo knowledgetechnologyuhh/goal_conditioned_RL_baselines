@@ -45,7 +45,6 @@ declare -a repeated_cmd_array=()
 for (( i=0; i<$max_trials_per_config; ++i))
 do
   repeated_cmd_array+=( "${cmd_array[@]}" )
-  echo $i
 done
 
 for cmd in "${repeated_cmd_array[@]}"
@@ -54,8 +53,8 @@ do
     n_active_procs=$(pgrep -c -P$$)
     echo "Currently, there are ${n_active_procs} active processes"
     while [ "$n_active_procs" -ge "$max_active_procs" ];do
-        echo "Process queue is full, waiting..."
-        sleep 120
+        echo "${n_active_procs} processes running; queue is full, waiting..."
+        sleep 60
         n_active_procs=$(pgrep -c -P$$)
     done
     echo "Now executing ${cmd}"
