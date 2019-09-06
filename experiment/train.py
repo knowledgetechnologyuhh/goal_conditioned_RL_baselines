@@ -203,6 +203,11 @@ def launch(
         policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate)
     print("Done training")
 
+def get_subdir_by_params(path_params, ctr=0):
+    param_subdir = "_".join(
+        ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
+         sorted(path_params.items()) if str(v) != '']) + "_" + str(ctr)
+    return param_subdir
 
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
@@ -234,14 +239,11 @@ def main(ctx, **kwargs):
     print("Running training for {}".format(kwargs))
     ctr = kwargs['try_start_idx']
     max_ctr = kwargs['max_try_idx']
+    path_params = kwargs['override_params']
+    alg_str = kwargs['algorithm'].split(".")[1]
+    path_params.update({'info': kwargs['info'], 'alg': alg_str})
     while subdir_exists:
-        alg_str = "alg:{}".format(kwargs['algorithm'].split(".")[1])
-        info_str = ""
-        if kwargs['info'] != '':
-            info_str = 'info:{}'.format(kwargs['info'])
-        param_subdir = "_".join(
-            ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
-             sorted(kwargs['override_params'].items())]) + "_" + alg_str + '_' + info_str + "_" + str(ctr)
+        param_subdir = get_subdir_by_params(path_params, ctr)
         if git_label != '':
             logdir = os.path.join(kwargs['base_logdir'], git_label, kwargs['env'], param_subdir)
         else:
