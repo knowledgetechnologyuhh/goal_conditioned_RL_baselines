@@ -15,6 +15,7 @@ from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
 from baselines.herhrl.hrl_policy import HRL_Policy
 from baselines.herhrl.ddpg_her_hrl_policy import DDPG_HER_HRL_POLICY
+from baselines.herhrl.ddpg_her_hrl_policy_shared_loss_pi import DDPG_HER_HRL_POLICY_SHARED_LOSS_PI
 from baselines.herhrl.pddl_policy import PDDL_POLICY
 import math
 
