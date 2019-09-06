@@ -98,7 +98,7 @@ use_target_net=self.use_target_net)
 # OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 # OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
 # OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
-OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
+OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'obs_noise_coeff', 'network_class']
 
 ROLLOUT_PARAMS_LIST = ['noise_eps', 'random_eps', 'replay_strategy', 'env_name']
 

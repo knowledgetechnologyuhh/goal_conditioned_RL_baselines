@@ -78,7 +78,7 @@ class ActorCriticSharedPreproc:
         # Networks.
         with tf.variable_scope('shared_preproc'):
             # self.preproc_in = input_pi
-            self.preproc_in = nn(input_pi, [256, 128])
+            self.preproc_in = nn(input_pi, [self.hidden])
         with tf.variable_scope('pi'):
             self.pi_tf = self.max_u * tf.tanh(nn(
                 self.preproc_in, [self.hidden] * self.layers + [self.dimu]))
