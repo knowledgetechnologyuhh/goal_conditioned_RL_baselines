@@ -6,8 +6,8 @@ n_epochs=70
 early_stop_threshold=70
 initial_trial_idx=100
 env="AntFourRoomsEnv-v0"
-max_active_procs=1
-max_trials_per_config=3
+max_active_procs=5
+max_trials_per_config=5
 
 krenew -K 60 -b
 declare -a cmd_array=()
@@ -30,9 +30,10 @@ do
         --num_cpu 4
         --penalty_magnitude 10
         --n_epochs 100
-        --try_start_idx=${initial_trial_idx}
-        --max_try_idx=${end_trial_idx}
+        --try_start_idx ${initial_trial_idx}
+        --max_try_idx ${end_trial_idx}
         --base_logdir /data/$(whoami)/herhrl
+        --info ${policies_layers}
         --network_class ${network_class}"
         echo ${cmd}
     #    cmd="sleep 7"
