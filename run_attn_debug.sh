@@ -11,7 +11,7 @@ krenew -K 60 -b
 
 for i in 1 2 3
 do
-    for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc'
+    for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn'
     do
         cmd="python3 experiment/train.py
         --action_steps [5,50]
