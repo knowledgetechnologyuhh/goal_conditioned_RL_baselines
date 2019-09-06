@@ -32,6 +32,7 @@ do
         --n_epochs 100
         --try_start_idx=${initial_trial_idx}
         --max_try_idx=${end_trial_idx}
+        --base_logdir /data/$(whoami)/herhrl
         --network_class ${network_class}"
         echo ${cmd}
     #    cmd="sleep 7"
