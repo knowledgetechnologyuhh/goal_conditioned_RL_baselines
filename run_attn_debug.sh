@@ -27,7 +27,7 @@ do
         --env ${env}
         --algorithm baselines.herhrl
         --render 0
-        --num_cpu 4
+        --num_cpu ${n_cpu}
         --penalty_magnitude 10
         --n_epochs 100
         --try_start_idx ${initial_trial_idx}
