@@ -3,7 +3,7 @@ source ./set_paths.sh
 
 n_cpu=4
 n_epochs=100
-early_stop_threshold=95
+early_stop_threshold=30
 
 env="AntFourRoomsEnv-v0"
 
