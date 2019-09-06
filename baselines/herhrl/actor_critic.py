@@ -35,15 +35,15 @@ class ActorCritic:
             self.preproc_in = input_pi
         with tf.variable_scope('pi'):
             self.pi_tf = self.max_u * tf.tanh(nn(
-                input_pi, [self.hidden] * self.layers + [self.dimu]))
+                input_pi, [self.hidden] * (self.layers+1) + [self.dimu]))
         with tf.variable_scope('Q'):
             # for policy training
             input_Q = tf.concat(axis=1, values=[o, g, self.pi_tf / self.max_u])
-            self.Q_pi_tf = nn(input_Q, [self.hidden] * self.layers + [1])
+            self.Q_pi_tf = nn(input_Q, [self.hidden] * (self.layers+1) + [1])
             # for critic training
             input_Q = tf.concat(axis=1, values=[o, g, self.u_tf / self.max_u])
             self._input_Q = input_Q  # exposed for tests
-            self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
+            self.Q_tf = nn(input_Q, [self.hidden] * (self.layers+1) + [1], reuse=True)
 
 
 class ActorCriticSharedPreproc:
@@ -120,7 +120,7 @@ class ActorCriticVanillaAttn:
 
         # Networks.
         with tf.variable_scope('shared_preproc') as scope:
-            attn = tf.nn.sigmoid(nn(input_og, [64] * 2 + [input_og.shape[1]], name='attn'))
+            attn = tf.nn.sigmoid(nn(input_og, [self.hidden] * 2 + [input_og.shape[1]], name='attn'))
             had_prod = attn * input_og
             # Now map input to a smaller space
             reduced_attn_input = had_prod
@@ -171,7 +171,7 @@ class ActorCriticVanillaAttnReduced:
 
         # Networks.
         with tf.variable_scope('shared_preproc') as scope:
-            attn = tf.nn.sigmoid(nn(input_og, [64] * 2 + [input_og.shape[1]], name='attn'))
+            attn = tf.nn.sigmoid(nn(input_og, [self.hidden] * 2 + [input_og.shape[1]], name='attn'))
             had_prod = attn * input_og
             # Now map input to a smaller space
             # reduced_attn_input = had_prod
