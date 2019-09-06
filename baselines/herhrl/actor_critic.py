@@ -90,7 +90,7 @@ class ActorCriticSharedPreproc:
             self._input_Q = input_Q  # exposed for tests
             self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
 
-class ActorCriticSharedVanillaAttn:
+class ActorCriticVanillaAttn:
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
                  **kwargs):
@@ -123,7 +123,7 @@ class ActorCriticSharedVanillaAttn:
             attn = tf.nn.sigmoid(nn(input_og, [64] * 2 + [input_og.shape[1]]))
             had_prod = attn * input_og
             # Now map input to a smaller space
-            self.preproc_in = nn(had_prod, [int(input_og.shape[1]/2)])
+            self.preproc_in = nn(had_prod, [int(input_og.shape[1]//2)])
 
         with tf.variable_scope('pi'):
             self.pi_tf = self.max_u * tf.tanh(nn(

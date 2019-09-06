@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
 
-n_cpu=4
+n_cpu=6
 n_epochs=70
 early_stop_threshold=70
 initial_trial_idx=100
 env="AntFourRoomsEnv-v0"
-max_active_procs=3
+max_active_procs=2
 max_trials_per_config=3
 
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config ))
 
-for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn'
+for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc'
 do
     cmd="python3 experiment/train.py
     --action_steps [6,27]
