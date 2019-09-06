@@ -11,7 +11,7 @@ click.option('--base_logdir', type=str, default='data', help='the path to where 
 click.option('--n_epochs', type=int, default=300, help='the max. number of training epochs to run'),
 click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)'),
 click.option('--seed', type=int, default=0, help='the random seed used to seed both the environment and the training code'),
-click.option('--policy_save_interval', type=int, default=50, help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.'),
+click.option('--policy_save_interval', type=int, default=10, help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.'),
 click.option('--restore_policy', type=str, default=None, help='The pretrained policy file to start with to avoid learning from scratch again. Useful for interrupting and restoring training sessions.'),
 click.option('--rollout_batch_size', type=int, default=1, help='The number of simultaneous rollouts.'),
 click.option('--n_episodes', type=int, default=100, help='The number of training episodes (parallel rollouts) per epoch.'),
@@ -21,7 +21,6 @@ click.option('--try_start_idx', type=int, default=100, help='Index for first try
 click.option('--early_stop_success_rate', type=int, default=90, help='The required mean success rate  over the last 4 epochs in % to trigger early stopping. 0 for no early stopping'),
 click.option('--info', type=str, default='', help='A command line comment that will be integrated in the folder where the results are stored. Useful for debugging and addressing temporary changes to the code..'),
 click.option('--bind_core', type=int, default=0, help='Whether to bind each MPI worker to a core.')
-
 ]
 
 @click.command(context_settings=dict(
