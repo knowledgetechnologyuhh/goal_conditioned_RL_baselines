@@ -38,6 +38,7 @@ class RolloutWorker(Rollout):
         self.rep_correct_history = deque(maxlen=history_len)
         self.q_loss_history = deque(maxlen=history_len)
         self.pi_loss_history = deque(maxlen=history_len)
+        self.preproc_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
         self.subgoals_achieved_history = deque(maxlen=history_len)
         self.subgoals_given_history = deque(maxlen=history_len)
@@ -76,15 +77,17 @@ class RolloutWorker(Rollout):
         return env
 
     def train_policy(self, n_train_batches):
-        q_losses, pi_losses = [], []
+        q_losses, pi_losses, preproc_losses = [], [], []
         for _ in range(n_train_batches):
-            q_loss, pi_loss = self.policy.train()  # train actor-critic
+            q_loss, pi_loss, preproc_loss = self.policy.train()  # train actor-critic
             q_losses.append(q_loss)
             pi_losses.append(pi_loss)
+            preproc_losses.append(preproc_loss)
         if n_train_batches > 0:
             self.policy.update_target_net()
             self.q_loss_history.append(np.mean(q_losses))
             self.pi_loss_history.append(np.mean(pi_losses))
+            self.preproc_loss_history.append(np.mean(preproc_losses))
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
@@ -319,6 +322,7 @@ class RolloutWorker(Rollout):
         if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
             logs += [('q_loss', np.mean(self.q_loss_history))]
             logs += [('pi_loss', np.mean(self.pi_loss_history))]
+            logs += [('preproc_loss', np.mean(self.preproc_loss_history))]
         logs += [('mean_Q', np.mean(self.q_history))]
         this_prefix = prefix
         if self.h_level > 0:
