@@ -22,9 +22,9 @@ for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herh
 do
   for l2_action in '1.0' '0.0'
   do
-    for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+    for shared_pi_err_coeff in '0.0' '1.0' '0.2'
     do
-      for shared_pi_err_coeff in '0.0' '1.0' '0.2'
+      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
       do
         cmd="python3 experiment/train.py
         --early_stop_threshold ${early_stop_threshold}
