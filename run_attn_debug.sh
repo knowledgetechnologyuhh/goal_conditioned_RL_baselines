@@ -28,7 +28,7 @@ do
       do
         cmd="python3 experiment/train.py
         --early_stop_threshold ${early_stop_threshold}
-        --early_stop_value ${early_stop_value}
+        --early_stop_data_column ${early_stop_value}
         --action_steps [10,25]
         --policies_layers [DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]
         --n_episodes 100
