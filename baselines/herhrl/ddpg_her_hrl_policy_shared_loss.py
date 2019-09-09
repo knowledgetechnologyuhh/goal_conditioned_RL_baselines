@@ -18,7 +18,7 @@ def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class DDPG_HER_HRL_POLICY_SHARED_LOSS_PI(DDPG_HER_HRL_POLICY):
+class DDPG_HER_HRL_POLICY_SHARED_LOSS(DDPG_HER_HRL_POLICY):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
@@ -107,7 +107,8 @@ class DDPG_HER_HRL_POLICY_SHARED_LOSS_PI(DDPG_HER_HRL_POLICY):
         self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
         self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
-        self.shared_preproc_loss_tf = (self.Q_loss_tf)
+        self.shared_q_err_coeff = 1.0-self.shared_pi_err_coeff
+        self.shared_preproc_loss_tf = (self.shared_q_err_coeff * self.Q_loss_tf + self.shared_pi_err_coeff * self.pi_loss_tf)
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars('main/Q'))
         pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/pi'))
         shared_preproc_grads_tf = tf.gradients(self.shared_preproc_loss_tf, self._vars('main/shared_preproc'))

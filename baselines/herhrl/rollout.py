@@ -31,6 +31,7 @@ class RolloutWorker(Rollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
+        self.current_logs = []
         self.exploit = exploit
         self.is_leaf = policy.child_policy is None
         self.h_level = policy.h_level
@@ -309,6 +310,12 @@ class RolloutWorker(Rollout):
         if not self.is_leaf:
             self.child_rollout.reset_rollout()
 
+    def get_current_log_data_val(self, log_col_name):
+        for l_name, l_val in self.current_logs:
+            if l_name == log_col_name:
+                return l_val
+        return None
+
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
         """
@@ -332,7 +339,7 @@ class RolloutWorker(Rollout):
         if self.is_leaf is False:
             child_logs = self.child_rollout.logs(prefix=prefix)
             logs += child_logs
-
+        self.current_logs = logs
         return logs
 
     def get_mean_succ_rate(self, n_past_entries=10):

@@ -136,15 +136,17 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
         label = label.replace("algorithm: baselines.herhrl", 'PDDL+HER')
         label = label.replace("algorithm: baselines.her", 'HER')
         label = label.replace("obs_noise_coeff:", 'obs noise:')
+        label = label.replace("DDPG_HER_HRL_POLICY_SHARED_LOSS_PI", 'prep shared loss')
+        label = label.replace("DDPG_HER_HRL_POLICY", 'prep comb. loss')
         # End custom modifications of label
 
         xs, ys = zip(*data[config])
         # label = label + "|N:{}".format(len(ys))
         len_ys = sorted([len(y) for y in ys])
-        try:
-            maxlen_ys_2nd = len_ys[-2]
-        except Exception as e:
-            print("nooo")
+        # try:
+        #     maxlen_ys_2nd = len_ys[-2]
+        # except Exception as e:
+        #     print("nooo")
         maxlen_ys = max([len(x) for x in xs])
         xs, ys = pad(xs), pad(ys, value=np.nan)
         median = np.nanmedian(ys, axis=0)
@@ -156,7 +158,8 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
 
         c_idx = idx % len(new_colors)
         color = new_colors[c_idx]
-        plot_idx = maxlen_ys_2nd + 1    # this to remove the effect of early stopping on median plot
+        plot_idx = maxlen_ys
+        # plot_idx = maxlen_ys_2nd + 1    # this to remove the effect of early stopping on median plot
         # plot_idx = min(35, maxlen_ys_2nd + 1)  # this line to cut the graph where you like
         # plot_idx = maxlen_ys          # this to plot normally
         if lin_log == 'lin':
@@ -181,7 +184,7 @@ def draw_all_data_plot(data, fig_dir, y_axis_title=None, lin_log='lin'):
     # sort both labels and handles by labels
     if len(labels) > 0:
         labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-        plt.legend(handles, labels, loc='upper right', fontsize=16)
+        plt.legend(handles, labels, loc='upper left', fontsize=10)
     fig.tight_layout()
     plt.savefig(os.path.join(fig_dir, 'fig_{}.jpg'.format(y_axis_title.replace("/", "_"))))
     plt.savefig(os.path.join(fig_dir, 'fig_{}.pdf'.format(y_axis_title.replace("/", "_"))))
@@ -535,8 +538,8 @@ def do_plot(data_dir, smoothen=True, padding=False, col_to_display='test/success
         var_param_keys.remove('early_stop_success_rate')
     data = get_data(paths, var_param_keys, max_epochs, smoothen, padding, col_to_display=col_to_display)
     data = get_min_len_data(data, min_len=10)
-    # if get_best != '':
-    #     data = get_best_data(data, get_best, n_best=4, avg_last_steps=40, sort_order_least_val=0.5)
+    if get_best != '':
+        data = get_best_data(data, get_best, n_best=10, avg_last_steps=5, sort_order_least_val=0.5)
 
     draw_all_data_plot(data, data_dir, y_axis_title=col_to_display, lin_log=lin_log)
 
@@ -572,7 +575,7 @@ if __name__ == '__main__':
     cols = get_all_columns(args.data_dir)
     if args.column == '':
         for c in cols:
-            do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c, get_best='least')
+            do_plot(args.data_dir, args.smooth, args.pad, col_to_display=c, get_best='')
     else:
     # data_lastval_threshold = 0.0
-        do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column, get_best='least')
+        do_plot(args.data_dir, args.smooth, args.pad, col_to_display=args.column, get_best='')

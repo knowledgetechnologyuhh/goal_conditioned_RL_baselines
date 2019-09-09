@@ -236,13 +236,7 @@ class ActorCriticProbSampling:
             self.preproc_in = input_og
 
         with tf.variable_scope('pi'):
-            # rnd = tf.random_uniform(shape=[None, int(self.preproc_in.shape[1])])
-            # batch_size = tf.placeholder(tf.int32, shape=[])  # `batch_size` is a scalar (0-D tensor).
-            # rnd = tf.random_uniform([batch_size, int(self.preproc_in.shape[1])])
-            # rnd = tf.random_uniform(shape=self.preproc_in.shape)
             prob_in = tf.nn.sigmoid(nn(self.preproc_in, [64] * 2 + [self.preproc_in.shape[1]], name='attn'))
-            # attn = tf.dtypes.cast(prob_in >= rnd, self.preproc_in.dtype)
-            # attn = prob_in * rnd
             attn = prob_in
             had_prod = attn * self.preproc_in
             reduced_attn_input = had_prod

@@ -6,10 +6,17 @@ n_epochs=2
 rollout_batch_size=1
 n_cpu=2
 penalty_magnitude=10
-environments=( 'TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'AntFourRoomsEnv-v0' )
-policy_combinations=( '[PDDL_POLICY,DDPG_HER_HRL_POLICY]' '[DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]' )
-network_classes=( 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced' 'baselines.herhrl.actor_critic:ActorCriticProbSampling' 'baselines.herhrl.actor_critic:ActorCriticProbSamplingReduced' )
+
+#environments=( 'TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'AntFourRoomsEnv-v0' )
+#policy_combinations=( '[PDDL_POLICY,DDPG_HER_HRL_POLICY]' '[DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]' '[DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]' )
+#network_classes=( 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced' 'baselines.herhrl.actor_critic:ActorCriticProbSampling' 'baselines.herhrl.actor_critic:ActorCriticProbSamplingReduced' )
 action_steps_combinations=( '[4,20]' )
+
+
+environments=( 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'AntFourRoomsEnv-v0' )
+policy_combinations=( '[DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]' )
+network_classes=( 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' )
+
 
 base_cmd="python3 experiment/train.py
                   --num_cpu ${n_cpu}

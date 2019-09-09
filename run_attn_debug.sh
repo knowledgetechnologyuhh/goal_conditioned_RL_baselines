@@ -2,25 +2,34 @@
 source ./set_paths.sh
 
 n_cpu=6
-n_epochs=70
-early_stop_threshold=70
+n_epochs=100
+#early_stop_threshold=70
 initial_trial_idx=100
-env="AntFourRoomsEnv-v0"
+#env="AntFourRoomsEnv-v0"
 max_active_procs=5
 max_trials_per_config=5
+early_stop_threshold='9.9'
+early_stop_value='test/subgoals_achieved'
 
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config ))
 #--base_logdir /storage/wtmgws/wtmgws7_data/ideas_deep_rl/data
 #for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced' 'baselines.herhrl.actor_critic:ActorCriticProbSampling' 'baselines.herhrl.actor_critic:ActorCriticProbSamplingReduced'
+#for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced'
 for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced'
 do
-    for policies_layers in '[DDPG_HER_HRL_POLICY_SHARED_LOSS_PI,DDPG_HER_HRL_POLICY_SHARED_LOSS_PI]' '[DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]' '[DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY_SHARED_LOSS_PI]'
+  for l2_action in '1.0' '0.0'
+  do
+    for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
     do
+      for shared_pi_err_coeff in '0.0' '1.0' '0.2'
+      do
         cmd="python3 experiment/train.py
+        --early_stop_threshold ${early_stop_threshold}
+        --early_stop_value ${early_stop_value}
         --action_steps [10,25]
-        --policies_layers ${policies_layers}
+        --policies_layers [DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]
         --n_episodes 100
         --n_test_rollouts 10
         --n_train_batches 15
@@ -33,11 +42,15 @@ do
         --try_start_idx ${initial_trial_idx}
         --max_try_idx ${end_trial_idx}
         --base_logdir /data/$(whoami)/herhrl
-        --network_class ${network_class}"
+        --network_class ${network_class}
+        --shared_pi_err_coeff ${shared_pi_err_coeff}
+        --l2_action ${l2_action}"
         echo ${cmd}
     #    cmd="sleep 7"
         cmd_array+=( "${cmd}" )
+      done
     done
+  done
 done
 
 declare -a repeated_cmd_array=()
