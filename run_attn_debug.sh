@@ -10,6 +10,7 @@ max_active_procs=5
 max_trials_per_config=5
 early_stop_threshold='9.9'
 early_stop_value='test/subgoals_achieved'
+total_cmd_ctr=0
 
 krenew -K 60 -b
 declare -a cmd_array=()
@@ -47,11 +48,14 @@ do
         --l2_action ${l2_action}"
         echo ${cmd}
     #    cmd="sleep 7"
+        ((total_cmd_ctr++))
         cmd_array+=( "${cmd}" )
       done
     done
   done
 done
+
+echo "Total number of commands: ${total_cmd_ctr}"
 
 declare -a repeated_cmd_array=()
 for (( i=0; i<$max_trials_per_config; ++i))
