@@ -45,7 +45,7 @@ do
         --base_logdir /data/$(whoami)/herhrl
         --network_class ${network_class}
         --shared_pi_err_coeff ${shared_pi_err_coeff}
-        --l2_action ${l2_action}"
+        --action_l2 ${l2_action}"
         echo ${cmd}
     #    cmd="sleep 7"
         ((total_cmd_ctr++))
