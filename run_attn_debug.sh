@@ -24,6 +24,9 @@ do
   do
     for shared_pi_err_coeff in '0.0' '1.0' '0.2'
     do
+      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $network_class = 'baselines.herhrl.actor_critic:ActorCritic' )  ]]; then
+        continue
+      fi
       for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
       do
         cmd="python3 experiment/train.py
