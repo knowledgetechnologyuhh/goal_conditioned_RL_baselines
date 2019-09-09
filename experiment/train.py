@@ -18,6 +18,7 @@ from subprocess import CalledProcessError
 import subprocess
 from baselines.util import physical_cpu_core_count
 import wtm_envs.register_envs
+from queue import deque
 
 num_cpu = 0
 
@@ -34,16 +35,16 @@ def train(rollout_worker, evaluator,
           save_policies, **kwargs):
     global num_cpu
     rank = MPI.COMM_WORLD.Get_rank()
-
     latest_policy_path = os.path.join(logger.get_dir(), 'policy_latest.pkl')
     best_policy_path = os.path.join(logger.get_dir(), 'policy_best.pkl')
     periodic_policy_path = os.path.join(logger.get_dir(), 'policy_{}.pkl')
 
-    best_success_rate = -1
+    best_success_rate = -np.inf
+    best_early_stop_val = -np.inf
     success_rates = []
     # if the std dev of the success rate of the last epochs is larger than X do early stopping.
     n_epochs_avg_for_early_stop = 4
-
+    early_stop_vals = deque(maxlen=n_epochs_avg_for_early_stop)
     for epoch in range(n_epochs):
         # train
         logger.info("Training epoch {}".format(epoch))
@@ -70,26 +71,49 @@ def train(rollout_worker, evaluator,
             print("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
 
-        # save latest policy
-        evaluator.save_policy(latest_policy_path)
-
         # save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())
         success_rates.append(success_rate)
-        if rank == 0 and success_rate >= best_success_rate and save_policies:
-            best_success_rate = success_rate
-            logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
-            evaluator.save_policy(best_policy_path)
-        if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
-            policy_path = periodic_policy_path.format(epoch)
-            logger.info('Saving periodic policy to {} ...'.format(policy_path))
-            evaluator.save_policy(policy_path)
-        if len(success_rates) > n_epochs_avg_for_early_stop:
-            avg = np.mean(success_rates[-n_epochs_avg_for_early_stop:])
-            logger.info('Mean of success rate of last {} epochs: {}'.format(n_epochs_avg_for_early_stop, avg))
-            if avg >= kwargs['early_stop_success_rate'] and kwargs['early_stop_success_rate'] != 0:
-                logger.info('Policy is good enough now, early stopping')
-                break
+        try:
+            early_stop_current_val = evaluator.get_current_log_data_val(kwargs['early_stop_data_column'])
+        except Exception as e:
+            # In case the algorithm that we use does not feature custom early stop data columns
+            early_stop_current_val = None
+        # early_stop_val = mpi_average(evaluator.)
+        early_stop_vals.append(early_stop_current_val)
+
+        if rank == 0:
+            # save latest policy
+            evaluator.save_policy(latest_policy_path)
+            if policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
+                policy_path = periodic_policy_path.format(epoch)
+                logger.info('Saving periodic policy to {} ...'.format(policy_path))
+                evaluator.save_policy(policy_path)
+            if kwargs['early_stop_data_column'] is None:
+                if success_rate >= best_success_rate and save_policies:
+                    best_success_rate = success_rate
+                    logger.info(
+                        'New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
+                    evaluator.save_policy(best_policy_path)
+                if len(success_rates) >= n_epochs_avg_for_early_stop:
+                    avg = np.mean(success_rates[-n_epochs_avg_for_early_stop:])
+                    logger.info('Mean of success rate of last {} epochs: {}'.format(n_epochs_avg_for_early_stop, avg))
+                    if avg >= kwargs['early_stop_success_rate'] and kwargs['early_stop_success_rate'] != 0:
+                        logger.info('Policy is good enough now, early stopping')
+                        break
+
+            else:
+                if early_stop_current_val >= best_early_stop_val and save_policies:
+                    best_early_stop_val = early_stop_current_val
+                    logger.info(
+                        'New best value for {}: {}. Saving policy to {} ...'.format(kwargs['early_stop_data_column'], early_stop_current_val, best_policy_path))
+                    evaluator.save_policy(best_policy_path)
+                if len(early_stop_vals) >= n_epochs_avg_for_early_stop:
+                    avg = np.mean(early_stop_vals)
+                    logger.info('Mean of {} last {} epochs: {}'.format(kwargs['early_stop_data_column'], n_epochs_avg_for_early_stop, avg))
+                    if avg >= kwargs['early_stop_threshold']:
+                        logger.info('Policy is good enough now, early stopping')
+                        break
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -97,11 +121,6 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
-    # nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
-    # print("PID: {}".format(os.getpid()))
-    # print("Rollouts stored: {}".format(nrs))
-    # print("Last obs: {}".format(rollout_worker.policy.buffer.buffers['o'][nrs-1][-1][0]))
-    # print("bye")
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
@@ -195,12 +214,16 @@ def launch(
     evaluator.seed(rank_seed)
 
     early_stop_success_rate = kwargs['early_stop_success_rate'] / 100
-
+    if 'early_stop_data_column' not in kwargs.keys():
+        kwargs['early_stop_data_column'] = None
+        kwargs['early_stop_threshold'] = None
     train(
         logdir=logdir, rollout_worker=rollout_worker,
         evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_episodes=params['n_episodes'], n_train_batches=params['n_train_batches'],
-        policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate)
+        policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate,
+        early_stop_data_column=kwargs['early_stop_data_column'], early_stop_threshold=kwargs['early_stop_threshold']
+    )
     print("Done training")
 
 def get_subdir_by_params(path_params, ctr=0):
