@@ -27,7 +27,8 @@ do
       if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $network_class = 'baselines.herhrl.actor_critic:ActorCritic' )  ]]; then
         continue
       fi
-      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+#      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
       do
         if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' )  ]]; then
           n_epochs=40
