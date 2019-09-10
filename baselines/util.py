@@ -46,7 +46,7 @@ def get_subdir_by_params(path_params, ctr=0):
                 if split_elem.find("_") == -1:
                     short_split_elem = str(split_elem)
                 else:
-                    short_split_elem = "-".join([us_elem[:2] for us_elem in split_elem.split("_")])
+                    short_split_elem = "_".join([us_elem[:2] for us_elem in split_elem.split("_")])
             else:
                 short_split_elem = shorten_split_elem(split_elem, chars_to_split[1:])
             short_split_elem_strs.append(short_split_elem)
@@ -62,8 +62,8 @@ def get_subdir_by_params(path_params, ctr=0):
         this_param_str = '{}:{}'.format(this_key_str, this_v_str)
         param_strs.append(this_param_str)
 
-    subdir_str = "_".join(param_strs)
-    subdir_str += "_" + str(ctr)
+    subdir_str = "|".join(param_strs)
+    subdir_str += "|" + str(ctr)
 
     # param_subdir = "_".join(
     #     ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
