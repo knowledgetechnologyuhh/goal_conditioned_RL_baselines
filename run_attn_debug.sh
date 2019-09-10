@@ -2,7 +2,7 @@
 source ./set_paths.sh
 
 n_cpu=6
-n_epochs=100
+#n_epochs=75
 #early_stop_threshold=70
 initial_trial_idx=100
 #env="AntFourRoomsEnv-v0"
@@ -29,6 +29,11 @@ do
       fi
       for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
       do
+        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'AntFourRoomsEnv-v0' )  ]]; then
+          n_epochs=40
+        else
+          n_epochs=100
+        fi
         cmd="python3 experiment/train.py
         --early_stop_threshold ${early_stop_threshold}
         --early_stop_data_column ${early_stop_value}
@@ -50,7 +55,7 @@ do
         --shared_pi_err_coeff ${shared_pi_err_coeff}
         --action_l2 ${l2_action}"
         echo ${cmd}
-        cmd="sleep 17"
+    #    cmd="sleep 7"
         ((total_cmd_ctr++))
         cmd_array+=( "${cmd}" )
       done
@@ -73,12 +78,12 @@ do
     echo "Currently, there are ${n_active_procs} active processes"
     while [ "$n_active_procs" -ge "$max_active_procs" ];do
         echo "${n_active_procs} processes running; queue is full, waiting..."
-        sleep 5
+        sleep 60
         n_active_procs=$(pgrep -c -P$$)
     done
     echo "Now executing ${cmd}"
     ${cmd} || true &
-    sleep 3
+    sleep 30
 done
 
 
