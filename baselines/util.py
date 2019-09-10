@@ -41,7 +41,7 @@ def get_subdir_by_params(path_params, ctr=0):
         if str(v) == '':
             continue
         this_key_str = "".join([s[:2] for s in p.split("_")])
-        this_v_str = str(v)
+        this_v_str = "".join([str(v)[:2] for v in p.split("_")])
         this_param_str = '{}:{}'.format(this_key_str, this_v_str)
         subdir_str += "_" + this_param_str
 
