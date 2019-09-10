@@ -7,7 +7,7 @@ n_epochs=100
 initial_trial_idx=100
 #env="AntFourRoomsEnv-v0"
 max_active_procs=5
-max_trials_per_config=5
+max_trials_per_config=3
 early_stop_threshold='9.9'
 early_stop_value='test/subgoals_achieved'
 total_cmd_ctr=0
@@ -50,7 +50,7 @@ do
         --shared_pi_err_coeff ${shared_pi_err_coeff}
         --action_l2 ${l2_action}"
         echo ${cmd}
-    #    cmd="sleep 7"
+        cmd="sleep 17"
         ((total_cmd_ctr++))
         cmd_array+=( "${cmd}" )
       done
@@ -73,12 +73,12 @@ do
     echo "Currently, there are ${n_active_procs} active processes"
     while [ "$n_active_procs" -ge "$max_active_procs" ];do
         echo "${n_active_procs} processes running; queue is full, waiting..."
-        sleep 60
+        sleep 5
         n_active_procs=$(pgrep -c -P$$)
     done
     echo "Now executing ${cmd}"
     ${cmd} || true &
-    sleep 30
+    sleep 3
 done
 
 
