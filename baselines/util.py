@@ -36,15 +36,33 @@ def store_args(method):
     return wrapper
 
 def get_subdir_by_params(path_params, ctr=0):
-    subdir_str = ''
+    param_strs = []
+
+    def shorten_split_elem(elem_str, chars_to_split):
+        split_elems = elem_str.split(chars_to_split[0])
+        short_split_elem_strs = []
+        for split_elem in split_elems:
+            if len(chars_to_split) == 1:
+                if split_elem.find("_") == -1:
+                    short_split_elem = str(split_elem)
+                else:
+                    short_split_elem = "-".join([us_elem[:2] for us_elem in split_elem.split("_")])
+            else:
+                short_split_elem = shorten_split_elem(split_elem, chars_to_split[1:])
+            short_split_elem_strs.append(short_split_elem)
+        short_ret_str = chars_to_split[0].join(short_split_elem_strs)
+        return short_ret_str
+
     for p,v in sorted(path_params.items()):
         if str(v) == '':
             continue
         this_key_str = "".join([s[:2] for s in p.split("_")])
-        this_v_str = "".join([str(v)[:2] for v in p.split("_")])
+        chars_to_split = [",", ":", "[", "]"]
+        this_v_str = shorten_split_elem(str(v), chars_to_split)
         this_param_str = '{}:{}'.format(this_key_str, this_v_str)
-        subdir_str += "_" + this_param_str
+        param_strs.append(this_param_str)
 
+    subdir_str = "_".join(param_strs)
     subdir_str += "_" + str(ctr)
 
     # param_subdir = "_".join(
