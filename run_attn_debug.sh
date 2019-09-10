@@ -29,7 +29,7 @@ do
       fi
       for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
       do
-        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'AntFourRoomsEnv-v0' )  ]]; then
+        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' )  ]]; then
           n_epochs=40
         else
           n_epochs=100
@@ -47,7 +47,7 @@ do
         --render 0
         --num_cpu ${n_cpu}
         --penalty_magnitude 10
-        --n_epochs 100
+        --n_epochs ${n_epochs}
         --try_start_idx ${initial_trial_idx}
         --max_try_idx ${end_trial_idx}
         --base_logdir /data/$(whoami)/herhrl
