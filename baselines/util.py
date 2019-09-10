@@ -35,6 +35,23 @@ def store_args(method):
 
     return wrapper
 
+def get_subdir_by_params(path_params, ctr=0):
+    subdir_str = ''
+    for p,v in sorted(path_params.items()):
+        if str(v) == '':
+            continue
+        this_key_str = "".join([s[:2] for s in p.split("_")])
+        this_v_str = str(v)
+        this_param_str = '{}:{}'.format(this_key_str, this_v_str)
+        subdir_str += "_" + this_param_str
+
+    subdir_str += "_" + str(ctr)
+
+    # param_subdir = "_".join(
+    #     ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
+    #      sorted(path_params.items()) if str(v) != '']) + "_" + str(ctr)
+    return subdir_str
+
 
 def import_function(spec):
     """Import a function identified by a string like "pkg.module:fn_name".

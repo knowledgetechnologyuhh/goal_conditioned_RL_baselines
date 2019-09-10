@@ -18,7 +18,7 @@ def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
 
-class DDPG_HER_HRL_POLICY_SHARED_LOSS(DDPG_HER_HRL_POLICY):
+class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
@@ -143,4 +143,8 @@ class DDPG_HER_HRL_POLICY_SHARED_LOSS(DDPG_HER_HRL_POLICY):
         self._sync_optimizers()
         self._init_target_net()
 
+    def _vars(self, scope):
+        res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + '/' + scope)
+        # assert len(res) > 0
+        return res
 

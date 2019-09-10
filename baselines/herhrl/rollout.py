@@ -80,15 +80,18 @@ class RolloutWorker(Rollout):
     def train_policy(self, n_train_batches):
         q_losses, pi_losses, preproc_losses = [], [], []
         for _ in range(n_train_batches):
-            q_loss, pi_loss, preproc_loss = self.policy.train()  # train actor-critic
-            q_losses.append(q_loss)
-            pi_losses.append(pi_loss)
-            preproc_losses.append(preproc_loss)
+            # q_loss, pi_loss, preproc_loss = self.policy.train()  # train actor-critic
+            losses = self.policy.train()
+            q_losses.append(losses[0])
+            pi_losses.append(losses[1])
+            if len(losses) > 2:
+                preproc_losses.append(losses[3])
         if n_train_batches > 0:
             self.policy.update_target_net()
             self.q_loss_history.append(np.mean(q_losses))
             self.pi_loss_history.append(np.mean(pi_losses))
-            self.preproc_loss_history.append(np.mean(preproc_losses))
+            if len(preproc_losses) > 0:
+                self.preproc_loss_history.append(np.mean(preproc_losses))
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 

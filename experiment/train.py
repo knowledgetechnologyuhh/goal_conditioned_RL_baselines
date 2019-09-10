@@ -16,9 +16,10 @@ from baselines.util import mpi_fork
 import experiment.click_options as main_linker
 from subprocess import CalledProcessError
 import subprocess
-from baselines.util import physical_cpu_core_count
+from baselines.util import physical_cpu_core_count, get_subdir_by_params
 import wtm_envs.register_envs
 from queue import deque
+
 
 num_cpu = 0
 
@@ -229,12 +230,6 @@ def launch(
         early_stop_data_column=kwargs['early_stop_data_column'], early_stop_threshold=kwargs['early_stop_threshold']
     )
     print("Done training")
-
-def get_subdir_by_params(path_params, ctr=0):
-    param_subdir = "_".join(
-        ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
-         sorted(path_params.items()) if str(v) != '']) + "_" + str(ctr)
-    return param_subdir
 
 @click.command(context_settings=dict(
     ignore_unknown_options=True,

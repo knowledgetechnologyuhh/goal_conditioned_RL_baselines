@@ -99,7 +99,7 @@ use_target_net=self.use_target_net)
 # OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
 # OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
 # OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'obs_noise_coeff', 'network_class', 'shared_pi_err_coeff']
-OVERRIDE_PARAMS_LIST = ['action_steps', 'policies_layers', 'network_class', 'shared_pi_err_coeff', 'action_l2']
+OVERRIDE_PARAMS_LIST = ['action_steps', 'policies_layers', 'shared_pi_err_coeff', 'action_l2', 'network_classes']
 
 ROLLOUT_PARAMS_LIST = ['noise_eps', 'random_eps', 'replay_strategy', 'env_name']
 
@@ -172,7 +172,6 @@ def configure_her(params):
     return sample_her_transitions
 
 
-
 def simple_goal_subtract(a, b):
     assert a.shape == b.shape
     return a - b
@@ -208,8 +207,9 @@ def configure_policy(dims, params):
     n_subgoals = params['action_steps']
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
                     policy_str in params['policies_layers'][1:-1].split(",") if policy_str != '']
+    net_classes = [net_class for net_class in params['network_classes'][1:-1].split(",") if net_class != '']
     policies = []
-    for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
+    for l, (n_s, ThisPolicy, net_class) in enumerate(zip(n_subgoals, policy_types, net_classes)):
 
         if l == (len(n_subgoals) - 1): # If this is the final lowest layer
             input_dims = dims.copy()
@@ -224,6 +224,7 @@ def configure_policy(dims, params):
         _params['has_child'] = has_child
         sample_her_transitions = configure_her(_params)
         ddpg_params['sample_transitions'] = sample_her_transitions
+        ddpg_params['network_class'] = "baselines.herhrl." + net_class
         this_params = ddpg_params.copy()
         gamma = 1. - 1. / n_s
         this_params.update({'input_dims': input_dims,  # agent takes an input observations

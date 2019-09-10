@@ -5,6 +5,8 @@ n_cpu=6
 #n_epochs=75
 #early_stop_threshold=70
 initial_trial_idx=100
+n_test_rollouts=10
+n_episodes=100
 #env="AntFourRoomsEnv-v0"
 max_active_procs=5
 max_trials_per_config=3
@@ -15,16 +17,14 @@ total_cmd_ctr=0
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config ))
-#--base_logdir /storage/wtmgws/wtmgws7_data/ideas_deep_rl/data
-#for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced' 'baselines.herhrl.actor_critic:ActorCriticProbSampling' 'baselines.herhrl.actor_critic:ActorCriticProbSamplingReduced'
-#for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced'
-for network_class in 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced'
+for ll_network_class in 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
 do
+  network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
   for l2_action in '1.0' '0.0'
   do
     for shared_pi_err_coeff in '0.0' '1.0' '0.2'
     do
-      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $network_class = 'baselines.herhrl.actor_critic:ActorCritic' )  ]]; then
+      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic:ActorCritic' )  ]]; then
         continue
       fi
 #      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
@@ -35,13 +35,18 @@ do
         else
           n_epochs=100
         fi
+#        # For debugging uncomment those:
+#        n_epochs=3
+#        n_episodes=3
+#        n_test_rollouts=2
+
         cmd="python3 experiment/train.py
         --early_stop_threshold ${early_stop_threshold}
         --early_stop_data_column ${early_stop_value}
         --action_steps [10,25]
-        --policies_layers [DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]
-        --n_episodes 100
-        --n_test_rollouts 10
+        --policies_layers [DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY_SHARED_PREPROC]
+        --n_episodes ${n_episodes}
+        --n_test_rollouts ${n_test_rollouts}
         --n_train_batches 15
         --env ${env}
         --algorithm baselines.herhrl
@@ -52,7 +57,7 @@ do
         --try_start_idx ${initial_trial_idx}
         --max_try_idx ${end_trial_idx}
         --base_logdir /data/$(whoami)/herhrl
-        --network_class ${network_class}
+        --network_classes ${network_classes}
         --shared_pi_err_coeff ${shared_pi_err_coeff}
         --action_l2 ${l2_action}"
         echo ${cmd}
@@ -83,7 +88,8 @@ do
         n_active_procs=$(pgrep -c -P$$)
     done
     echo "Now executing ${cmd}"
-    ${cmd} || true &
+#    ${cmd} # For debugging: execute in foreground
+    ${cmd} || true & # Execute in background
     sleep 30
 done
 
