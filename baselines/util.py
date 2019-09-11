@@ -79,8 +79,19 @@ def import_function(spec):
     fn = getattr(module, fn_name)
     return fn
 
-
 def flatten_grads(var_list, grads):
+    """Flattens a variables and their gradients.
+    """
+    if len(var_list) == 0:
+        return []
+    try:
+        grad_list = [tf.reshape(grad, [U.numel(v)]) for (v, grad) in zip(var_list, grads)]
+    except Exception as e:
+        print(e)
+    grad_list = [tf.reshape(grad, [U.numel(v)]) for (v, grad) in zip(var_list, grads)]
+    return tf.concat(grad_list, 0)
+
+def flatten_grads_compact(var_list, grads):
     """Flattens a variables and their gradients.
     """
     if len(var_list) == 0:

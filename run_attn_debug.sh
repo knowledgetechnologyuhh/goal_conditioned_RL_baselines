@@ -9,18 +9,18 @@ n_test_rollouts=10
 n_episodes=100
 #env="AntFourRoomsEnv-v0"
 max_active_procs=5
-max_trials_per_config=3
+max_trials_per_config=2
 early_stop_threshold='9.9'
 early_stop_value='test/subgoals_achieved'
 total_cmd_ctr=0
 
 krenew -K 60 -b
 declare -a cmd_array=()
-end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config ))
+end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config - 1 ))
 for ll_network_class in 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
 do
   network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
-  for l2_action in '1.0' '0.0'
+  for l2_action in '1.0'
   do
     for shared_pi_err_coeff in '0.0' '1.0' '0.2'
     do
