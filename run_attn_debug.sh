@@ -8,8 +8,8 @@ initial_trial_idx=100
 n_test_rollouts=10
 n_episodes=100
 #env="AntFourRoomsEnv-v0"
-max_active_procs=5
-max_trials_per_config=2
+max_active_procs=1
+max_trials_per_config=10
 early_stop_threshold='9.9'
 early_stop_value='test/subgoals_achieved'
 total_cmd_ctr=0
@@ -17,18 +17,19 @@ total_cmd_ctr=0
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config - 1 ))
-for ll_network_class in 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
+for ll_network_class in 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttn'
+#for ll_network_class in 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
 do
   network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
   for l2_action in '1.0'
   do
-    for shared_pi_err_coeff in '0.0' '1.0' '0.2'
+    for shared_pi_err_coeff in '0.0' '0.2' '1.0'
     do
       if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic_shared_preproc:ActorCritic' )  ]]; then
         continue
       fi
 #      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
-      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1'
       do
         if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' )  ]]; then
           n_epochs=40

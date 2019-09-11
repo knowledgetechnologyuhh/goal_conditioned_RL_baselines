@@ -79,6 +79,12 @@ def train(rollout_worker, evaluator,
         early_stop_vals.append(early_stop_current_val)
 
         if rank == 0:
+
+            try:
+                rollout_worker.policy.draw_attn_hist(img_dir=logger.get_dir())
+            except Exception as e:
+                pass
+
             logger.info("Data_dir: {}".format(logger.get_dir()))
             logger.dump_tabular()
 
