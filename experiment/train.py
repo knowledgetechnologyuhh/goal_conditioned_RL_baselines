@@ -75,7 +75,7 @@ def train(rollout_worker, evaluator,
         success_rates.append(success_rate)
 
         early_stop_current_val = logger.getkvs()[kwargs['early_stop_data_column']]
-        print("Rank {} esv: {}".format(rank, early_stop_current_val))
+        # print("Rank {} esv: {}".format(rank, early_stop_current_val))
         early_stop_vals.append(early_stop_current_val)
 
         if rank == 0:
@@ -237,7 +237,7 @@ def launch(
         policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate,
         early_stop_data_column=kwargs['early_stop_data_column'], early_stop_threshold=kwargs['early_stop_threshold']
     )
-    print("Done training for process with rank {}".format(rank))
+    # print("Done training for process with rank {}".format(rank))
 
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
