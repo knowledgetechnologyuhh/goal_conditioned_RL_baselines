@@ -206,7 +206,7 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
                 this_prob_hists = np.histogram(this_prob, self.attn_hist_bins, range=(0, 1))
                 self.prob_hist += this_prob_hists[0] / this_prob.shape[1]
             else:
-                vals = [policy.attn, policy.prob_in]
+                vals = [policy.attn]
                 ret = self.sess.run(vals, feed_dict=feed)
                 # action postprocessing
                 this_attn = ret[0]
