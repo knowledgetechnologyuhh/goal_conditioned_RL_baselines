@@ -64,14 +64,11 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
                  sample_transitions, gamma, reuse=False, **kwargs)
 
     def _reset_hists(self):
-        self.hists = {"attn": None, "prob_in": None}
+        self.hists = {"attn": None, "prob_in": None, "rnd": None}
 
     def store_episode(self, episode_batch, update_stats=True):
         DDPG_HER_HRL_POLICY.store_episode(self, episode_batch, update_stats)
         self.ep_ctr += 1
-        # if self.ep_ctr % self.draw_hist_freq == 0:
-        #     self.draw_hists(kwargs['log_dir'])
-
 
     def draw_hists(self, img_dir):
         for hist_name, hist in self.hists.items():

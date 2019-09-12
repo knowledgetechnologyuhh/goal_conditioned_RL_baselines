@@ -17,17 +17,21 @@ total_cmd_ctr=0
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config - 1 ))
-for ll_network_class in 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
+#for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
+#for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep6' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep100'
+for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnTwoValSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnTwoValSteep100'
 do
   network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
   for l2_action in '1.0'
   do
-    for shared_pi_err_coeff in '0.0' '0.2' '1.0'
+    for shared_pi_err_coeff in '0.2'
     do
       if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic_shared_preproc:ActorCritic' )  ]]; then
         continue
       fi
-      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+#      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+#      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
+      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1'
       do
         if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' )  ]]; then
           n_epochs=40
@@ -35,9 +39,9 @@ do
           n_epochs=100
         fi
 #        # For debugging uncomment those:
-#        n_epochs=3
-#        n_episodes=3
-#        n_test_rollouts=2
+        n_epochs=3
+        n_episodes=3
+        n_test_rollouts=2
 
         cmd="python3 experiment/train.py
         --early_stop_threshold ${early_stop_threshold}
