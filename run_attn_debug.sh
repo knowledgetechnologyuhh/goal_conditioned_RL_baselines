@@ -39,9 +39,9 @@ do
           n_epochs=100
         fi
 #        # For debugging uncomment those:
-        n_epochs=3
-        n_episodes=3
-        n_test_rollouts=2
+#        n_epochs=3
+#        n_episodes=3
+#        n_test_rollouts=2
 
         cmd="python3 experiment/train.py
         --early_stop_threshold ${early_stop_threshold}
