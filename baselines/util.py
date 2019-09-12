@@ -56,7 +56,7 @@ def get_subdir_by_params(path_params, ctr=0):
     for p,v in sorted(path_params.items()):
         if str(v) == '':
             continue
-        this_key_str = "".join([s[:2] for s in p.split("_")])
+        this_key_str = "".join([s[:3] for s in p.split("_")])
         chars_to_split = [",", ":", "[", "]"]
         this_v_str = shorten_split_elem(str(v), chars_to_split)
         this_param_str = '{}:{}'.format(this_key_str, this_v_str)
