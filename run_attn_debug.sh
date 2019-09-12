@@ -10,7 +10,7 @@ n_episodes=50
 #env="AntFourRoomsEnv-v0"
 max_active_procs=5
 max_trials_per_config=2
-early_stop_threshold='8.0'
+early_stop_threshold='7.0'
 early_stop_value='test/subgoals_achieved'
 total_cmd_ctr=0
 
@@ -19,10 +19,10 @@ declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config - 1 ))
 #for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
 #for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep6' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep100'
-for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnHeaviside' \
+for ll_network_class in 'actor_critic:ActorCritic' \
+ 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnHeaviside' 'actor_critic_shared_preproc:ActorCriticVanillaAttnEnforceW' \
  'actor_critic_shared_preproc:ActorCriticProbSamplingAttn' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' \
  'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' \
- 'actor_critic_shared_preproc:ActorCriticVanillaAttnEnforceW' \
  'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep6' \
  'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep100'
 do
