@@ -57,11 +57,13 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
         self.hist_bins = 50
         self.draw_hist_freq = 3
         self._reset_hists()
-
+        self.shared_pi_err_coeff = kwargs['shared_pi_err_coeff']
         DDPG_HER_HRL_POLICY.__init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
                  rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
                  sample_transitions, gamma, reuse=False, **kwargs)
+        self.preproc_lr = (self.Q_lr + self.pi_lr) / 2
+
 
     def _reset_hists(self):
         self.hists = {"attn": None, "prob_in": None, "rnd": None}
@@ -133,8 +135,10 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
         self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
         self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
-        self.shared_q_err_coeff = 1.0-self.shared_pi_err_coeff
+        self.shared_q_err_coeff = 1.0 - self.shared_pi_err_coeff
         self.shared_preproc_loss_tf = (self.shared_q_err_coeff * self.Q_loss_tf + self.shared_pi_err_coeff * self.pi_loss_tf)
+        if "shared_preproc_err" in self.main.__dict__:
+            self.shared_preproc_loss_tf += self.main.shared_preproc_err
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars('main/Q'))
         pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/pi'))
         shared_preproc_grads_tf = tf.gradients(self.shared_preproc_loss_tf, self._vars('main/shared_preproc'))
@@ -206,3 +210,31 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
                 self.hists[hist_name] += this_hists[0] / this_vals.shape[1]
         return u,q
 
+    def _sync_optimizers(self):
+        self.Q_adam.sync()
+        self.pi_adam.sync()
+        self.shared_preproc_adam.sync()
+
+    def _grads(self):
+        # Avoid feed_dict here for performance!
+        critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, preproc_grad = self.sess.run([
+            self.Q_loss_tf,
+            self.main.Q_pi_tf,
+            self.shared_preproc_loss_tf,
+            self.Q_grad_tf,
+            self.pi_grad_tf,
+            self.shared_preproc_grad_tf
+        ])
+        return critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, preproc_grad
+
+    def _update(self, Q_grad, pi_grad, preproc_grad):
+        self.Q_adam.update(Q_grad, self.Q_lr)
+        self.pi_adam.update(pi_grad, self.pi_lr)
+        self.shared_preproc_adam.update(preproc_grad, self.preproc_lr)
+
+    def train(self, stage=True):
+        if stage:
+            self.stage_batch()
+        critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, preproc_grad = self._grads()
+        self._update(Q_grad, pi_grad, preproc_grad)
+        return critic_loss, actor_loss, preproc_loss

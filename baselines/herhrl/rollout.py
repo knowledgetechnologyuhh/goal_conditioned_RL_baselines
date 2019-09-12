@@ -85,7 +85,7 @@ class RolloutWorker(Rollout):
             q_losses.append(losses[0])
             pi_losses.append(losses[1])
             if len(losses) > 2:
-                preproc_losses.append(losses[3])
+                preproc_losses.append(losses[2])
         if n_train_batches > 0:
             self.policy.update_target_net()
             self.q_loss_history.append(np.mean(q_losses))
