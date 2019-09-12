@@ -192,6 +192,8 @@ def launch(
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
     params = config.prepare_params(params)
+    pid = os.getpid()
+    logger.info("Starting process id: {}".format(pid))
     config.log_params(params, logger=logger)
 
     if num_cpu == 1:
