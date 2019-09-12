@@ -261,9 +261,9 @@ class ActorCriticProbSamplingAttn:
         # Networks.
         with tf.variable_scope('shared_preproc') as scope:
             self.prob_in = tf.nn.sigmoid(nn(input_og, [64] * 2 + [input_og.shape[1]], name='attn'))
-            rnd = tf.random_uniform(shape=[kwargs['batch_size'], int(input_og.shape[1])])
+            self.rnd = tf.random_uniform(shape=[kwargs['batch_size'], int(input_og.shape[1])])
 
-            self.attn = tf.sigmoid((self.prob_in - rnd) * self.steepness)
+            self.attn = tf.sigmoid((self.prob_in - self.rnd) * self.steepness)
 
             had_prod = self.attn * input_og
             # Now map input to a smaller space

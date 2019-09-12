@@ -39,9 +39,9 @@ do
       for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1'
       do
         if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' )  ]]; then
-          n_epochs=40
+          n_epochs=80
         else
-          n_epochs=100
+          n_epochs=200
         fi
 #        # For debugging uncomment those:
 #        n_epochs=3
