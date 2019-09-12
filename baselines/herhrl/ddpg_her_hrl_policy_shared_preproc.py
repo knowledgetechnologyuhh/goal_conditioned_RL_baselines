@@ -54,38 +54,38 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
             reuse (boolean): whether or not the networks should be reused
         """
         self.ep_ctr = 0
-        self.attn_hist_bins = 50
-        self.draw_attn_hist_ep_freq = 100
-        self._reset_attn_hist()
+        self.hist_bins = 50
+        self.draw_hist_freq = 3
+        self._reset_hists()
 
         DDPG_HER_HRL_POLICY.__init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
                  Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
                  rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
                  sample_transitions, gamma, reuse=False, **kwargs)
 
-    def _reset_attn_hist(self):
-        self.attn_hist = np.zeros(self.attn_hist_bins)
-        self.prob_hist = np.zeros(self.attn_hist_bins)
-        # self.attn_hist_bins = np.arange(0,1+1.0/self.attn_hist_bins,1.0/self.attn_hist_bins)
+    def _reset_hists(self):
+        self.hists = {"attn": None, "prob_in": None}
 
     def store_episode(self, episode_batch, update_stats=True):
         DDPG_HER_HRL_POLICY.store_episode(self, episode_batch, update_stats)
         self.ep_ctr += 1
+        # if self.ep_ctr % self.draw_hist_freq == 0:
+        #     self.draw_hists(kwargs['log_dir'])
 
-    def draw_attn_hist(self, img_dir):
-        step_size = 1.0/self.attn_hist_bins
-        xs = np.arange(0, 1, step_size)
-        self.attn_hist /= (self.ep_ctr * self.T)
-        self.prob_hist /= (self.ep_ctr * self.T)
-        fig, ax = plt.subplots()
-        ax.bar(xs, self.attn_hist, step_size)
-        plt.savefig(img_dir+"/attn_hist_l_{}_ep_{}.png".format(self.h_level, self.ep_ctr))
-        fig, ax = plt.subplots()
-        ax.bar(xs, self.prob_hist, step_size)
-        plt.savefig(img_dir+"/prob_hist_l_{}_ep_{}.png".format(self.h_level, self.ep_ctr))
-        self._reset_attn_hist()
+
+    def draw_hists(self, img_dir):
+        for hist_name, hist in self.hists.items():
+            if hist is None:
+                continue
+            step_size = 1.0/self.hist_bins
+            xs = np.arange(0, 1, step_size)
+            hist /= (self.ep_ctr * self.T)
+            fig, ax = plt.subplots()
+            ax.bar(xs, hist, step_size)
+            plt.savefig(img_dir+"/{}_hist_l_{}_ep_{}.png".format(hist_name, self.h_level, self.ep_ctr))
+        self._reset_hists()
         if self.child_policy is not None:
-            self.child_policy.draw_attn_hist(img_dir)
+            self.child_policy.draw_hists(img_dir)
 
     def _create_network(self, reuse=False):
         logger.info("Creating a DDPG_HRL agent with action space %d x %s..." % (self.dimu, self.max_u))
@@ -183,37 +183,29 @@ class DDPG_HER_HRL_POLICY_SHARED_PREPROC(DDPG_HER_HRL_POLICY):
         u, q = DDPG_HER_HRL_POLICY.get_actions(self,o, ag, g, noise_eps, random_eps, use_target_net,
                     compute_Q, exploit, **kwargs )
 
-        if "attn" in self.main.__dict__:
-            o, g = self._preprocess_og(o, ag, g)
-            policy = self.target if use_target_net else self.main
-            # values to compute
+        o, g = self._preprocess_og(o, ag, g)
+        policy = self.target if use_target_net else self.main
+        # feed for histograms
+        feed = {
+            policy.o_tf: o.reshape(-1, self.dimo),
+            policy.g_tf: g.reshape(-1, self.dimg),
+            policy.u_tf: np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
+        }
+        vals = []
+        hist_names_to_consider = []
+        for hist_name, hist in self.hists.items():
+            if hist_name in self.main.__dict__:
+                hist_names_to_consider.append(hist_name)
+                vals.append(eval("policy.{}".format(hist_name)))
+                # vals = [policy.attn]
 
-            # feed
-            feed = {
-                policy.o_tf: o.reshape(-1, self.dimo),
-                policy.g_tf: g.reshape(-1, self.dimg),
-                policy.u_tf: np.zeros((o.size // self.dimo, self.dimu), dtype=np.float32)
-            }
-
-            if "prob_in" in self.main.__dict__:
-                vals = [policy.attn, policy.prob_in]
-                ret = self.sess.run(vals, feed_dict=feed)
-                # action postprocessing
-                this_attn = ret[0]
-                this_attn_hists = np.histogram(this_attn, self.attn_hist_bins, range=(0, 1))
-                self.attn_hist += this_attn_hists[0] / this_attn.shape[1]
-                this_prob = ret[1]
-                this_prob_hists = np.histogram(this_prob, self.attn_hist_bins, range=(0, 1))
-                self.prob_hist += this_prob_hists[0] / this_prob.shape[1]
+        ret = self.sess.run(vals, feed_dict=feed)
+        for val_idx, hist_name in enumerate(hist_names_to_consider):
+            this_vals = ret[val_idx]
+            this_hists = np.histogram(this_vals, self.hist_bins, range=(0, 1))
+            if self.hists[hist_name] is None:
+                self.hists[hist_name] = this_hists[0] / this_vals.shape[1]
             else:
-                vals = [policy.attn]
-                ret = self.sess.run(vals, feed_dict=feed)
-                # action postprocessing
-                this_attn = ret[0]
-                this_attn_hists = np.histogram(this_attn, self.attn_hist_bins, range=(0, 1))
-                self.attn_hist += this_attn_hists[0] / this_attn.shape[1]
-                self.prob_hist += this_attn_hists[0] / this_attn.shape[1]
-
-
+                self.hists[hist_name] += this_hists[0] / this_vals.shape[1]
         return u,q
 

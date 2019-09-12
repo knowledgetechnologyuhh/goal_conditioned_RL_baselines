@@ -81,7 +81,7 @@ def train(rollout_worker, evaluator,
         if rank == 0:
 
             try:
-                rollout_worker.policy.draw_attn_hist(img_dir=logger.get_dir())
+                rollout_worker.policy.draw_hists(img_dir=logger.get_dir())
             except Exception as e:
                 pass
 
