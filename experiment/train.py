@@ -1,5 +1,13 @@
-import tensorflow as tf
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# Level | Level for Humans | Level Description
+#  -------|------------------|------------------------------------
+#   0     | DEBUG            | [Default] Print all messages
+#   1     | INFO             | Filter out INFO messages
+#   2     | WARNING          | Filter out INFO & WARNING messages
+#   3     | ERROR            | Filter out all messages
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # or any {DEBUG, INFO, WARN, ERROR, FATAL}
 import sys
 this_path =os.getcwd()
 sys.path.append(this_path)
@@ -259,7 +267,7 @@ def main(ctx, **kwargs):
             kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
 
-    print("Running training for {}".format(kwargs))
+    logger.info("Running training for {}".format(kwargs))
     ctr = kwargs['try_start_idx']
     max_ctr = kwargs['max_try_idx']
     path_params = kwargs['override_params']
@@ -280,7 +288,7 @@ def main(ctx, **kwargs):
 
     do_train = True
     trial_no = ctr - 1
-    print("Trying this config for {}th time. ".format(trial_no))
+    logger.info("Trying this config for {}th time. ".format(trial_no))
     last_logdir = "_".join(logdir.split("_")[:-1])+"_{}".format(trial_no - 1)
     last_res_file = last_logdir+"/progress.csv"
     if not os.path.isfile(last_res_file):
@@ -300,12 +308,12 @@ def main(ctx, **kwargs):
             #         print("Last time this did only achieve {} success rate avg over last 4 epochs... skipping a new test!".format(
             #             last_succ_rates))
         except:
-            print("Could not load progress data {}".format(last_res_file))
+            logger.warn("Could not load progress data {}".format(last_res_file))
     if trial_no > max_ctr:
-        print("Already collected enough data for this parameterization")
+        logger.info("Already collected enough data for this parameterization")
         do_train = False
     if do_train:
-        print("Launching training")
+        logger.info("Launching training")
         launch(**kwargs)
 
 

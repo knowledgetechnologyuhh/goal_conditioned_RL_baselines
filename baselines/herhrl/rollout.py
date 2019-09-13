@@ -6,6 +6,7 @@ from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
+import sys
 from PIL import Image
 
 class RolloutWorker(Rollout):
@@ -268,7 +269,7 @@ class RolloutWorker(Rollout):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
-        for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
+        for cyc in tqdm(range(n_episodes), disable=self.h_level > 0, file=sys.__stdout__):
             ro_start = time.time()
             self.generate_rollouts()
             dur_ro += time.time() - ro_start
