@@ -79,7 +79,6 @@ def train(rollout_worker, evaluator,
         early_stop_vals.append(early_stop_current_val)
 
         if rank == 0:
-
             try:
                 rollout_worker.policy.draw_hists(img_dir=logger.get_dir())
             except Exception as e:
@@ -111,26 +110,15 @@ def train(rollout_worker, evaluator,
                         'New best value for {}: {}. Saving policy to {} ...'.format(kwargs['early_stop_data_column'], early_stop_current_val, best_policy_path))
                     evaluator.save_policy(best_policy_path)
 
+        if len(early_stop_vals) >= n_epochs_avg_for_early_stop:
+            avg = np.mean(early_stop_vals)
+            logger.info('Mean of {} of last {} epochs: {}'.format(kwargs['early_stop_data_column'],
+                                                                  n_epochs_avg_for_early_stop, avg))
 
-        if kwargs['early_stop_data_column'] is None:
-            if len(success_rates) >= n_epochs_avg_for_early_stop:
-                avg = np.mean(success_rates[-n_epochs_avg_for_early_stop:])
-                logger.info('Mean of success rate of last {} epochs: {}'.format(n_epochs_avg_for_early_stop, avg))
-                if avg >= kwargs['early_stop_success_rate'] and kwargs['early_stop_success_rate'] != 0:
-                    logger.info('Policy is good enough now, early stopping')
-                    done_training = True
-                    # break
-        else:
-            # if len(early_stop_vals) >= n_epochs_avg_for_early_stop:
-            if len(early_stop_vals) >= 0:
-                avg = np.mean(early_stop_vals)
-                logger.info('Mean of {} of last {} epochs: {}'.format(kwargs['early_stop_data_column'],
-                                                                      n_epochs_avg_for_early_stop, avg))
-
-                if avg >= kwargs['early_stop_threshold'] and avg >= kwargs['early_stop_threshold'] != 0:
-                    logger.info('Policy is good enough now, early stopping')
-                    done_training = True
-                    # break
+            if avg >= kwargs['early_stop_threshold'] and avg >= kwargs['early_stop_threshold'] != 0:
+                logger.info('Policy is good enough now, early stopping')
+                done_training = True
+                # break
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -138,9 +126,11 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
+        if (epoch + 1) == n_epochs:
+            logger.info('All epochs are finished. Stopping the training now.')
+            done_training = True
         if done_training:
             break
-
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
@@ -234,15 +224,15 @@ def launch(
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
     evaluator.seed(rank_seed)
 
-    early_stop_success_rate = kwargs['early_stop_success_rate'] / 100
-    if 'early_stop_data_column' not in kwargs.keys():
-        kwargs['early_stop_data_column'] = None
-        kwargs['early_stop_threshold'] = None
+    # early_stop_success_rate = kwargs['early_stop_success_rate'] / 100
+    # if 'early_stop_data_column' not in kwargs.keys():
+    #     kwargs['early_stop_data_column'] = None
+    #     kwargs['early_stop_threshold'] = None
     train(
         logdir=logdir, rollout_worker=rollout_worker,
         evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_episodes=params['n_episodes'], n_train_batches=params['n_train_batches'],
-        policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate,
+        policy_save_interval=policy_save_interval, save_policies=save_policies,
         early_stop_data_column=kwargs['early_stop_data_column'], early_stop_threshold=kwargs['early_stop_threshold']
     )
     # print("Done training for process with rank {}".format(rank))

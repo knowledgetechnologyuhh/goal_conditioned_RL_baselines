@@ -14,8 +14,7 @@ from baselines.herhrl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
 from baselines.herhrl.hrl_policy import HRL_Policy
-from baselines.herhrl.ddpg_her_hrl_policy import DDPG_HER_HRL_POLICY
-from baselines.herhrl.ddpg_her_hrl_policy_shared_preproc import DDPG_HER_HRL_POLICY_SHARED_PREPROC
+from baselines.herhrl.ddpg_her_hrl_policy_old import DDPG_HER_HRL_POLICY
 from baselines.herhrl.pddl_policy import PDDL_POLICY
 import math
 

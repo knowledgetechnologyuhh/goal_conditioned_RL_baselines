@@ -17,14 +17,14 @@ total_cmd_ctr=0
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config - 1 ))
-for ll_network_class in 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic:ActorCritic'
+for ll_network_class in 'actor_critic:ActorCriticSharedPreproc' 'actor_critic:ActorCritic'
 do
   network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
   for l2_action in '1.0'
   do
     for shared_pi_err_coeff in '0.1'
     do
-      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic_shared_preproc:ActorCritic' )  ]]; then
+      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic:ActorCritic' )  ]]; then
         continue
       fi
 #      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
@@ -42,7 +42,7 @@ do
           --early_stop_threshold ${early_stop_threshold}
           --early_stop_data_column ${early_stop_value}
           --action_steps [10,25]
-          --policies_layers [DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY_SHARED_PREPROC]
+          --policies_layers [DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]
           --n_episodes ${n_episodes}
           --n_test_rollouts ${n_test_rollouts}
           --n_train_batches ${train_batch_size}

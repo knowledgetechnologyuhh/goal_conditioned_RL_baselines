@@ -17,25 +17,25 @@ total_cmd_ctr=0
 krenew -K 60 -b
 declare -a cmd_array=()
 end_trial_idx=$(( $initial_trial_idx + $max_trials_per_config - 1 ))
-#for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCritic' 'actor_critic_shared_preproc:ActorCriticSharedPreproc' 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnReduced'
-#for ll_network_class in 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep6' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep100'
+#for ll_network_class in 'actor_critic:ActorCriticProbSamplingAttnSteep6' 'actor_critic:ActorCriticProbSamplingAttnSteep100' 'actor_critic:ActorCritic' 'actor_critic:ActorCriticSharedPreproc' 'actor_critic:ActorCriticVanillaAttn' 'actor_critic:ActorCriticVanillaAttnReduced'
+#for ll_network_class in 'actor_critic:ActorCriticProbSamplingAttnSteep6' 'actor_critic:ActorCriticProbSamplingAttnSteep100' 'actor_critic:ActorCriticVanillaAttnSteep6' 'actor_critic:ActorCriticVanillaAttnSteep100'
 #for ll_network_class in 'actor_critic:ActorCritic' \
-# 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnHeaviside' 'actor_critic_shared_preproc:ActorCriticVanillaAttnEnforceW' \
-# 'actor_critic_shared_preproc:ActorCriticProbSamplingAttn' 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep6' \
-# 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnSteep100' \
-# 'actor_critic_shared_preproc:ActorCriticVanillaAttn' 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep6' \
-# 'actor_critic_shared_preproc:ActorCriticVanillaAttnSteep100'
+# 'actor_critic:ActorCriticProbSamplingAttnHeaviside' 'actor_critic:ActorCriticVanillaAttnEnforceW' \
+# 'actor_critic:ActorCriticProbSamplingAttn' 'actor_critic:ActorCriticProbSamplingAttnSteep6' \
+# 'actor_critic:ActorCriticProbSamplingAttnSteep100' \
+# 'actor_critic:ActorCriticVanillaAttn' 'actor_critic:ActorCriticVanillaAttnSteep6' \
+# 'actor_critic:ActorCriticVanillaAttnSteep100'
 
 for ll_network_class in 'actor_critic:ActorCritic' \
- 'actor_critic_shared_preproc:ActorCriticProbSamplingAttnHeaviside' 'actor_critic_shared_preproc:ActorCriticVanillaAttnEnforceW' \
- 'actor_critic_shared_preproc:ActorCriticProbSamplingAttn'
+ 'actor_critic:ActorCriticProbSamplingAttnHeaviside' 'actor_critic:ActorCriticVanillaAttnEnforceW' \
+ 'actor_critic:ActorCriticProbSamplingAttn'
 do
   network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
   for l2_action in '1.0'
   do
     for shared_pi_err_coeff in '0.1'
     do
-      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic_shared_preproc:ActorCritic' )  ]]; then
+      if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic:ActorCritic' )  ]]; then
         continue
       fi
 #      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
@@ -56,7 +56,7 @@ do
         --early_stop_threshold ${early_stop_threshold}
         --early_stop_data_column ${early_stop_value}
         --action_steps [10,25]
-        --policies_layers [DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY_SHARED_PREPROC]
+        --policies_layers [DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]
         --n_episodes ${n_episodes}
         --n_test_rollouts ${n_test_rollouts}
         --n_train_batches 15

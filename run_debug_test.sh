@@ -1,63 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env bash
 source ./set_paths.sh
-n_episodes=3
-n_test_rollouts=2
-n_epochs=2
-rollout_batch_size=1
-n_cpu=2
-penalty_magnitude=10
 
-#environments=( 'TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'AntFourRoomsEnv-v0' )
-#policy_combinations=( '[PDDL_POLICY,DDPG_HER_HRL_POLICY]' '[DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]' '[DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]' )
-#network_classes=( 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttnReduced' 'baselines.herhrl.actor_critic:ActorCriticProbSampling' 'baselines.herhrl.actor_critic:ActorCriticProbSamplingReduced' )
-action_steps_combinations=( '[4,20]' )
-
-
-environments=( 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'AntFourRoomsEnv-v0' )
-policy_combinations=( '[DDPG_HER_HRL_POLICY_SHARED_LOSS,DDPG_HER_HRL_POLICY_SHARED_LOSS]' )
-network_classes=( 'baselines.herhrl.actor_critic:ActorCritic' 'baselines.herhrl.actor_critic:ActorCriticSharedPreproc' 'baselines.herhrl.actor_critic:ActorCriticVanillaAttn' )
-
-
-base_cmd="python3 experiment/train.py
-                  --num_cpu ${n_cpu}
-                  --rollout_batch_size ${rollout_batch_size}
-                  --n_epochs ${n_epochs}
-                  --n_episodes ${n_episodes}
-                  --base_logdir /data/$(whoami)/herhrl
-                  --render 0
-                  --n_test_rollouts ${n_test_rollouts}
-                  --early_stop_success_rate 99"
-
-# Iterate through environments
-for env in "${environments[@]}"
+python3 experiment/generate_debug_commands.py
+sleep 2
+cmd_file="debug_cmds.txt"
+max_active_procs=8
+cmd_ctr=0
+n_cmds=$(cat $cmd_file | wc -l)
+while IFS= read -r cmd
 do
-  env_cmd="${base_cmd} --env ${env}"
-
-  # Iterate through network classes
-  for network_class in "${network_classes[@]}"
-  do
-    net_cmd="${env_cmd} --network_class ${network_class}"
-
-    # Generate and execute HER command
-    her_cmd="${net_cmd} --algorithm baselines.her"
-    echo ${her_cmd}
-    ${her_cmd}
-
-    # Generate and execute HERHRL commands
-    herhrl_cmd="${net_cmd} --algorithm baselines.herhrl"
-
-    # Iterate through action_steps
-    for action_steps in "${action_steps_combinations[@]}"
-    do
-      action_steps_cmd="${herhrl_cmd} --action_steps ${action_steps}"
-
-      # Iterate through policy_combinations
-      for policy_combination in "${policy_combinations[@]}"
-      do
-        policy_comb_cmd="${action_steps_cmd} --policies_layers ${policy_combination}"
-        echo ${policy_comb_cmd}
-        ${policy_comb_cmd}
-      done
+    ((cmd_ctr++))
+    echo "Next cmd in queue is ${cmd}"
+#    cmd='sleep 12' # Uncomment for debugging this script with a simple sleep command
+    n_active_procs=$(pgrep -c -P$$)
+    ps -ef | grep sleep
+    echo "Currently, there are ${n_active_procs} active processes"
+    while [ "$n_active_procs" -ge "$max_active_procs" ];do
+        echo "${n_active_procs} processes running; queue is full, waiting..."
+        sleep 5
+        n_active_procs=$(pgrep -c -P$$)
     done
-  done
-done
+    echo "Now executing cmd ${cmd_ctr} / ${n_cmds}: "
+    echo ${cmd}
+    ${cmd} || true & # Execute in background
+    sleep 1
+done < $cmd_file
+echo "All commands have been ececuted"

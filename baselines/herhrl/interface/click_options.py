@@ -24,8 +24,6 @@ click.option('--obs_noise_coeff', type=float, default=0.0, help='Fraction of ele
 click.option('--shared_pi_err_coeff', type=float, default=0.1, help='Coefficient of shared preprocessing layer for '
                                                                     'actor (for critic it is 1-shared_pi_err_coeff).'),
 click.option('--action_l2', type=float, default=1.0, help='Whether to add the quadratic action error of pi_tf.'),
-click.option('--early_stop_threshold', type=float, default=0.99, help='The early stopping threshold.'),
-click.option('--early_stop_data_column', type=str, default='test/success_rate', help='The data column on which early stopping is based.')
 ]
 
 def click_main(func):
