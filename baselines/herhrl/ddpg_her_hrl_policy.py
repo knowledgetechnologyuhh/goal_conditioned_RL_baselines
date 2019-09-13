@@ -164,10 +164,10 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         random_u = np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - noisy_u)  # eps-greedy
         u += random_u
         u = u[0].copy()
-        self.update_hists(feed)
+        self.update_hists(feed, policy)
         return u, q
 
-    def update_hists(self, feed):
+    def update_hists(self, feed, policy):
         vals = []
         hist_names_to_consider = []
         for hist_name, hist in self.hists.items():
