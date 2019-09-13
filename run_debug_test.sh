@@ -11,7 +11,7 @@ while IFS= read -r cmd
 do
     ((cmd_ctr++))
     echo "Next cmd in queue is ${cmd}"
-#    cmd='sleep 12' # Uncomment for debugging this script with a simple sleep command
+#    cmd="sleep 12" # Uncomment for debugging this script with a simple sleep command
     n_active_procs=$(pgrep -c -P$$)
     ps -ef | grep sleep
     echo "Currently, there are ${n_active_procs} active processes"
@@ -22,7 +22,7 @@ do
     done
     echo "Now executing cmd ${cmd_ctr} / ${n_cmds}: "
     echo ${cmd}
-    ${cmd} >> logs/${cmd_ctr}.log & # Execute in background
+    $cmd > logs/${cmd_ctr}.log 2> logs/${cmd_ctr}_err.log & # Execute in background
     sleep 1
 done < $cmd_file
 echo "All commands have been ececuted"
