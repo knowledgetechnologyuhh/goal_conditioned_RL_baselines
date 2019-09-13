@@ -12,7 +12,7 @@ import time
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
-from baselines.util import mpi_fork
+from baselines.util import mpi_fork, get_git_label
 import experiment.click_options as main_linker
 from subprocess import CalledProcessError
 import subprocess
@@ -269,17 +269,13 @@ def main(ctx, **kwargs):
             kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
 
-    try:
-        git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
-    except:
-        git_label = ''
-        print("Could not get git label")
     print("Running training for {}".format(kwargs))
     ctr = kwargs['try_start_idx']
     max_ctr = kwargs['max_try_idx']
     path_params = kwargs['override_params']
     alg_str = kwargs['algorithm'].split(".")[1]
     path_params.update({'info': kwargs['info'], 'alg': alg_str})
+    git_label = get_git_label()
     while subdir_exists:
         param_subdir = get_subdir_by_params(path_params, ctr)
         if git_label != '':

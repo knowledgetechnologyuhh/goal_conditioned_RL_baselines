@@ -70,6 +70,12 @@ def get_subdir_by_params(path_params, ctr=0):
     #      sorted(path_params.items()) if str(v) != '']) + "_" + str(ctr)
     return subdir_str
 
+def get_git_label():
+    try:
+        git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
+    except:
+        git_label = ''
+    return git_label
 
 def import_function(spec):
     """Import a function identified by a string like "pkg.module:fn_name".
