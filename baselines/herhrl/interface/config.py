@@ -3,7 +3,7 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.herhrl.ddpg_her_hrl_policy_old import DDPG_HER_HRL_POLICY
+from baselines.herhrl.ddpg_her_hrl_policy import DDPG_HER_HRL_POLICY
 from baselines.herhrl.mix_pddl_hrl_policy import MIX_PDDL_HRL_POLICY
 from baselines.herhrl.pddl_policy import PDDL_POLICY
 from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_transitions_hrl
