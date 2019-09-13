@@ -1,5 +1,5 @@
 from collections import OrderedDict
-
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
@@ -13,10 +13,9 @@ from baselines.herhrl.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
 from baselines.herhrl.hrl_policy import HRL_Policy
-
+from baselines.herhrl.ddpg_her_hrl_policy_old import DDPG_HER_HRL_POLICY
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
-
 
 class DDPG_HER_HRL_POLICY(HRL_Policy):
     @store_args
@@ -53,6 +52,12 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             gamma (float): gamma used for Q learning updates
             reuse (boolean): whether or not the networks should be reused
         """
+        self.ep_ctr = 0
+        self.hist_bins = 50
+        self.draw_hist_freq = 3
+        self._reset_hists()
+        self.shared_pi_err_coeff = kwargs['shared_pi_err_coeff']
+
         HRL_Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
@@ -101,7 +106,22 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         buffer_size = self.buffer_size #// self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
 
+        self.preproc_lr = (self.Q_lr + self.pi_lr) / 2
+
+    def _reset_hists(self):
+        self.hists = {"attn": None, "prob_in": None, "rnd": None}
+
     def draw_hists(self, img_dir):
+        for hist_name, hist in self.hists.items():
+            if hist is None:
+                continue
+            step_size = 1.0 / self.hist_bins
+            xs = np.arange(0, 1, step_size)
+            hist /= (self.ep_ctr * self.T)
+            fig, ax = plt.subplots()
+            ax.bar(xs, hist, step_size)
+            plt.savefig(img_dir + "/{}_hist_l_{}_ep_{}.png".format(hist_name, self.h_level, self.ep_ctr))
+        self._reset_hists()
         if self.child_policy is not None:
             self.child_policy.draw_hists(img_dir)
 
@@ -145,8 +165,25 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         random_u = np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - noisy_u)  # eps-greedy
         u += random_u
         u = u[0].copy()
+        self.update_hists(feed)
         return u, q
 
+    def update_hists(self, feed):
+        vals = []
+        hist_names_to_consider = []
+        for hist_name, hist in self.hists.items():
+            if hist_name in self.main.__dict__:
+                hist_names_to_consider.append(hist_name)
+                vals.append(eval("policy.{}".format(hist_name)))
+
+        ret = self.sess.run(vals, feed_dict=feed)
+        for val_idx, hist_name in enumerate(hist_names_to_consider):
+            this_vals = ret[val_idx]
+            this_hists = np.histogram(this_vals, self.hist_bins, range=(0, 1))
+            if self.hists[hist_name] is None:
+                self.hists[hist_name] = this_hists[0] / this_vals.shape[1]
+            else:
+                self.hists[hist_name] += this_hists[0] / this_vals.shape[1]
 
     def scale_and_offset_action(self, u):
         scaled_u = u.copy()
@@ -187,6 +224,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
             self.g_stats.update(transitions['g'])
             self.g_stats.recompute_stats()
 
+        self.ep_ctr += 1
         # print("Done storing Episode")
 
     def get_current_buffer_size(self):
@@ -195,20 +233,24 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
     def _sync_optimizers(self):
         self.Q_adam.sync()
         self.pi_adam.sync()
+        self.shared_preproc_adam.sync()
 
     def _grads(self):
         # Avoid feed_dict here for performance!
-        critic_loss, actor_loss, Q_grad, pi_grad = self.sess.run([
+        critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, preproc_grad = self.sess.run([
             self.Q_loss_tf,
             self.main.Q_pi_tf,
+            self.shared_preproc_loss_tf,
             self.Q_grad_tf,
-            self.pi_grad_tf
+            self.pi_grad_tf,
+            self.shared_preproc_grad_tf
         ])
-        return critic_loss, actor_loss, Q_grad, pi_grad
+        return critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, preproc_grad
 
-    def _update(self, Q_grad, pi_grad):
+    def _update(self, Q_grad, pi_grad, preproc_grad):
         self.Q_adam.update(Q_grad, self.Q_lr)
         self.pi_adam.update(pi_grad, self.pi_lr)
+        self.shared_preproc_adam.update(preproc_grad, self.preproc_lr)
 
     def sample_batch(self):
         transitions = self.buffer.sample(self.batch_size)
@@ -228,9 +270,9 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
     def train(self, stage=True):
         if stage:
             self.stage_batch()
-        critic_loss, actor_loss, Q_grad, pi_grad = self._grads()
-        self._update(Q_grad, pi_grad)
-        return critic_loss, actor_loss
+        critic_loss, actor_loss, preproc_loss, Q_grad, pi_grad, preproc_grad = self._grads()
+        self._update(Q_grad, pi_grad, preproc_grad)
+        return critic_loss, actor_loss, preproc_loss
 
     def _init_target_net(self):
         self.sess.run(self.init_target_net_op)
@@ -243,7 +285,7 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
 
     def _vars(self, scope):
         res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope + '/' + scope)
-        assert len(res) > 0
+        # assert len(res) > 0
         return res
 
     def _global_vars(self, scope):
@@ -294,31 +336,44 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         target_Q_pi_tf = self.target.Q_pi_tf
         clip_range = (-self.clip_return, 0. if self.clip_pos_returns else np.inf)
         # target_tf = tf.clip_by_value(batch_tf['r'] + self.gamma * target_Q_pi_tf, *clip_range)
-        target_tf = tf.clip_by_value(batch_tf['r'] + tf.transpose(self.gamma * batch_tf['gamma'])* target_Q_pi_tf, *clip_range)
+        target_tf = tf.clip_by_value(batch_tf['r'] + tf.transpose(self.gamma * batch_tf['gamma']) * target_Q_pi_tf,
+                                     *clip_range)
         self.Q_loss_tf = tf.reduce_mean(tf.square(tf.stop_gradient(target_tf) - self.main.Q_tf))
         self.pi_loss_tf = -tf.reduce_mean(self.main.Q_pi_tf)
         self.pi_loss_tf += self.action_l2 * tf.reduce_mean(tf.square(self.main.pi_tf / self.max_u))
+        self.shared_q_err_coeff = 1.0 - self.shared_pi_err_coeff
+        self.shared_preproc_loss_tf = (
+                    self.shared_q_err_coeff * self.Q_loss_tf + self.shared_pi_err_coeff * self.pi_loss_tf)
+        if "shared_preproc_err" in self.main.__dict__:
+            self.shared_preproc_loss_tf += self.main.shared_preproc_err
         Q_grads_tf = tf.gradients(self.Q_loss_tf, self._vars('main/Q'))
         pi_grads_tf = tf.gradients(self.pi_loss_tf, self._vars('main/pi'))
+        shared_preproc_grads_tf = tf.gradients(self.shared_preproc_loss_tf, self._vars('main/shared_preproc'))
         assert len(self._vars('main/Q')) == len(Q_grads_tf)
         assert len(self._vars('main/pi')) == len(pi_grads_tf)
+        assert len(self._vars('main/shared_preproc')) == len(shared_preproc_grads_tf)
         self.Q_grads_vars_tf = zip(Q_grads_tf, self._vars('main/Q'))
         self.pi_grads_vars_tf = zip(pi_grads_tf, self._vars('main/pi'))
+        self.shared_preproc_grads_vars_tf = zip(shared_preproc_grads_tf, self._vars('main/shared_preproc'))
         self.Q_grad_tf = flatten_grads(grads=Q_grads_tf, var_list=self._vars('main/Q'))
         self.pi_grad_tf = flatten_grads(grads=pi_grads_tf, var_list=self._vars('main/pi'))
+        self.shared_preproc_grad_tf = flatten_grads(grads=shared_preproc_grads_tf,
+                                                    var_list=self._vars('main/shared_preproc'))
 
         # optimizers
         self.Q_adam = MpiAdam(self._vars('main/Q'), scale_grad_by_procs=False)
         self.pi_adam = MpiAdam(self._vars('main/pi'), scale_grad_by_procs=False)
+        self.shared_preproc_adam = MpiAdam(self._vars('main/shared_preproc'), scale_grad_by_procs=False)
 
         # polyak averaging
-        self.main_vars = self._vars('main/Q') + self._vars('main/pi')
-        self.target_vars = self._vars('target/Q') + self._vars('target/pi')
+        self.main_vars = self._vars('main/Q') + self._vars('main/pi') + self._vars('main/shared_preproc')
+        self.target_vars = self._vars('target/Q') + self._vars('target/pi') + self._vars('target/shared_preproc')
         self.stats_vars = self._global_vars('o_stats') + self._global_vars('g_stats')
         self.init_target_net_op = list(
             map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
         self.update_target_net_op = list(
-            map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]), zip(self.target_vars, self.main_vars)))
+            map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]),
+                zip(self.target_vars, self.main_vars)))
 
         # initialize all variables
         tf.variables_initializer(self._global_vars('')).run()
@@ -363,4 +418,6 @@ class DDPG_HER_HRL_POLICY(HRL_Policy):
         assert(len(vars) == len(state["tf"]))
         node = [tf.assign(var, val) for var, val in zip(vars, state["tf"])]
         self.sess.run(node)
+
+
 
