@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
 
-#python3 experiment/generate_debug_commands.py
-#sleep 2
+python3 experiment/generate_debug_commands.py
+sleep 2
 cmd_file="debug_cmds.txt"
 max_active_procs=4
 cmd_ctr=0
