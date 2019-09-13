@@ -22,7 +22,7 @@ do
     done
     echo "Now executing cmd ${cmd_ctr} / ${n_cmds}: "
     echo ${cmd}
-    ${cmd} & # Execute in background
+    ${cmd} >> logs/${cmd_ctr}.log & # Execute in background
     sleep 1
 done < $cmd_file
 echo "All commands have been ececuted"
