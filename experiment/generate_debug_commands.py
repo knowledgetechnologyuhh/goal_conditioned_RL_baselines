@@ -55,6 +55,8 @@ if __name__ == "__main__":
     opts_values["general"]['n_test_rollouts'] = n_test_rollouts
     opts_values["general"]['base_logdir'] = "/data/" + whoami + "/herhrl"
     opts_values["general"]['render'] = 0
+    opts_values["general"]['try_start_idx'] = 100
+    opts_values["general"]['max_try_idx'] = 500
 
     base_cmd = "python3 experiment/train.py"
     for k, v in sorted(opts_values["general"].items()):
