@@ -25,8 +25,8 @@ def get_herhrl_cmds(base_cmd):
     all_cmds = []
     for polcomb, accomb in zip(policy_combinations, ac_combinations):
         this_cmd = base_cmd
-        this_cmd += "-- policies_layers {}".format(polcomb)
-        this_cmd += "-- network_classes {}".format(accomb)
+        this_cmd += " --policies_layers {}".format(polcomb)
+        this_cmd += " --network_classes {}".format(accomb)
         all_cmds.append(this_cmd)
 
     return all_cmds
