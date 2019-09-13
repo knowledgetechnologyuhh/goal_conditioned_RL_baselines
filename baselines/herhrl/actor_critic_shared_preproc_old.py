@@ -19,6 +19,8 @@ def heaviside(x: tf.Tensor, g: tf.Graph = tf.get_default_graph()):
         step_func = i + tf.stop_gradient(tf.to_float(ge) - i)
         return step_func
 
+# The TwoVal ACs generate an Attn Vector that has four maxima: two at 0 and 1, and two more at around 0.25 and 0.75. This is not desired!
+
 class ActorCriticProbSamplingAttnTwoVal:
     steepness = 1
     @store_args

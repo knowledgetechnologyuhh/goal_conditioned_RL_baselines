@@ -10,7 +10,7 @@ n_episodes=50
 #env="AntFourRoomsEnv-v0"
 max_active_procs=5
 max_trials_per_config=3
-early_stop_threshold='9.0'
+early_stop_threshold='7.0'
 early_stop_value='test/subgoals_achieved'
 total_cmd_ctr=0
 
@@ -22,7 +22,7 @@ do
   network_classes="[actor_critic:ActorCritic,${ll_network_class}]"
   for l2_action in '1.0'
   do
-    for shared_pi_err_coeff in '0.2'
+    for shared_pi_err_coeff in '0.1'
     do
       if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic_shared_preproc:ActorCritic' )  ]]; then
         continue
@@ -36,7 +36,7 @@ do
         else
           n_epochs=200
         fi
-        for train_batch_size in '15' '30' '60'
+        for train_batch_size in '5' '10' '15' '30'
         do
           cmd="python3 experiment/train.py
           --early_stop_threshold ${early_stop_threshold}
