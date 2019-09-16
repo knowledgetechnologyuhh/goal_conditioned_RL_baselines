@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
-mkdir logs || true
+logs_dir=debug_logs
+rm -rf ${logs_dir}
+mkdir ${logs_dir}
 python3 experiment/generate_debug_commands.py
 sleep 2
 cmd_file="debug_cmds.txt"
@@ -31,7 +33,7 @@ do
     done
     echo "Now executing cmd ${cmd_ctr} / ${n_cmds}: "
     echo ${cmd}
-    $cmd 1> logs/${cmd_ctr}.log 2> logs/${cmd_ctr}_err.log || true & # Execute in background
+    $cmd 1> ${logs_dir}/${cmd_ctr}.log 2> ${logs_dir}/${cmd_ctr}_err.log || true & # Execute in background
 ##    $cmd 1> logs/${cmd_ctr}.log 2> logs/${cmd_ctr}_err.log # Execute in background
     sleep 3
 done
