@@ -6,6 +6,7 @@ from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from collections import deque
 from baselines.template.util import convert_episode_to_batch_major
+import sys
 from PIL import Image
 
 class RolloutWorker(Rollout):
@@ -31,6 +32,7 @@ class RolloutWorker(Rollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
+        self.current_logs = []
         self.exploit = exploit
         self.is_leaf = policy.child_policy is None
         self.h_level = policy.h_level
@@ -38,6 +40,7 @@ class RolloutWorker(Rollout):
         self.rep_correct_history = deque(maxlen=history_len)
         self.q_loss_history = deque(maxlen=history_len)
         self.pi_loss_history = deque(maxlen=history_len)
+        self.preproc_loss_history = deque(maxlen=history_len)
         self.q_history = deque(maxlen=history_len)
         self.subgoals_achieved_history = deque(maxlen=history_len)
         self.subgoals_given_history = deque(maxlen=history_len)
@@ -76,15 +79,20 @@ class RolloutWorker(Rollout):
         return env
 
     def train_policy(self, n_train_batches):
-        q_losses, pi_losses = [], []
+        q_losses, pi_losses, preproc_losses = [], [], []
         for _ in range(n_train_batches):
-            q_loss, pi_loss = self.policy.train()  # train actor-critic
-            q_losses.append(q_loss)
-            pi_losses.append(pi_loss)
+            # q_loss, pi_loss, preproc_loss = self.policy.train()  # train actor-critic
+            losses = self.policy.train()
+            q_losses.append(losses[0])
+            pi_losses.append(losses[1])
+            if len(losses) > 2:
+                preproc_losses.append(losses[2])
         if n_train_batches > 0:
             self.policy.update_target_net()
             self.q_loss_history.append(np.mean(q_losses))
             self.pi_loss_history.append(np.mean(pi_losses))
+            if len(preproc_losses) > 0:
+                self.preproc_loss_history.append(np.mean(preproc_losses))
             if not self.is_leaf:
                 self.child_rollout.train_policy(n_train_batches)
 
@@ -261,7 +269,7 @@ class RolloutWorker(Rollout):
         dur_ro = 0
         dur_train = 0
         dur_start = time.time()
-        for cyc in tqdm(range(n_episodes), disable=self.h_level > 0):
+        for cyc in tqdm(range(n_episodes), disable=self.h_level > 0, file=sys.__stdout__):
             ro_start = time.time()
             self.generate_rollouts()
             dur_ro += time.time() - ro_start
@@ -319,6 +327,8 @@ class RolloutWorker(Rollout):
         if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
             logs += [('q_loss', np.mean(self.q_loss_history))]
             logs += [('pi_loss', np.mean(self.pi_loss_history))]
+        if len(self.preproc_loss_history) > 0:
+            logs += [('preproc_loss', np.mean(self.preproc_loss_history))]
         logs += [('mean_Q', np.mean(self.q_history))]
         this_prefix = prefix
         if self.h_level > 0:
@@ -328,7 +338,7 @@ class RolloutWorker(Rollout):
         if self.is_leaf is False:
             child_logs = self.child_rollout.logs(prefix=prefix)
             logs += child_logs
-
+        # self.current_logs = logs
         return logs
 
     def get_mean_succ_rate(self, n_past_entries=10):

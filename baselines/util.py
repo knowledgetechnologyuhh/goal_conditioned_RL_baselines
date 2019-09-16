@@ -35,6 +35,47 @@ def store_args(method):
 
     return wrapper
 
+def get_subdir_by_params(path_params, ctr=0):
+    param_strs = []
+
+    def shorten_split_elem(elem_str, chars_to_split):
+        split_elems = elem_str.split(chars_to_split[0])
+        short_split_elem_strs = []
+        for split_elem in split_elems:
+            if len(chars_to_split) == 1:
+                if split_elem.find("_") == -1:
+                    short_split_elem = str(split_elem)
+                else:
+                    short_split_elem = "_".join([us_elem[:2] for us_elem in split_elem.split("_")])
+            else:
+                short_split_elem = shorten_split_elem(split_elem, chars_to_split[1:])
+            short_split_elem_strs.append(short_split_elem)
+        short_ret_str = chars_to_split[0].join(short_split_elem_strs)
+        return short_ret_str
+
+    for p,v in sorted(path_params.items()):
+        if str(v) == '':
+            continue
+        this_key_str = "".join([s[:3] for s in p.split("_")])
+        chars_to_split = [",", ":", "[", "]"]
+        this_v_str = shorten_split_elem(str(v), chars_to_split)
+        this_param_str = '{}:{}'.format(this_key_str, this_v_str)
+        param_strs.append(this_param_str)
+
+    subdir_str = "|".join(param_strs)
+    subdir_str += "|" + str(ctr)
+
+    # param_subdir = "_".join(
+    #     ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
+    #      sorted(path_params.items()) if str(v) != '']) + "_" + str(ctr)
+    return subdir_str
+
+def get_git_label():
+    try:
+        git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
+    except:
+        git_label = ''
+    return git_label
 
 def import_function(spec):
     """Import a function identified by a string like "pkg.module:fn_name".
@@ -44,10 +85,23 @@ def import_function(spec):
     fn = getattr(module, fn_name)
     return fn
 
-
 def flatten_grads(var_list, grads):
     """Flattens a variables and their gradients.
     """
+    if len(var_list) == 0:
+        return []
+    try:
+        grad_list = [tf.reshape(grad, [U.numel(v)]) for (v, grad) in zip(var_list, grads)]
+    except Exception as e:
+        print(e)
+    grad_list = [tf.reshape(grad, [U.numel(v)]) for (v, grad) in zip(var_list, grads)]
+    return tf.concat(grad_list, 0)
+
+def flatten_grads_compact(var_list, grads):
+    """Flattens a variables and their gradients.
+    """
+    if len(var_list) == 0:
+        return []
     return tf.concat([tf.reshape(grad, [U.numel(v)])
                       for (v, grad) in zip(var_list, grads)], 0)
 
