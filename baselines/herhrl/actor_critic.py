@@ -200,7 +200,10 @@ class ActorCriticProbSamplingAttn:
             # This is the probability vector concerned with which input is probable to be attended to.
             self.prob_in = tf.nn.sigmoid(nn(input_og, [64] * 2 + [input_og.shape[1]], name='attn'))
             self.rnd = tf.random_uniform(shape=[kwargs['batch_size'], int(input_og.shape[1])])
-
+            # By subtracting a random number in [0,1] from the prob_in, we generate an attn value in [-1,1].
+            # Hence, the prob_in learns to be close to 0 or 1, because the NN "wants" a controllable and deterministic
+            # attn vector. Because we have the sigmoid applied to the difference, this is only possible if the prob_in
+            # is close to 0 or 1.
             self.attn = tf.sigmoid((self.prob_in - self.rnd) * self.steepness)
 
             had_prod = self.attn * input_og
@@ -224,6 +227,9 @@ class ActorCriticProbSamplingAttn:
             self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
 
 class ActorCriticProbSamplingAttnSteep100(ActorCriticProbSamplingAttn):
+    """
+    Same as ActorCriticProbSampling but with a steeper sigmoid function/
+    """
     steepness = 100
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
@@ -232,6 +238,9 @@ class ActorCriticProbSamplingAttnSteep100(ActorCriticProbSamplingAttn):
                  **kwargs)
 
 class ActorCriticProbSamplingAttnSteep6(ActorCriticProbSamplingAttn):
+    """
+    Same as ActorCriticProbSampling but with a steeper sigmoid function/
+    """
     steepness = 6
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
@@ -240,6 +249,8 @@ class ActorCriticProbSamplingAttnSteep6(ActorCriticProbSamplingAttn):
                  **kwargs)
 
 class ActorCriticProbSamplingAttnHeaviside:
+    """ Same as ActorCriticProbSampling, but with heaviside function instead of sigmoid.
+        """
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
                  **kwargs):
