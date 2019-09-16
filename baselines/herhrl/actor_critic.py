@@ -63,6 +63,8 @@ class ActorCritic:
             self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
 
 class ActorCriticSharedPreproc:
+    """ The same as the ActorCritic but with a single shared preprocessing layer.
+    """
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
                  **kwargs):
@@ -88,11 +90,11 @@ class ActorCriticSharedPreproc:
         # Prepare inputs for actor and critic.
         o = self.o_stats.normalize(self.o_tf)
         g = self.g_stats.normalize(self.g_tf)
-        input_pi = tf.concat(axis=1, values=[o, g])  # for actor
+        input_og = tf.concat(axis=1, values=[o, g])  # for actor
 
         # Networks.
         with tf.variable_scope('shared_preproc'):
-            self.preproc_in = nn(input_pi, [self.hidden])
+            self.preproc_in = nn(input_og, [self.hidden])
         with tf.variable_scope('pi'):
             self.pi_tf = self.max_u * tf.tanh(nn(
                 self.preproc_in, [self.hidden] * self.layers + [self.dimu]))
@@ -106,6 +108,9 @@ class ActorCriticSharedPreproc:
             self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
 
 class ActorCriticVanillaAttnEnforceW:
+    """ The same as the ActorCritic but with an additional attention layer that is subject to an additional error function that encourages the outputs of the attention to be either 0 or 1.
+    The error function has a "W"-shape with the lower points are 0 and 1. The steepness parameter controls the steepness of the "W".
+    """
     steepness = 1
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
@@ -138,13 +143,12 @@ class ActorCriticVanillaAttnEnforceW:
         with tf.variable_scope('shared_preproc') as scope:
             self.attn = tf.nn.sigmoid(nn(input_og, [self.hidden] * 2 + [input_og.shape[1]], name='attn') * self.steepness)
             force_W_steepness = 3
+            # This is the additional "W"-error that will be added to the total error for optimizing the weights in the shared preproc layers.
             self.shared_preproc_err = ((4 * force_W_steepness * (self.attn ** 2)) - (4 * force_W_steepness * self.attn)) ** 2
             had_prod = self.attn * input_og
             # Now map input to a smaller space
             reduced_attn_input = had_prod
-            # reduced_attn_input = nn(had_prod, [int(input_og.shape[1]//3)], name='compress_in')
             reduced_attn = self.attn
-            # reduced_attn = nn(attn, [int(input_og.shape[1]//3)], name='compress_attn')
             self.preproc_in = tf.concat(axis=1, values=[reduced_attn_input, reduced_attn])
 
         with tf.variable_scope('pi'):
@@ -160,6 +164,8 @@ class ActorCriticVanillaAttnEnforceW:
             self.Q_tf = nn(input_Q, [self.hidden] * self.layers + [1], reuse=True)
 
 class ActorCriticProbSamplingAttn:
+    """ The same as the ActorCritic but with an additional attention layer that is subject to probabilistic sampling.
+    """
     steepness = 1
     @store_args
     def __init__(self, inputs_tf, dimo, dimg, dimu, max_u, o_stats, g_stats, hidden, layers,
@@ -191,6 +197,7 @@ class ActorCriticProbSamplingAttn:
 
         # Networks.
         with tf.variable_scope('shared_preproc') as scope:
+            # This is the probability vector concerned with which input is probable to be attended to.
             self.prob_in = tf.nn.sigmoid(nn(input_og, [64] * 2 + [input_og.shape[1]], name='attn'))
             self.rnd = tf.random_uniform(shape=[kwargs['batch_size'], int(input_og.shape[1])])
 

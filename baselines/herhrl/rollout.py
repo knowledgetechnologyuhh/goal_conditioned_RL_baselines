@@ -327,6 +327,7 @@ class RolloutWorker(Rollout):
         if len(self.q_loss_history) > 0 and len(self.pi_loss_history) > 0:
             logs += [('q_loss', np.mean(self.q_loss_history))]
             logs += [('pi_loss', np.mean(self.pi_loss_history))]
+        if len(self.preproc_loss_history) > 0:
             logs += [('preproc_loss', np.mean(self.preproc_loss_history))]
         logs += [('mean_Q', np.mean(self.q_history))]
         this_prefix = prefix
