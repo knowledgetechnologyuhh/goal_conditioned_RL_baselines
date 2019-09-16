@@ -1,5 +1,13 @@
-import tensorflow as tf
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# Level | Level for Humans | Level Description
+#  -------|------------------|------------------------------------
+#   0     | DEBUG            | [Default] Print all messages
+#   1     | INFO             | Filter out INFO messages
+#   2     | WARNING          | Filter out INFO & WARNING messages
+#   3     | ERROR            | Filter out all messages
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # or any {DEBUG, INFO, WARN, ERROR, FATAL}
 import sys
 this_path =os.getcwd()
 sys.path.append(this_path)
@@ -12,12 +20,14 @@ import time
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
-from baselines.util import mpi_fork
+from baselines.util import mpi_fork, get_git_label
 import experiment.click_options as main_linker
 from subprocess import CalledProcessError
 import subprocess
-from baselines.util import physical_cpu_core_count
+from baselines.util import physical_cpu_core_count, get_subdir_by_params
 import wtm_envs.register_envs
+from queue import deque
+
 
 num_cpu = 0
 
@@ -34,16 +44,18 @@ def train(rollout_worker, evaluator,
           save_policies, **kwargs):
     global num_cpu
     rank = MPI.COMM_WORLD.Get_rank()
-
     latest_policy_path = os.path.join(logger.get_dir(), 'policy_latest.pkl')
     best_policy_path = os.path.join(logger.get_dir(), 'policy_best.pkl')
     periodic_policy_path = os.path.join(logger.get_dir(), 'policy_{}.pkl')
 
-    best_success_rate = -1
+    best_success_rate = -np.inf
+    best_early_stop_val = -np.inf
     success_rates = []
     # if the std dev of the success rate of the last epochs is larger than X do early stopping.
     n_epochs_avg_for_early_stop = 4
+    early_stop_vals = deque(maxlen=n_epochs_avg_for_early_stop)
 
+    done_training = False
     for epoch in range(n_epochs):
         # train
         logger.info("Training epoch {}".format(epoch))
@@ -66,30 +78,55 @@ def train(rollout_worker, evaluator,
             logger.record_tabular(key, mpi_average(val))
         for key, val in policy.logs('policy'):
             logger.record_tabular(key, mpi_average(val))
-        if rank == 0:
-            print("Data_dir: {}".format(logger.get_dir()))
-            logger.dump_tabular()
 
-        # save latest policy
-        evaluator.save_policy(latest_policy_path)
-
-        # save the policy if it's better than the previous ones
         success_rate = mpi_average(evaluator.current_success_rate())
         success_rates.append(success_rate)
-        if rank == 0 and success_rate >= best_success_rate and save_policies:
-            best_success_rate = success_rate
-            logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
-            evaluator.save_policy(best_policy_path)
-        if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
-            policy_path = periodic_policy_path.format(epoch)
-            logger.info('Saving periodic policy to {} ...'.format(policy_path))
-            evaluator.save_policy(policy_path)
-        if len(success_rates) > n_epochs_avg_for_early_stop:
-            avg = np.mean(success_rates[-n_epochs_avg_for_early_stop:])
-            logger.info('Mean of success rate of last {} epochs: {}'.format(n_epochs_avg_for_early_stop, avg))
-            if avg >= kwargs['early_stop_success_rate'] and kwargs['early_stop_success_rate'] != 0:
+
+        early_stop_current_val = logger.getkvs()[kwargs['early_stop_data_column']]
+        # print("Rank {} esv: {}".format(rank, early_stop_current_val))
+        early_stop_vals.append(early_stop_current_val)
+
+        if rank == 0:
+            try:
+                rollout_worker.policy.draw_hists(img_dir=logger.get_dir())
+            except Exception as e:
+                pass
+
+            logger.info("Data_dir: {}".format(logger.get_dir()))
+            logger.dump_tabular()
+
+            # save latest policy
+            evaluator.save_policy(latest_policy_path)
+
+            if policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
+                policy_path = periodic_policy_path.format(epoch)
+                logger.info('Saving periodic policy to {} ...'.format(policy_path))
+                evaluator.save_policy(policy_path)
+
+            # save the policy if it's better than the previous ones
+            if kwargs['early_stop_data_column'] is None:
+                if success_rate >= best_success_rate and save_policies:
+                    best_success_rate = success_rate
+                    logger.info(
+                        'New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
+                    evaluator.save_policy(best_policy_path)
+            else:
+                assert early_stop_current_val is not None,"Early stopping value should not be none."
+                if early_stop_current_val >= best_early_stop_val and save_policies:
+                    best_early_stop_val = early_stop_current_val
+                    logger.info(
+                        'New best value for {}: {}. Saving policy to {} ...'.format(kwargs['early_stop_data_column'], early_stop_current_val, best_policy_path))
+                    evaluator.save_policy(best_policy_path)
+
+        if len(early_stop_vals) >= n_epochs_avg_for_early_stop:
+            avg = np.mean(early_stop_vals)
+            logger.info('Mean of {} of last {} epochs: {}'.format(kwargs['early_stop_data_column'],
+                                                                  n_epochs_avg_for_early_stop, avg))
+
+            if avg >= kwargs['early_stop_threshold'] and avg >= kwargs['early_stop_threshold'] != 0:
                 logger.info('Policy is good enough now, early stopping')
-                break
+                done_training = True
+                # break
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -97,11 +134,11 @@ def train(rollout_worker, evaluator,
         MPI.COMM_WORLD.Bcast(root_uniform, root=0)
         if rank != 0:
             assert local_uniform[0] != root_uniform[0]
-    # nrs = int(rollout_worker.policy.buffer.n_transitions_stored / rollout_worker.T)
-    # print("PID: {}".format(os.getpid()))
-    # print("Rollouts stored: {}".format(nrs))
-    # print("Last obs: {}".format(rollout_worker.policy.buffer.buffers['o'][nrs-1][-1][0]))
-    # print("bye")
+        if (epoch + 1) == n_epochs:
+            logger.info('All epochs are finished. Stopping the training now.')
+            done_training = True
+        if done_training:
+            break
 
 def launch(
     env, logdir, n_epochs, num_cpu, seed, policy_save_interval, restore_policy, override_params={}, save_policies=True, **kwargs):
@@ -112,7 +149,6 @@ def launch(
         if n_cpus_available < num_cpu:
             whoami = mpi_fork(num_cpu) # This significantly reduces performance!
             assert kwargs['bind_core'] == 0, "Too high CPU count when trying to bind MPI workers to core. You require {} CPUs but have only {}".format(num_cpu, n_cpus_available)
-
         else:
             if kwargs['bind_core']:
                 whoami = mpi_fork(num_cpu, ['--bind-to', 'core'])
@@ -154,6 +190,8 @@ def launch(
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
     params = config.prepare_params(params)
+    pid = os.getpid()
+    logger.info("Starting process id: {}".format(pid))
     config.log_params(params, logger=logger)
 
     if num_cpu == 1:
@@ -194,15 +232,18 @@ def launch(
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
     evaluator.seed(rank_seed)
 
-    early_stop_success_rate = kwargs['early_stop_success_rate'] / 100
-
+    # early_stop_success_rate = kwargs['early_stop_success_rate'] / 100
+    # if 'early_stop_data_column' not in kwargs.keys():
+    #     kwargs['early_stop_data_column'] = None
+    #     kwargs['early_stop_threshold'] = None
     train(
         logdir=logdir, rollout_worker=rollout_worker,
         evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_episodes=params['n_episodes'], n_train_batches=params['n_train_batches'],
-        policy_save_interval=policy_save_interval, save_policies=save_policies, early_stop_success_rate=early_stop_success_rate)
-    print("Done training")
-
+        policy_save_interval=policy_save_interval, save_policies=save_policies,
+        early_stop_data_column=kwargs['early_stop_data_column'], early_stop_threshold=kwargs['early_stop_threshold']
+    )
+    # print("Done training for process with rank {}".format(rank))
 
 @click.command(context_settings=dict(
     ignore_unknown_options=True,
@@ -226,22 +267,15 @@ def main(ctx, **kwargs):
             kwargs['override_params'][op] = kwargs[op]
     subdir_exists = True
 
-    try:
-        git_label = str(subprocess.check_output(["git", 'describe', '--always'])).strip()[2:-3]
-    except:
-        git_label = ''
-        print("Could not get git label")
-    print("Running training for {}".format(kwargs))
+    logger.info("Running training for {}".format(kwargs))
     ctr = kwargs['try_start_idx']
     max_ctr = kwargs['max_try_idx']
+    path_params = kwargs['override_params']
+    alg_str = kwargs['algorithm'].split(".")[1]
+    path_params.update({'info': kwargs['info'], 'alg': alg_str})
+    git_label = get_git_label()
     while subdir_exists:
-        alg_str = "alg:{}".format(kwargs['algorithm'].split(".")[1])
-        info_str = ""
-        if kwargs['info'] != '':
-            info_str = 'info:{}'.format(kwargs['info'])
-        param_subdir = "_".join(
-            ['{}:{}'.format("".join([s[:2] for s in p.split("_")]), str(v).split(":")[-1]) for p, v in
-             sorted(kwargs['override_params'].items())]) + "_" + alg_str + '_' + info_str + "_" + str(ctr)
+        param_subdir = get_subdir_by_params(path_params, ctr)
         if git_label != '':
             logdir = os.path.join(kwargs['base_logdir'], git_label, kwargs['env'], param_subdir)
         else:
@@ -254,7 +288,7 @@ def main(ctx, **kwargs):
 
     do_train = True
     trial_no = ctr - 1
-    print("Trying this config for {}th time. ".format(trial_no))
+    logger.info("Trying this config for {}th time. ".format(trial_no))
     last_logdir = "_".join(logdir.split("_")[:-1])+"_{}".format(trial_no - 1)
     last_res_file = last_logdir+"/progress.csv"
     if not os.path.isfile(last_res_file):
@@ -274,12 +308,12 @@ def main(ctx, **kwargs):
             #         print("Last time this did only achieve {} success rate avg over last 4 epochs... skipping a new test!".format(
             #             last_succ_rates))
         except:
-            print("Could not load progress data {}".format(last_res_file))
+            logger.warn("Could not load progress data {}".format(last_res_file))
     if trial_no > max_ctr:
-        print("Already collected enough data for this parameterization")
+        logger.info("Already collected enough data for this parameterization")
         do_train = False
     if do_train:
-        print("Launching training")
+        logger.info("Launching training")
         launch(**kwargs)
 
 
