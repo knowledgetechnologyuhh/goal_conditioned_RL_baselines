@@ -229,6 +229,7 @@ class WTMEnv(robot_env.RobotEnv):
         # convert to rgb array
         buf = fig.canvas.tostring_rgb()
         ncols, nrows = fig.canvas.get_width_height()
+        plt.close(fig)
         return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
 
     def add_graph_values(self, axis_name, val, x, reset=False):
