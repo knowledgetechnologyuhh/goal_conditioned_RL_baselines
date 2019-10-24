@@ -1,7 +1,15 @@
 <mujoco model="ant">
   <compiler angle="degree" coordinate="local" inertiafromgeom="true" texturedir="../textures"/>
   <option integrator="RK4" timestep="0.02"/>
-  <include file="../shared/graph_canvas.xml"></include>
+  <asset>
+    <texture type="cube" name="graph" file="tabula_rasa.png" />
+    <material name="graph_mat" texture="graph"/>
+  </asset>
+  <worldbody>
+    <body name="graph_body" pos="17.5 0 0.01">
+       <geom contype="0" conaffinity="0" name="graph_geom" type="box" size="8.5 8.5 0.01" material="graph_mat" group="3" />
+     </body>
+  </worldbody>
   <custom>
     <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
   </custom>
