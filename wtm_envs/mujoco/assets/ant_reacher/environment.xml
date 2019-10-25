@@ -1,7 +1,15 @@
 <mujoco model="ant">
   <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
   <option integrator="RK4" timestep="0.02"/>
-  <include file="../shared/graph_canvas.xml"></include>
+  <asset>
+    <texture type="cube" name="graph" file="../textures/tabula_rasa.png" />
+    <material name="graph_mat" texture="graph"/>
+  </asset>
+  <worldbody>
+    <body name="graph_body" pos="24.5 0 0.01">
+       <geom contype="0" conaffinity="0" name="graph_geom" type="box" size="11.5 11.5 0.01" material="graph_mat" group="3" />
+     </body>
+  </worldbody>
   <custom>
     <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
   </custom>
@@ -10,9 +18,9 @@
     <geom conaffinity="0" condim="3" density="5.0" friction="1 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>
   </default>
   <asset>
-    <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+    <texture type="skybox" file="../textures/sky.png" gridsize="3 4" gridlayout=".U..LFRB.D.."/>
     <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
-    <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+    <texture builtin="flat" height="100" name="texplane" rgb1="0.0 0.25 0.5" type="2d" width="100"/>
     <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
     <material name="geom" texture="texgeom" texuniform="true"/>
   </asset>
