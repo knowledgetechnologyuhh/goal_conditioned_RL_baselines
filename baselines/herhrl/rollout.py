@@ -31,6 +31,7 @@ class RolloutWorker(Rollout):
             random_eps (float): probability of selecting a completely random action
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
+            graph (boolean): whether or not to create the graph
         """
         self.current_logs = []
         self.exploit = exploit
@@ -52,6 +53,7 @@ class RolloutWorker(Rollout):
         self.final_goal_achieved = False
         self.subgoals_given = []
         self.render_mode = 'human'
+        self.graph = kwargs['graph']
 
         self.total_steps = 0
         if self.is_leaf is False:
@@ -111,13 +113,15 @@ class RolloutWorker(Rollout):
         if self.h_level == 0:
             self.reset_all_rollouts()   # self.g is set here
             # self.subgoals_given[0].append(self.g.copy())
-            if self.render:
-                self.first_env.render(mode=self.render_mode)
-        if self.is_leaf:
-            self.first_env.env.goal = self.g.copy()
-        if self.h_level == 0:
-            self.first_env.env.final_goal = self.g.copy()
-        self.first_env.env.goal_hierarchy[self.h_level] = self.g.copy()
+            #if self.render:
+            #    for i in range(self.rollout_batch_size):
+            #        self.envs[i].render(mode=self.render_mode)
+        for i, env in enumerate(self.envs):
+            if self.is_leaf:
+                self.envs[i].env.goal = self.g[i].copy()
+            if self.h_level == 0:
+                self.envs[i].env.final_goal = self.g[i].copy()
+            self.envs[i].env.goal_hierarchy[self.h_level] = self.g[i].copy()
 
         # compute observations
         o = np.zeros((self.dims['o']), np.float32)  # observations
@@ -138,11 +142,16 @@ class RolloutWorker(Rollout):
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             scaled_u = self.policy.scale_and_offset_action(u)
-
-            o_new = np.zeros((self.dims['o']))
-            ag_new = np.zeros((self.dims['g']))
-            success = 0
-            penalty = 0
+            if self.graph:
+                reset = t==0
+                if self.h_level == 0:
+                    self.first_env.env.add_graph_values("q-high", q, t, reset=reset)
+                else:
+                    self.first_env.env.add_graph_values("q-value", q, t, reset=reset)
+            o_new = np.zeros((self.rollout_batch_size, self.dims['o']))
+            ag_new = np.zeros((self.rollout_batch_size, self.dims['g']))
+            success = np.zeros(self.rollout_batch_size)
+            penalty = np.zeros((self.rollout_batch_size, 1))
             self.q_history.append(np.mean(q))
             g = self.g
 
