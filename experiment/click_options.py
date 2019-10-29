@@ -21,7 +21,9 @@ click.option('--try_start_idx', type=int, default=100, help='Index for first try
 click.option('--early_stop_threshold', type=float, default=0.99, help='The early stopping threshold.'),
 click.option('--early_stop_data_column', type=str, default='test/success_rate', help='The data column on which early stopping is based.'),
 click.option('--info', type=str, default='', help='A command line comment that will be integrated in the folder where the results are stored. Useful for debugging and addressing temporary changes to the code..'),
-click.option('--bind_core', type=int, default=0, help='Whether to bind each MPI worker to a core.')
+click.option('--bind_core', type=int, default=0, help='Whether to bind each MPI worker to a core.'),
+click.option('--graph', type=int, default=1, help='Whether or not to create the graph.')
+
 ]
 
 @click.command(context_settings=dict(
