@@ -6,6 +6,8 @@ import numpy as np
 class MpiAdam(object):
     def __init__(self, var_list, *, beta1=0.9, beta2=0.999, epsilon=1e-08, scale_grad_by_procs=True, comm=None):
         self.var_list = var_list
+        if len(self.var_list) == 0:
+            return
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -19,6 +21,8 @@ class MpiAdam(object):
         self.comm = MPI.COMM_WORLD if comm is None else comm
 
     def update(self, localg, stepsize):
+        if len(self.var_list) == 0:
+            return
         if self.t % 100 == 0:
             self.check_synced()
         localg = localg.astype('float32')
@@ -35,11 +39,15 @@ class MpiAdam(object):
         self.setfromflat(self.getflat() + step)
 
     def sync(self):
+        if len(self.var_list) == 0:
+            return
         theta = self.getflat()
         self.comm.Bcast(theta, root=0)
         self.setfromflat(theta)
 
     def check_synced(self):
+        if len(self.var_list) == 0:
+            return
         if self.comm.Get_rank() == 0: # this is root
             theta = self.getflat()
             self.comm.Bcast(theta, root=0)

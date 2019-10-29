@@ -39,7 +39,7 @@ DEFAULT_PARAMS = {
     'use_mpi': True,
     # training
     'n_cycles': 50,  # per epoch
-    'rollout_batch_size': 2,  # per mpi thread
+    'rollout_batch_size': 1,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
     'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
@@ -98,11 +98,10 @@ use_target_net=self.use_target_net)
 # OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 # OVERRIDE_PARAMS_LIST = ['rollout_batch_size', 'n_batches', 'batch_size', 'n_subgoals_layers', 'policies_layers']
 # OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'n_subgoals_layers', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
-OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'mix_p_steepness', 'obs_noise_coeff']
+# OVERRIDE_PARAMS_LIST = ['penalty_magnitude', 'action_steps', 'policies_layers', 'obs_noise_coeff', 'network_class', 'shared_pi_err_coeff']
+OVERRIDE_PARAMS_LIST = ['action_steps', 'policies_layers', 'shared_pi_err_coeff', 'action_l2', 'network_classes']
 
-
-
-ROLLOUT_PARAMS_LIST = ['rollout_batch_size', 'noise_eps', 'random_eps', 'replay_strategy', 'env_name']
+ROLLOUT_PARAMS_LIST = ['noise_eps', 'random_eps', 'replay_strategy', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -120,8 +119,6 @@ def cached_make_env(make_env):
 def prepare_params(kwargs):
     # DDPG params
     ddpg_params = dict()
-    # test_subgoal_perc = kwargs['test_subgoal_perc']
-    # print('test_subgoal_perc {}'.format(test_subgoal_perc))
     env_name = kwargs['env_name']
 
     def make_env():
@@ -130,10 +127,8 @@ def prepare_params(kwargs):
     tmp_env = cached_make_env(kwargs['make_env'])
     action_steps = [int(n_s) for n_s in kwargs['action_steps'][1:-1].split(",") if n_s != '']
     kwargs['action_steps'] = action_steps
-    # kwargs['T'] = action_steps[-1]
     tmp_env.reset()
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
-    # kwargs['gamma'] = 1. - 1. / kwargs['T'] #TODO Gamma should be different for each layer!
     if 'lr' in kwargs:
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr']
@@ -143,12 +138,13 @@ def prepare_params(kwargs):
                  'polyak',
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',
-                 'action_l2', 'clip_obs', 'scope', 'relative_goals']:
-        ddpg_params[name] = kwargs[name]
-        kwargs['_' + name] = kwargs[name]
-        del kwargs[name]
+                 'action_l2', 'clip_obs', 'scope', 'relative_goals',
+                 'shared_pi_err_coeff']:
+        if name in kwargs.keys():
+            ddpg_params[name] = kwargs[name]
+            kwargs['_' + name] = kwargs[name]
+            del kwargs[name]
     kwargs['ddpg_params'] = ddpg_params
-
     return kwargs
 
 
@@ -176,46 +172,31 @@ def configure_her(params):
     return sample_her_transitions
 
 
-
 def simple_goal_subtract(a, b):
     assert a.shape == b.shape
     return a - b
 
 
 def configure_policy(dims, params):
-    # sample_her_transitions = configure_her(params)
     # Extract relevant parameters.
     rollout_batch_size = params['rollout_batch_size']
     ddpg_params = params['ddpg_params']
     reuse = params['reuse']
     use_mpi = params['use_mpi']
-    # input_dims = dims.copy()
-    # p_threshold = params['mix_p_threshold']
     p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
     env.reset()
-    # obs = env.env._get_obs() # TODO Move this to policy
-    # obs_preds, _ = env.env.obs2preds_single(obs['observation'], obs['desired_goal'])
-    # if "preds" in env.env.__dict__:
-    #     n_preds = len(env.env.preds)
-    # else:
-    #     n_preds = None
     subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
     units_per_obs_len = 12
     n_obs = len(env.env._get_obs()['observation'])
     ddpg_params.update({
-                        # 'T': params['T'],
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
-                        # 'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
-                        # 'n_preds': n_preds,
-                        # 'sample_transitions': sample_her_transitions,
                         'clip_pos_returns': True,  # clip positive returns for Q-values
                         'h_level': 0,
-                        # 'p_threshold': p_threshold,
                         'p_steepness': p_steepness,
                         'hidden': units_per_obs_len * n_obs
     })
@@ -226,8 +207,9 @@ def configure_policy(dims, params):
     n_subgoals = params['action_steps']
     policy_types = [getattr(importlib.import_module('baselines.herhrl.' + (policy_str.lower())), policy_str) for
                     policy_str in params['policies_layers'][1:-1].split(",") if policy_str != '']
+    net_classes = [net_class for net_class in params['network_classes'][1:-1].split(",") if net_class != '']
     policies = []
-    for l, (n_s, ThisPolicy) in enumerate(zip(n_subgoals + [None], policy_types)):
+    for l, (n_s, ThisPolicy, net_class) in enumerate(zip(n_subgoals, policy_types, net_classes)):
 
         if l == (len(n_subgoals) - 1): # If this is the final lowest layer
             input_dims = dims.copy()
@@ -242,6 +224,7 @@ def configure_policy(dims, params):
         _params['has_child'] = has_child
         sample_her_transitions = configure_her(_params)
         ddpg_params['sample_transitions'] = sample_her_transitions
+        ddpg_params['network_class'] = "baselines.herhrl." + net_class
         this_params = ddpg_params.copy()
         gamma = 1. - 1. / n_s
         this_params.update({'input_dims': input_dims,  # agent takes an input observations
