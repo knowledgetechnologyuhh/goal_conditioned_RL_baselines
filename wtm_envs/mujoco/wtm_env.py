@@ -2,6 +2,8 @@ import numpy as np
 from wtm_envs.mujoco import robot_env, utils
 import mujoco_py
 from queue import deque
+from mujoco_py import modder
+import matplotlib.pyplot as plt
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -76,10 +78,13 @@ class WTMEnv(robot_env.RobotEnv):
         self.goal_hierarchy = {}
         self.goal = []
         self.final_goal = []
+        self.graph_values = {}
 
         super(WTMEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=n_actions,
             initial_qpos=initial_qpos)
+
+        self.mod = modder.TextureModder(self.sim)
 
         # assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
 
@@ -182,3 +187,57 @@ class WTMEnv(robot_env.RobotEnv):
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
         return (d < self.distance_threshold).astype(np.float32)
+
+    def render(self, mode='human'):
+        self._render_callback()
+        if mode == 'rgb_array':
+            self._get_viewer(mode).render()
+            # window size used for old mujoco-py:
+            width, height = 1920, 1180
+            data = self._get_viewer(mode).read_pixels(width, height, depth=False)
+            # original image is upside-down, so flip it
+            return data[::-1, :, :]
+        elif mode == 'human':
+            self._get_viewer().render()
+        if bool(self.graph_values):
+            body_names = [self.sim.model.body_id2name(x) for x in np.arange(self.sim.model.nbody)]
+            if 'graph_body' in body_names:  # check if canvas in XML
+                self._get_viewer().vopt.geomgroup[3] = 1  # make canvas visible
+                self.mod.set_rgb("graph_geom", self.create_graph())
+
+    def create_graph(self):
+        # create Graph
+        fig = plt.figure(figsize=(6.4, 6.4))
+        keys = self.graph_values.keys()
+        keys = filter(lambda x: x[-2:] != '_x', keys)
+        for i, key in enumerate(keys):
+            frame_on = i==0
+            ax = fig.add_subplot(111, label=str(i), frame_on=frame_on)
+            ax.set_ylabel(str(key), color="C"+str(i))
+            ax.set_xlabel('step', color="C"+str(i))
+            if i % 2 != 0:
+                ax.yaxis.tick_right()
+                ax.yaxis.set_label_position('right')
+                ax.xaxis.tick_top()
+                ax.xaxis.set_label_position('top')
+            ax.tick_params(axis='y', colors="C"+str(i))
+            ax.plot(self.graph_values[key+'_x'], self.graph_values[key], color="C"+str(i))
+        plt.tight_layout()
+        fig.canvas.draw()
+
+        # convert to rgb array
+        buf = fig.canvas.tostring_rgb()
+        ncols, nrows = fig.canvas.get_width_height()
+        plt.close(fig)
+        return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
+
+    def add_graph_values(self, axis_name, val, x, reset=False):
+        if reset and axis_name in self.graph_values.keys():
+            del self.graph_values[axis_name]
+            del self.graph_values[axis_name+'_x']
+        if axis_name in self.graph_values:
+            self.graph_values[axis_name].append(val)
+            self.graph_values[axis_name+'_x'].append(x)
+        else:
+            self.graph_values[axis_name]=[val[0]]
+            self.graph_values[axis_name+'_x'] = [x]

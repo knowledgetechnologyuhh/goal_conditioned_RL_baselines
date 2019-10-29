@@ -31,6 +31,7 @@ class RolloutWorker(Rollout):
             random_eps (float): probability of selecting a completely random action
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
+            graph (boolean): whether or not to create the graph
         """
         self.current_logs = []
         self.exploit = exploit
@@ -52,6 +53,7 @@ class RolloutWorker(Rollout):
         self.final_goal_achieved = False
         self.subgoals_given = []
         self.render_mode = 'human'
+        self.graph = kwargs['graph']
 
         self.total_steps = 0
         if self.is_leaf is False:
@@ -138,6 +140,12 @@ class RolloutWorker(Rollout):
             self.policy_action_params['success_rate'] = self.get_mean_succ_rate()
             u, q = self.policy.get_actions(o, ag, self.g, **self.policy_action_params)
             scaled_u = self.policy.scale_and_offset_action(u)
+            if self.graph:
+                reset = t==0
+                if self.h_level == 0:
+                    self.first_env.env.add_graph_values("q-high", q, t, reset=reset)
+                else:
+                    self.first_env.env.add_graph_values("q-value", q, t, reset=reset)
 
             o_new = np.zeros((self.dims['o']))
             ag_new = np.zeros((self.dims['g']))
