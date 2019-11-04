@@ -6,7 +6,6 @@ atomicwrites==1.2.1
 attrs==18.2.0
 autopep8==1.4.4
 backcall==0.1.0
--e git+https://git.informatik.uni-hamburg.de/wtmstaff/ideas_deep_rl.git@92fb3cfe3123761f901142fe9e94006c8c528448#egg=baselines
 blend-modes==1.0.1
 certifi==2018.10.15
 cffi==1.11.5
