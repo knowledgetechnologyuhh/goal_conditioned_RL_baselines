@@ -22,6 +22,16 @@ for n_objects in range(-1, 5):
                     )
 
 for n_objects in range(-1, 5):
+    kwargs = {'n_objects': n_objects + 1}
+    max_ep_steps = 50 * (n_objects +1)
+
+    register(
+        id='CausalDependenciesMujocoEnv-o{}-v0'.format(kwargs['n_objects']),
+        entry_point='wtm_envs.mujoco.causal_dep.unlock_goal:CausalDependenciesMujocoEnv',
+        kwargs=kwargs,
+        max_episode_steps=max_ep_steps)
+
+for n_objects in range(-1, 5):
     for min_tower_height in range(5):
         for max_tower_height in range(7):
             for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
