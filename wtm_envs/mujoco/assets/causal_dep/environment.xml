@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco>
+	<compiler angle="radian" coordinate="local" meshdir="../stls/fetch" texturedir="../textures"></compiler>
+	<option timestep="0.002">
+		<flag warmstart="enable"></flag>
+	</option>
+
+	<include file="shared.xml"></include>
+	<include file="../shared/graph_canvas.xml"></include>
+	
+	<worldbody>
+		<geom name="floor0" pos="0.8 0.25 0" size="2 2 1" type="plane" condim="3" material="floor_mat"></geom>
+
+		<include file="robot.xml"></include>
+
+		<body pos="0.922 0.25 0.25" name="table0">
+			<geom name="table0" size="0.35 0.35 0.25" type="box" mass="2000" material="table_mat_wood"></geom>
+		</body>
+
+		<body name="object0" pos="0.025 -0.7 0.025">
+			<joint name="object0:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object0" material="block_mat" rgba="1 0 0 1" mass="2"></geom>
+		</body>
+		<body name="object1" pos="0.025 -0.6 0.025">
+			<joint name="object1:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object1" material="block_mat" rgba="0.4 0.4 0.4 1" mass="2"></geom>
+		</body>
+		<body name="object2" pos="0.025 -0.5 0.025">
+			<joint name="object2:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object2" material="block_mat" rgba="0.5 0.5 0.5 1" mass="2"></geom>
+		</body>
+		<body name="object3" pos="0.025 -0.4 0.025">
+			<joint name="object3:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object3" material="block_mat" rgba="0.6 0.6 0.6 1" mass="2"></geom>
+		</body>
+		<body name="object4" pos="0.025 -0.3 0.025">
+			<joint name="object4:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.025 0.025" type="box" condim="3" name="object4" material="block_mat" rgba="0.7 0.7 0.7 1" mass="2"></geom>
+		</body>
+		<body name="cage" pos="0.85 0.25 0.55">
+			<joint name="cage:joint" type="free"></joint>
+			<geom name="cage:vertback" type="box" condim="3" pos="0 0.05 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertfront" type="box" condim="3" pos="0 -0.05 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertleft" type="box" condim="3" pos="-0.05 0 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertright" type="box" condim="3" pos="0.05 0 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertbackleft" type="box" condim="3" pos="-0.05 0.05 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertbackright" type="box" condim="3" pos="0.05 0.05 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertfrontleft" type="box" condim="3" pos="-0.05 -0.05 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:vertfrontright" type="box" condim="3" pos="0.05 -0.05 0" size="0.001 0.001 0.05" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:toplr" type="box" condim="3" pos="0 0 0.05" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:topfb" type="box" condim="3" pos="0 0 0.05" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horbacktop" type="box" condim="3" pos="0 0.05 0.05" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horbackmid" type="box" condim="3" pos="0 0.05 0" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horbackbot" type="box" condim="3" pos="0 0.05 -0.05" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horfronttop" type="box" condim="3" pos="0 -0.05 0.05" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horfrontmid" type="box" condim="3" pos="0 -0.05 0" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horfrontbot" type="box" condim="3" pos="0 -0.05 -0.05" size="0.051 0.001 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horlefttop" type="box" condim="3" pos="-0.05 0 0.05" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horleftmid" type="box" condim="3" pos="-0.05 0 0" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horleftbot" type="box" condim="3" pos="-0.05 0 -0.05" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horrighttop" type="box" condim="3" pos="0.05 0 0.05" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horrightmid" type="box" condim="3" pos="0.05 0 0" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+			<geom name="cage:horrightbot" type="box" condim="3" pos="0.05 0 -0.05" size="0.001 0.051 0.001" mass="200" rgba="0.5 0.5 0.5 1"></geom>
+		</body>
+		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
+	</worldbody>
+</mujoco>
