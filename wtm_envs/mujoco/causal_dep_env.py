@@ -73,7 +73,7 @@ class CausalDependenciesEnv(WTMEnv):
          #   return np.float32(1)
         #return np.float32(0)
         d = self.goal_distance(achieved_goal, desired_goal)
-        print(d)
+        # print(d)
         return (d < self.distance_threshold).astype(np.float32)
 
     def _set_action(self, action):
