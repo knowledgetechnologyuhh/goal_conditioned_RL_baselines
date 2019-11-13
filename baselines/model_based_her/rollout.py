@@ -5,7 +5,9 @@ from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
 from baselines.util import convert_episode_to_batch_major
 from tqdm import tqdm
+from collections import deque
 import sys
+from mujoco_py import MujocoException
 
 class RolloutWorker(Rollout):
 
@@ -42,8 +44,6 @@ class RolloutWorker(Rollout):
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
         policy acting on it accordingly.
         """
-        if self.render:
-            self.first_env.render(mode=self.render_mode)
 
         self.reset_all_rollouts()
 
@@ -76,6 +76,7 @@ class RolloutWorker(Rollout):
                 u = policy_output  # get the actions from the policy output since actions should be the first element
             else:
                 u = policy_output[0]
+                q = policy_output[1]
                 other_histories.append(policy_output[1:])
             try:
                 if u.ndim == 1:
@@ -87,10 +88,9 @@ class RolloutWorker(Rollout):
             # visualize q value
             if self.graph:
                 reset = t == 0
-                #  TODO #
-                if len(self.custom_histories) > 0:
-                    self.first_env.env.add_graph_values('q-val', self.current_mean_Q()
-                                                        ,t, reset=reset)
+                # able to plot graph when compute_Q is True
+                if len(policy_output) == 2:
+                    self.first_env.env.add_graph_values('q-val', q ,t, reset=reset)
 
             o_new = np.empty((self.rollout_batch_size, self.dims['o']))
             ag_new = np.empty((self.rollout_batch_size, self.dims['g']))

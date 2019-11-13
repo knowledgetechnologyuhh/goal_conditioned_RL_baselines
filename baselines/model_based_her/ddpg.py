@@ -138,6 +138,7 @@ class DDPG(Policy):
         u += noise
         u = np.clip(u, -self.max_u, self.max_u)
         u += np.random.binomial(1, random_eps, u.shape[0]).reshape(-1, 1) * (self._random_action(u.shape[0]) - u)  # eps-greedy
+
         if u.shape[0] == 1:
             u = u[0]
         u = u.copy()

@@ -59,7 +59,7 @@ ROLLOUT_PARAMS = {
         'use_demo_states': True,
         'T': 50,
         'policy_action_params': {'exploit': False,
-                                 'compute_Q': False,
+                                 'compute_Q': True,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
                                  'use_target_net': False}
