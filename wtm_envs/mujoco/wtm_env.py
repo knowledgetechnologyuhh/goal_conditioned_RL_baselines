@@ -224,6 +224,7 @@ class WTMEnv(robot_env.RobotEnv):
             ax.plot(self.graph_values[key+'_x'], self.graph_values[key], color="C"+str(i))
         plt.tight_layout()
         fig.canvas.draw()
+        #  fig.savefig('')
 
         # convert to rgb array
         buf = fig.canvas.tostring_rgb()
