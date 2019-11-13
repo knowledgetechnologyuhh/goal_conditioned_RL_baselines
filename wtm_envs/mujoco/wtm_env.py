@@ -4,6 +4,8 @@ import mujoco_py
 from queue import deque
 from mujoco_py import modder
 import matplotlib.pyplot as plt
+import platform
+import os
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -224,7 +226,13 @@ class WTMEnv(robot_env.RobotEnv):
             ax.plot(self.graph_values[key+'_x'], self.graph_values[key], color="C"+str(i))
         plt.tight_layout()
         fig.canvas.draw()
-        #  fig.savefig('')
+
+        # TODO Bug found on macOS:
+        # The canvas of the figure will be filled if fig.savefig() is called.
+        # This was found in the process of debugging the empty graph.
+        if platform.system() == 'Darwin':
+            fig.savefig('dummy.png')
+            os.remove('dummy.png')
 
         # convert to rgb array
         buf = fig.canvas.tostring_rgb()
