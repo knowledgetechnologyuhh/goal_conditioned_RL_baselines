@@ -43,7 +43,7 @@
     </asset>
 
     <equality>
-        <weld body1="robot0:mocap" body2="robot0:gripper_link" solimp="0.9 0.95 0.001" solref="0.02 1"></weld>
+        <weld body1="robot0:mocap" body2="robot0:rod" solimp="0.9 0.95 0.001" solref="0.02 1"></weld>
     </equality>
     
     <contact>

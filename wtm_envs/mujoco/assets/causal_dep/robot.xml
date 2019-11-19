@@ -82,6 +82,9 @@
 													<body name="robot0:gripper_camera_depth_optical_frame" pos="0 0 0" quat="0.5 -0.5 0.5 -0.5"></body>
 												</body>
 											</body>
+											<body name="robot0:rod" pos="-0.01 0 0">
+												<geom name="robot0:rod" type="cylinder" size="0.015 0.05" rgba="0.4 0.4 0.4 1" euler="0 1.5708 0"></geom>
+											</body>
 
 											<!--body childclass="robot0:fetchGripper" name="robot0:r_gripper_finger_link" pos="0 0.0159 0">
 												<inertial diaginertia="0.1 0.1 0.1" mass="4" pos="-0.01 0 0"></inertial>
