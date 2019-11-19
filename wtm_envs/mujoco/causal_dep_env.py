@@ -14,7 +14,7 @@ import mujoco_py
 
 
 class CausalDependenciesEnv(WTMEnv):
-    """Superclass for all Tower environments.
+    """A simple reacher task with causal dependencies. The robot has to reach n-key locations in order to unlock the goal.
     """
 
     def __init__(
@@ -69,11 +69,7 @@ class CausalDependenciesEnv(WTMEnv):
         else:
             return norm_dist
     def _is_success(self, achieved_goal, desired_goal):
-        #if abs(desired_goal[0] - achieved_goal[0]) < 0.065 and abs(desired_goal[1] - achieved_goal[1]) < 0.09:
-         #   return np.float32(1)
-        #return np.float32(0)
         d = self.goal_distance(achieved_goal, desired_goal)
-        # print(d)
         return (d < self.distance_threshold).astype(np.float32)
 
     def _set_action(self, action):
@@ -93,8 +89,8 @@ class CausalDependenciesEnv(WTMEnv):
         dt = self.sim.nsubsteps * self.sim.model.opt.timestep
 
         #robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
-        robot_xpos = self.sim.data.get_geom_xpos('robot0:gripper_link').copy()
-        robot_xvelp = self.sim.data.get_geom_xvelp('robot0:gripper_link').copy()
+        robot_xpos = self.sim.data.get_geom_xpos('robot0:rod').copy()
+        robot_xvelp = self.sim.data.get_geom_xvelp('robot0:rod').copy()
         object_pos, object_rot, object_velp, object_velr = (np.array([]) for _ in range(4))
 
         if self.n_objects > 0:
@@ -104,11 +100,13 @@ class CausalDependenciesEnv(WTMEnv):
 
                 # remove subgoal if robot is close to it
                 if n_o > 0:
-                    if abs(robot_xpos[0] - this_object_pos[0]) < 0.065 and abs(robot_xpos[1] - this_object_pos[1]) < 0.09:
-                        this_object_pos = np.array([0.025, -0.7 + 0.1 * self.keylocs, 0.025])
+                    if np.linalg.norm(robot_xpos[:2] - this_object_pos[:2]) < self.distance_threshold:
+                        #this_object_pos[2] -= 0.002
                         object_qpos = self.sim.data.get_joint_qpos('object{}:joint'.format(n_o)).copy()
-                        object_qpos[:3]=this_object_pos
-                        self.sim.data.set_joint_qpos('object{}:joint'.format(n_o), object_qpos)
+                        object_qpos[:3] = this_object_pos
+                        swap_pos = self.sim.data.get_joint_qpos('object{}sub:joint'.format(n_o)).copy()
+                        self.sim.data.set_joint_qpos('object{}:joint'.format(n_o), swap_pos)
+                        self.sim.data.set_joint_qpos('object{}sub:joint'.format(n_o), object_qpos)
                         self.keylocs -= 1
 
                 # rotations
@@ -125,10 +123,10 @@ class CausalDependenciesEnv(WTMEnv):
             object_pos = object_rot = object_velp = object_velr = np.array(np.zeros(3))
 
         #remove cage if all subgoals were reached
+        cage_pos = self.sim.data.get_geom_xpos('cage:botback').copy()
+        cage_pos[1] = cage_pos[1]-0.05
         if self.keylocs == 0:
-            self.sim.data.set_joint_qpos('cage:joint', np.array([0.2, -0.2, 0.05, 1, 0, 0, 0]))
-        cage_pos = self.sim.data.get_geom_xpos('cage:toplr').copy()
-        cage_pos[2] = cage_pos[2]-0.05
+            self.sim.data.set_joint_qpos('cage:glassjoint', -1.99)
 
         obs = np.concatenate([
             robot_xpos, object_pos.ravel(), object_rot.ravel(), cage_pos,
@@ -157,7 +155,7 @@ class CausalDependenciesEnv(WTMEnv):
                 this_pos += self.np_random.uniform(-self.obj_range, self.obj_range, size=2)
                 for pos in p:
                     dist = np.linalg.norm(pos - this_pos)
-                    if dist < 0.12:
+                    if dist < 0.15:
                         close = True
             p.append(this_pos.copy())
 
@@ -169,8 +167,8 @@ class CausalDependenciesEnv(WTMEnv):
             self.sim.data.set_joint_qpos('object{}:joint'.format(o), object_qpos)
 
         #set cage position
-        goal_pos = self.sim.data.get_joint_qpos('object0:joint')
-        goal_pos[2] = goal_pos[2]+0.025
+        goal_pos = self.sim.data.get_joint_qpos('object0:joint').copy()
+        goal_pos[2] = goal_pos[2]+0.04
         self.sim.data.set_joint_qpos('cage:joint', goal_pos)
 
         self.sim.forward()
@@ -190,7 +188,7 @@ class CausalDependenciesEnv(WTMEnv):
         self.sim.forward()
 
         # Move end effector into position.
-        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_geom_xpos('robot0:gripper_link').copy()
+        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_geom_xpos('robot0:rod').copy()
         gripper_rotation = np.array([1., 0., 1., 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
@@ -198,4 +196,4 @@ class CausalDependenciesEnv(WTMEnv):
             self.sim.step()
 
         # Extract information for sampling goals.
-        self.initial_gripper_xpos = self.sim.data.get_geom_xpos('robot0:gripper_link').copy()
+        self.initial_gripper_xpos = self.sim.data.get_geom_xpos('robot0:rod').copy()
