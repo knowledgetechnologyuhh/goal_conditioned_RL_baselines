@@ -22,6 +22,6 @@ class Ur5MujocoEnv(ur5_env.UR5Env, utils.EzPickle):
             initial_qpos=initial_qpos, reward_type=reward_type,
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=PDDLUR5Env.table_height,
             obj_height=PDDLUR5Env.obj_height,
-            min_tower_height=min_tower_height, max_tower_height=max_tower_height,
+            min_tower_height=min_tower_height, max_tower_height=n_objects,
             easy=easy)
         utils.EzPickle.__init__(self)
