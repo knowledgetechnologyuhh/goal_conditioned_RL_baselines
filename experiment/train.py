@@ -182,7 +182,7 @@ def launch(
     # Prepare params.
     params = config.DEFAULT_PARAMS
     params['env_name'] = env
-    params['n_episodes'] = kwargs['n_episodes']
+    params['n_episodes'] = kwargs['n_train_rollouts']
     if env in config.DEFAULT_ENV_PARAMS:
         params.update(config.DEFAULT_ENV_PARAMS[env])  # merge env-specific parameters in
     params.update(**kwargs)
