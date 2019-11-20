@@ -4,6 +4,7 @@ import mujoco_py
 from queue import deque
 from mujoco_py import modder
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -208,6 +209,7 @@ class WTMEnv(robot_env.RobotEnv):
     def create_graph(self):
         # create Graph
         fig = plt.figure(figsize=(6.4, 6.4))
+        canvas = FigureCanvasAgg(fig)
         keys = self.graph_values.keys()
         keys = filter(lambda x: x[-2:] != '_x', keys)
         for i, key in enumerate(keys):
@@ -223,11 +225,11 @@ class WTMEnv(robot_env.RobotEnv):
             ax.tick_params(axis='y', colors="C"+str(i))
             ax.plot(self.graph_values[key+'_x'], self.graph_values[key], color="C"+str(i))
         plt.tight_layout()
-        fig.canvas.draw()
+        canvas.draw()
 
         # convert to rgb array
-        buf = fig.canvas.tostring_rgb()
-        ncols, nrows = fig.canvas.get_width_height()
+        buf = canvas.tostring_rgb()
+        ncols, nrows = canvas.get_width_height()
         plt.close(fig)
         return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
 
