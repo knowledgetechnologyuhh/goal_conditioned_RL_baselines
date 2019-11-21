@@ -22,7 +22,7 @@ class CausalDependenciesEnv(WTMEnv):
             distance_threshold, initial_qpos,
             n_objects, table_height, obj_height
     ):
-        """Initializes a new Fetch environment.
+        """Initializes a new Causal Dependencies environment.
 
         Args:
             model_path (string): path to the environments XML file
