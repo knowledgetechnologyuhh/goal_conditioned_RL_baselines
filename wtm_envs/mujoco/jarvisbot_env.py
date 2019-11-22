@@ -1,8 +1,8 @@
 import numpy as np
-from wtm_envs.mujoco import blockstack_env, utils
+from wtm_envs.mujoco import blocks_env, utils
 
-class JarvisbotEnv(blockstack_env.BlockStackEnv):
-    """Superclass for all Fetch environments.
+class JarvisbotEnv(blocks_env.BlocksEnv):
+    """Superclass for all Jarvisbot environments.
     """
 
     def __init__(

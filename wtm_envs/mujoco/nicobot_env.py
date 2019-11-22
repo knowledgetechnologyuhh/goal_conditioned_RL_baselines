@@ -1,8 +1,8 @@
 import numpy as np
-from wtm_envs.mujoco import blockstack_env, utils
+from wtm_envs.mujoco import blocks_env, utils
 
-class NicobotEnv(blockstack_env.BlockStackEnv):
-    """Superclass for all Fetch environments.
+class NicobotEnv(blocks_env.BlocksEnv):
+    """Superclass for all Nicobot environments.
     """
 
     def __init__(

@@ -1,8 +1,8 @@
 import numpy as np
-from wtm_envs.mujoco import blockstack_env, utils
+from wtm_envs.mujoco import blocks_env, utils
 
-class KeybotEnv(blockstack_env.BlockStackEnv):
-    """Superclass for all Fetch environments.
+class KeybotEnv(blocks_env.BlocksEnv):
+    """Superclass for all Keybot environments.
     """
 
     def __init__(
