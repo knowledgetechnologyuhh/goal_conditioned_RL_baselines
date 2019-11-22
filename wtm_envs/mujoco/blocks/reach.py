@@ -1,8 +1,8 @@
 from gym import utils
-from wtm_envs.mujoco import blockstack_env
-from wtm_envs.mujoco.blockstack_env_pddl import PDDLBlockStackEnv
+from wtm_envs.mujoco import blocks_env
 
-class BlockStackMujocoEnv(blockstack_env.BlockStackEnv, utils.EzPickle):
+
+class BlockReachMujocoEnv(blocks_env.BlocksEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
                  n_objects=3, min_tower_height=1, max_tower_height=3):
         initial_qpos = {
@@ -15,13 +15,11 @@ class BlockStackMujocoEnv(blockstack_env.BlockStackEnv, utils.EzPickle):
             'object3:joint': [0.4, 0.0, 0.05, 1., 0., 0., 0.],
             'object4:joint': [0.5, 0.0, 0.05, 1., 0., 0., 0.],
         }
-        blockstack_env.BlockStackEnv.__init__(
-            self, 'blockstack/environment.xml', block_gripper=False, n_substeps=20,
+        blocks_env.BlocksEnv.__init__(
+            self, 'blocks/environment.xml', block_gripper=False, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=True, target_offset=0.0,
-            obj_range=0.12, target_range=0.12,
-            # distance_threshold=0.02,
-            distance_threshold=PDDLBlockStackEnv.distance_threshold,
+            obj_range=0.15, target_range=0.15, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type,
-            gripper_goal=gripper_goal, n_objects=n_objects, table_height=PDDLBlockStackEnv.table_height, obj_height=PDDLBlockStackEnv.obj_height,
+            gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
             min_tower_height=min_tower_height, max_tower_height=n_objects)
         utils.EzPickle.__init__(self)
