@@ -1,7 +1,7 @@
 import numpy as np
 from wtm_envs.mujoco.pddl_env import PDDLEnv
 
-class PDDLBlockStackEnv(PDDLEnv):
+class PDDLBlocksEnv(PDDLEnv):
     grip_open_threshold = [0.038, 1.0]
     grip_closed_threshold = [0.0, 0.025]
     distance_threshold = 0.025
