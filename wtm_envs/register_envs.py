@@ -2,17 +2,19 @@
 from gym.envs.registration import register
 
 # blockstack environment using the Fetch robot
+IDsAndEPs = [['BlockStackMujocoEnv', 'stack_blocks:'], ['BlockPickAndPlaceMujocoEnv', 'pick_and_place:'],
+             ['BlockSlideMujocoEnv', 'slide:'], ['BlockReachMujocoEnv', 'reach:'], ['BlockPushMujocoEnv', 'push:']]
 for n_objects in range(-1, 5):
     for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
         kwargs = {'n_objects': n_objects + 1,
                   'gripper_goal': gripper_goal}
         max_ep_steps = 50 * (n_objects +1)
-
-        register(
-            id='BlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
-            entry_point='wtm_envs.mujoco.blockstack.stack_blocks:BlockStackMujocoEnv',
-            kwargs=kwargs,
-            max_episode_steps=max_ep_steps,
+        for idep in IDsAndEPs:
+            register(
+                id=idep[0]+'-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+                entry_point='wtm_envs.mujoco.blocks.' + idep[1] + idep[0],
+                kwargs=kwargs,
+                max_episode_steps=max_ep_steps,
         )
 
 # causal dependencies environment using the Fetch robot
@@ -34,8 +36,8 @@ for n_objects in range(-1, 5):
         max_ep_steps = 50 * (n_objects +1)
 
         register(
-            id='KeybotTowerBuildMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects'],),
-            entry_point='wtm_envs.mujoco.keybot.build_tower:KeybotTowerBuildMujocoEnv',
+            id='KeybotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects'],),
+            entry_point='wtm_envs.mujoco.keybot.stack_blocks:KeybotBlockStackMujocoEnv',
             kwargs=kwargs,
             max_episode_steps=max_ep_steps,
         )
@@ -48,8 +50,8 @@ for n_objects in range(0, 5):
         max_ep_steps = max(50, max_ep_steps)
 
         register(
-            id='JarvisbotTowerBuildMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
-            entry_point='wtm_envs.mujoco.jarvisbot.build_tower:JarvisbotTowerBuildMujocoEnv',
+            id='JarvisbotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.mujoco.jarvisbot.stack_blocks:JarvisbotBlockStackMujocoEnv',
             kwargs=kwargs,
             max_episode_steps=max_ep_steps,
         )
@@ -61,8 +63,8 @@ for n_objects in range(-1, 5):
         max_ep_steps = 50 * (n_objects + 1)
 
         register(
-            id='NicobotTowerBuildMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
-            entry_point='wtm_envs.mujoco.nicobot.build_tower:NicobotTowerBuildMujocoEnv',
+            id='NicobotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.mujoco.nicobot.stack_blocks:NicobotBlockStackMujocoEnv',
             kwargs=kwargs,
             max_episode_steps=max_ep_steps,
         )
@@ -74,8 +76,8 @@ for n_objects in range(-1, 5):
         max_ep_steps = 50 * (n_objects +1)
 
         register(
-            id='KeybotTowerBuildPhysicalEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
-            entry_point='wtm_envs.physical.keybot.build_tower:KeybotTowerBuildPhysicalEnv',
+            id='KeybotBlockStackPhysicalEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.physical.keybot.stack_blocks:KeybotBlockStackPhysicalEnv',
             kwargs=kwargs,
             max_episode_steps=max_ep_steps,
         )
