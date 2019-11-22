@@ -41,8 +41,8 @@ if __name__ == "__main__":
     n_cpu = 2
     penalty_magnitude = 10
 
-    environments = ['BlocksMujocoEnv-gripper_random-o2-v1',
-                    'BlocksMujocoEnv-gripper_above-o1-v1',
+    environments = ['BlockStackMujocoEnv-gripper_random-o2-v1',
+                    'BlockStackMujocoEnv-gripper_above-o1-v1',
                     'AntFourRoomsEnv-v0',
                     'HookMujocoEnv-gripper_above-e1-v1']
 

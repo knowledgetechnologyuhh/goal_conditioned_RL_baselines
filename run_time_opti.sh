@@ -27,11 +27,11 @@ do
       if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic:ActorCritic' )  ]]; then
         continue
       fi
-#      for env in 'AntFourRoomsEnv-v0' 'BlocksMujocoEnv-gripper_above-o1-v1' 'BlocksMujocoEnv-gripper_above-o2-v1'
-#      for env in 'BlocksMujocoEnv-gripper_above-o1-v1' 'BlocksMujocoEnv-gripper_above-o2-v1'
-      for env in 'BlocksMujocoEnv-gripper_above-o1-v1'
+#      for env in 'AntFourRoomsEnv-v0' 'BlockStackMujocoEnv-gripper_above-o1-v1' 'BlockStackMujocoEnv-gripper_above-o2-v1'
+#      for env in 'BlockStackMujocoEnv-gripper_above-o1-v1' 'BlockStackMujocoEnv-gripper_above-o2-v1'
+      for env in 'BlockStackMujocoEnv-gripper_above-o1-v1'
       do
-        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'BlocksMujocoEnv-gripper_above-o1-v1' )  ]]; then
+        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'BlockStackMujocoEnv-gripper_above-o1-v1' )  ]]; then
           n_epochs=80
         else
           n_epochs=200

@@ -7,7 +7,7 @@ rollout_batch_size=1
 n_cpu=2
 penalty_magnitude=10
 
-environments=( 'BlocksMujocoEnv-gripper_random-o2-v1' 'BlocksMujocoEnv-gripper_above-o1-v1' 'AntFourRoomsEnv-v0' )
+environments=( 'BlockStackMujocoEnv-gripper_random-o2-v1' 'BlockStackMujocoEnv-gripper_above-o1-v1' 'AntFourRoomsEnv-v0' )
 policies=( 'PDDL_POLICY' 'DDPG_HER_HRL_POLICY' 'DDPG_HER_HRL_POLICY_SHARED_PREPROC' )
 declare -a two_layer_policy_combinations=()
 
