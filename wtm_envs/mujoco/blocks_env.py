@@ -4,8 +4,8 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
-from wtm_envs.mujoco.tower_env_pddl import *
-from wtm_envs.mujoco.tower_env_pddl import PDDLTowerEnv
+from wtm_envs.mujoco.blocks_env_pddl import *
+from wtm_envs.mujoco.blocks_env_pddl import PDDLBlocksEnv
 from wtm_envs.mujoco.wtm_env import goal_distance
 from wtm_envs.mujoco.wtm_env import WTMEnv
 
@@ -13,8 +13,8 @@ import mujoco_py
 
 
 
-class TowerEnv(WTMEnv,PDDLTowerEnv):
-    """Superclass for all Tower environments.
+class BlocksEnv(WTMEnv, PDDLBlocksEnv):
+    """Superclass for all Blocks environments.
     """
 
     def __init__(
@@ -23,7 +23,7 @@ class TowerEnv(WTMEnv,PDDLTowerEnv):
             distance_threshold, initial_qpos, reward_type,
             gripper_goal, n_objects, table_height, obj_height, min_tower_height=None, max_tower_height=None,
     ):
-        """Initializes a new Fetch environment.
+        """Initializes a new Blocks environment.
 
         Args:
             model_path (string): path to the environments XML file
@@ -68,7 +68,7 @@ class TowerEnv(WTMEnv,PDDLTowerEnv):
         n_actions = 4
         WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos,
                         n_actions=n_actions)
-        PDDLTowerEnv.__init__(self, n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
+        PDDLBlocksEnv.__init__(self, n_objects=self.n_objects, gripper_has_target=self.gripper_has_target)
 
     def _obs2goal(self, obs):
         if len(obs.shape) == 1:

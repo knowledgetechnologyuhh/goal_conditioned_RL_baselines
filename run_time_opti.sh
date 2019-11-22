@@ -6,7 +6,7 @@ n_cpu=6
 #early_stop_threshold=70
 initial_trial_idx=100
 n_test_rollouts=10
-n_episodes=50
+n_train_rollouts=50
 #env="AntFourRoomsEnv-v0"
 max_active_procs=5
 max_trials_per_config=3
@@ -27,11 +27,11 @@ do
       if [[ ( $shared_pi_err_coeff != '0.0' ) && ( $ll_network_class = 'actor_critic:ActorCritic' )  ]]; then
         continue
       fi
-#      for env in 'AntFourRoomsEnv-v0' 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
-#      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' 'TowerBuildMujocoEnv-sparse-gripper_above-o2-h1-2-v1'
-      for env in 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1'
+#      for env in 'AntFourRoomsEnv-v0' 'BlockStackMujocoEnv-gripper_above-o1-v1' 'BlockStackMujocoEnv-gripper_above-o2-v1'
+#      for env in 'BlockStackMujocoEnv-gripper_above-o1-v1' 'BlockStackMujocoEnv-gripper_above-o2-v1'
+      for env in 'BlockStackMujocoEnv-gripper_above-o1-v1'
       do
-        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1' )  ]]; then
+        if [[ ( $env = 'AntFourRoomsEnv-v0' ) || ( $env = 'BlockStackMujocoEnv-gripper_above-o1-v1' )  ]]; then
           n_epochs=80
         else
           n_epochs=200
@@ -43,7 +43,7 @@ do
           --early_stop_data_column ${early_stop_value}
           --action_steps [10,25]
           --policies_layers [DDPG_HER_HRL_POLICY,DDPG_HER_HRL_POLICY]
-          --n_episodes ${n_episodes}
+          --n_train_rollouts ${n_train_rollouts}
           --n_test_rollouts ${n_test_rollouts}
           --n_train_batches ${train_batch_size}
           --env ${env}

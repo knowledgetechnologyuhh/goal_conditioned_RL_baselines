@@ -4,8 +4,6 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
-from wtm_envs.mujoco.tower_env_pddl import *
-from wtm_envs.mujoco.tower_env_pddl import PDDLTowerEnv
 from wtm_envs.mujoco.wtm_env import goal_distance
 from wtm_envs.mujoco.wtm_env import WTMEnv
 

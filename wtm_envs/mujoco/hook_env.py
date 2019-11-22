@@ -42,7 +42,7 @@ class HookEnv(WTMEnv, PDDLHookEnv):
             max_tower_height (int): the maximum height of the tower. (not required)
         """
 
-        # assert n_objects == 2, "Cannot have more than 2 objects for this environment at the time being!"
+        assert n_objects == 2, "Cannot have more than 2 objects for this environment at the time being!"
 
         self.gripper_extra_height = gripper_extra_height
         self.block_gripper = block_gripper
