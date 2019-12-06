@@ -131,6 +131,17 @@
             </body>
         </body>
 
+        <body name="robot0:external_camera_body_1" pos="0 0 0">
+			<camera euler="0 0.75 1.57" fovy="43.3" name="external_camera_1" pos="1.68 0 1.8"></camera>
+		</body>
+		<body name="robot0:internal_camera_body_r" pos="0 0 0">>
+			<!--<camera euler="0 -0.872665 -1.5708"  fovy="32.3" name="internal_camera_r" pos="-0.44 0 1.3"></camera>
+			<camera euler="0 -1.22 -1.5708"  fovy="40.3" name="internal_camera_r" pos="0.2 0 0.9"></camera>
+			<camera euler="0 -0.87 -1.5708"  fovy="50.3" name="internal_camera_r" pos="0.2 0 0.9"></camera>-->
+			<camera euler="0 -0.26 -1.5708"  fovy="65.5" name="internal_camera_r" pos="0.4506 0.05 1.325"></camera>
+			<!-- parameters of realsense D435 at camera position of Fetch robot-->
+		</body>
+
         <!-- End goal and subgoal Visualizations -->
 
         <!-- End Goal: Yellow -->
