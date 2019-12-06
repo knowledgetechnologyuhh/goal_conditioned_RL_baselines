@@ -134,3 +134,8 @@ for IK in [0, 1]:  # whether to use inverse kinematics
          entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
          kwargs=kwargs,
          max_episode_steps=200)
+
+# UR5
+register(id='UR5ReacherEnv-v1',
+         entry_point='wtm_envs.mujoco.ur5.reaching:Ur5ReacherEnv',
+         max_episode_steps=50)

@@ -85,7 +85,7 @@ class WTMEnv(robot_env.RobotEnv):
             model_path=model_path, n_substeps=n_substeps, n_actions=n_actions,
             initial_qpos=initial_qpos)
 
-        self.mod = modder.TextureModder(self.sim)
+        # self.mod = modder.TextureModder(self.sim)
 
         # assert self.gripper_goal in ['gripper_above', 'gripper_random'], "gripper_none is not supported anymore"
 
