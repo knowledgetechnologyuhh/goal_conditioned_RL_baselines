@@ -16,7 +16,7 @@ class UR5Env(WTMEnv):
     def __init__(
         self, model_path, n_substeps, reward_type, name, goal_space_train, goal_space_test,
             project_state_to_end_goal, project_state_to_subgoal, end_goal_thresholds, initial_state_space,
-            subgoal_bounds, subgoal_thresholds
+            subgoal_bounds, subgoal_thresholds, obs_type=1
     ):
         """
         UR5 environment
@@ -72,10 +72,21 @@ class UR5Env(WTMEnv):
         self.goal_space_scale = [goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
                             for limits_idx in range(len(goal_space_train))]
 
+        if obs_type == 1:
+            self.visual_input = False
+        else:
+            self.visual_input = True
+
         WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_state_space,
                         n_actions=3)
 
+        self.action_bounds = self.sim.model.actuator_ctrlrange[:, 1]  # low-level action bounds
+        self.action_offset = np.zeros((len(self.action_bounds)))  # Assumes symmetric low-level action ranges
 
+        if obs_type == 2:
+            self.camera_name = 'external_camera_1'
+        elif obs_type == 3:
+            self.camera_name = 'internal_camera_r'
 
     def _set_action(self, action):
         # assert action.shape == (4,)
@@ -110,47 +121,18 @@ class UR5Env(WTMEnv):
         # if grip_velp is None:
         #     grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
 
-        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
-        # object_pos, object_rot, object_velp, object_velr = ([] for _ in range(4))
-        # object_rel_pos = []
-
-        # if self.n_objects > 0:
-        #     for n_o in range(self.n_objects):
-        #         oname = 'object{}'.format(n_o)
-        #         this_object_pos = self.sim.data.get_site_xpos(oname)
-        #         # rotations
-        #         this_object_rot = rotations.mat2euler(self.sim.data.get_site_xmat(oname))
-        #         if n_o == 0:
-        #             hook_handle_pos = self.compute_handle_pos(this_object_pos, this_object_rot)
-        #             this_object_rot = np.concatenate([this_object_rot, hook_handle_pos])
-        #         # velocities
-        #         this_object_velp = self.sim.data.get_site_xvelp(oname) * dt
-        #         this_object_velr = self.sim.data.get_site_xvelr(oname) * dt
-        #         # gripper state
-        #         this_object_rel_pos = this_object_pos - grip_pos
-        #         this_object_velp -= grip_velp
-        #
-        #         object_pos = np.concatenate([object_pos, this_object_pos])
-        #         object_rot = np.concatenate([object_rot, this_object_rot])
-        #         object_velp = np.concatenate([object_velp, this_object_velp])
-        #         object_velr = np.concatenate([object_velr, this_object_velr])
-        #         object_rel_pos = np.concatenate([object_rel_pos, this_object_rel_pos])
-        # else:
-        #     object_pos = object_rot = object_velp = object_velr = object_rel_pos = np.array(np.zeros(3))
-        #
-        # gripper_state = robot_qpos[-2:]
-        # gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
-        #
-        # obs = np.concatenate([
-        #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-        #     object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
-        # ])
-
-
-        obs = np.concatenate([self.sim.data.qpos, self.sim.data.qvel])
+        # robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
         # obs = np.concatenate([robot_qpos, robot_qvel])
 
-        noisy_obs = self.add_noise(obs.copy(), self.obs_history, self.obs_noise_coefficient)
+        if self.visual_input:
+            # image_obs = self._get_image()
+            image_obs = self.offscreen_buffer()
+            image_obs = image_obs.reshape(-1)
+            obs = np.concatenate([self.sim.data.qpos, self.sim.data.qvel, image_obs])
+            noisy_obs = obs.copy()
+        else:
+            obs = np.concatenate([self.sim.data.qpos, self.sim.data.qvel])
+            noisy_obs = self.add_noise(obs.copy(), self.obs_history, self.obs_noise_coefficient)
         achieved_goal = self._obs2goal(noisy_obs)
 
         obs = {'observation': noisy_obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy(), 'non_noisy_obs': obs.copy()}
@@ -183,7 +165,7 @@ class UR5Env(WTMEnv):
         # self.display_end_goal(self.goal)
 
         # TODO check this
-        # self.sim.forward()
+        self.sim.forward()
 
     def _reset_sim(self):
         self.step_ctr = 0

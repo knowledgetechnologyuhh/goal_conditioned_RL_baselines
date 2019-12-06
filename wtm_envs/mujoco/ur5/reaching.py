@@ -3,7 +3,7 @@ from wtm_envs.mujoco import ur5_env
 import numpy as np
 
 class Ur5ReacherEnv(ur5_env.UR5Env, utils.EzPickle):
-    def __init__(self, reward_type='sparse',):
+    def __init__(self, reward_type='sparse', obs_type=1):
         # Provide initial state space consisting of the ranges for all joint angles and velocities. In the UR5
         # Reacher task we use a random initial shoulder position and use fixed values for the remainder.  Initial
         # joint velocities are set to 0.
@@ -80,6 +80,6 @@ class Ur5ReacherEnv(ur5_env.UR5Env, utils.EzPickle):
             reward_type=reward_type, name=name, goal_space_train=goal_space_train, goal_space_test=goal_space_test,
             project_state_to_end_goal=project_state_to_end_goal, project_state_to_subgoal=project_state_to_subgoal,
             end_goal_thresholds=end_goal_thresholds, initial_state_space=initial_state_space,
-            subgoal_bounds=subgoal_bounds, subgoal_thresholds=subgoal_thresholds
+            subgoal_bounds=subgoal_bounds, subgoal_thresholds=subgoal_thresholds, obs_type=obs_type
         )
         utils.EzPickle.__init__(self)
