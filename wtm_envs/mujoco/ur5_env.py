@@ -67,10 +67,22 @@ class UR5Env(WTMEnv):
         self.goal_space_test = goal_space_test
         self.subgoal_bounds = subgoal_bounds
 
-        # TODO need to check these
-        self.goal_space_offset = [np.mean(limits) for limits in goal_space_train]
-        self.goal_space_scale = [goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
-                            for limits_idx in range(len(goal_space_train))]
+        # Convert subgoal bounds to symmetric bounds and offset.  Need these to properly configure subgoal actor networks
+        self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
+        self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
+
+        for i in range(len(self.subgoal_bounds)):
+            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
+            self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
+
+        # These are similar to original Levy implementation
+        self.goal_space_offset = self.subgoal_bounds_offset
+        self.goal_space_scale = self.subgoal_bounds_symmetric
+
+        # # TODO need to check these
+        # self.goal_space_offset = [np.mean(limits) for limits in goal_space_train]
+        # self.goal_space_scale = [goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
+        #                          for limits_idx in range(len(goal_space_train))]
 
         if obs_type == 1:
             self.visual_input = False
@@ -83,14 +95,34 @@ class UR5Env(WTMEnv):
         self.action_bounds = self.sim.model.actuator_ctrlrange[:, 1]  # low-level action bounds
         self.action_offset = np.zeros((len(self.action_bounds)))  # Assumes symmetric low-level action ranges
 
+        self.action_space.low = -self.action_bounds
+        self.action_space.high = self.action_bounds
+
         if obs_type == 2:
             self.camera_name = 'external_camera_1'
         elif obs_type == 3:
             self.camera_name = 'internal_camera_r'
 
+    def step(self, action):
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        for _ in range(10):
+            self._set_action(action)
+            self.sim.step()
+            self._step_callback()
+        obs = self._get_obs()
+
+        done = False
+        is_success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
+        info = {
+            'is_success': is_success
+        }
+        reward = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], info)
+        return obs, reward, done, info
+
     def _set_action(self, action):
         # assert action.shape == (4,)
         action = action.copy()  # ensure that we don't change the action outside of this scope
+        # action = action*self.action_bounds + self.action_offset
 
         self.sim.data.ctrl[:] = action
         # pos_ctrl, gripper_ctrl = action[:3], action[3]
@@ -244,7 +276,7 @@ class UR5Env(WTMEnv):
     #     d = goal_distance(achieved_goal, desired_goal)
     #     return (d < self.distance_threshold).astype(np.float32)
 
-    def compute_reward(self, achieved_goal, goal, info):
+    def compute_reward(self, achieved_goal, goal, info):    # TODO check
         individual_differences = achieved_goal - goal
         d = np.linalg.norm(individual_differences, axis=-1)
 
@@ -254,7 +286,7 @@ class UR5Env(WTMEnv):
         else:
             return -1 * d
 
-    def _is_success(self, achieved_goal, desired_goal):
+    def _is_success(self, achieved_goal, desired_goal): # TODO check
         d = np.abs(achieved_goal - desired_goal)
         return np.all(d < self.end_goal_thresholds, axis=-1).astype(np.float32)
 
@@ -280,23 +312,7 @@ class UR5Env(WTMEnv):
             self._viewers[mode].cam.elevation = -50.
 
     def get_scale_and_offset_for_normalized_subgoal(self):
-        n_objects = self.n_objects
-        obj_height = self.obj_height
-        scale_xy = self.target_range
-        scale_z = obj_height * n_objects / 2
-        scale = np.array([scale_xy, scale_xy, scale_z] * (n_objects + 1))
-        offset = np.array(list(self.initial_gripper_xpos) * (n_objects + 1))
-        for j, off in enumerate(offset):
-            if j == 2:
-                offset[j] += self.random_gripper_goal_pos_offset[2]
-                if self.gripper_goal == 'gripper_random':
-                    scale[j] = self.target_range
-            elif (j + 1) % 3 == 0:
-                offset[j] += obj_height * n_objects / 2
-        if self.gripper_goal == 'gripper_none':
-            scale = scale[3:]
-            offset = offset[3:]
-        return scale, offset
+        return self.goal_space_scale, self.goal_space_offset
 
     # Visualize end goal.  This function may need to be adjusted for new environments.
     def display_end_goal(self, end_goal):
