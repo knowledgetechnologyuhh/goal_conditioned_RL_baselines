@@ -17,7 +17,7 @@ class UR5Env(WTMEnv):
         self, model_path, n_substeps, reward_type, name, goal_space_train, goal_space_test,
             project_state_to_end_goal, project_state_to_subgoal, end_goal_thresholds, initial_state_space,
             initial_joint_pos,
-            subgoal_bounds, subgoal_thresholds, obs_type=1
+            subgoal_bounds, subgoal_thresholds, obs_type=1, env_random=False
     ):
         """
         UR5 environment
@@ -90,6 +90,8 @@ class UR5Env(WTMEnv):
             self.visual_input = False
         else:
             self.visual_input = True
+
+        self.env_random = env_random
 
         WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_state_space,
                         n_actions=3)
@@ -202,6 +204,12 @@ class UR5Env(WTMEnv):
         self.sim.forward()
 
     def _reset_sim(self):
+        if self.env_random:
+            for name in self.sim.model.geom_names:
+                try:
+                    self.mod.rand_all(name)
+                except Exception as e:
+                    pass
         self.step_ctr = 0
 
         # Reset controls
