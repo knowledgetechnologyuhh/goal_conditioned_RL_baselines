@@ -93,7 +93,7 @@ class UR5Env(WTMEnv):
 
         self.env_random = env_random
 
-        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_state_space,
+        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_joint_pos,
                         n_actions=3)
 
         self.action_bounds = self.sim.model.actuator_ctrlrange[:, 1]  # low-level action bounds

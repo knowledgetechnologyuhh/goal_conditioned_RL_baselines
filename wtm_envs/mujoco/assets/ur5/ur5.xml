@@ -227,8 +227,8 @@
 
     </worldbody>
     <actuator>
-        <general name="shoulder_pan_joint" joint="shoulder_pan_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-150 150" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
-        <general name="shoulder_lift_joint" joint="shoulder_lift_joint" ctrllimited="true" forcelimited="true" ctrlrange="-5.0 5.0" forcerange="-150 150" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
+        <general name="shoulder_pan_joint" joint="shoulder_pan_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-150 150" biastype="affine" gainprm="15 0 0" biasprm="0 0 -10" />
+        <general name="shoulder_lift_joint" joint="shoulder_lift_joint" ctrllimited="true" forcelimited="true" ctrlrange="-5.0 5.0" forcerange="-150 150" biastype="affine" gainprm="15 0 0" biasprm="0 0 -10" />
         <general name="elbow_joint" joint="elbow_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-150 150" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
         <!--general name="wrist_1_joint" joint="wrist_1_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-28 28" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
         <general name="wrist_2_joint" joint="wrist_2_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-28 28" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
