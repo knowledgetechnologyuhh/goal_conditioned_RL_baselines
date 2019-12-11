@@ -8,11 +8,13 @@ class Ur5ReacherEnv(ur5_env.UR5Env, utils.EzPickle):
         # Reacher task we use a random initial shoulder position and use fixed values for the remainder.  Initial
         # joint velocities are set to 0.
 
-        initial_joint_pos = np.array([5.96625837e-03, 3.22757851e-03, -1.27944547e-01])
+        initial_joint_pos = np.array([5.96625837e-03, -np.pi/8. + 3.22757851e-03, -1.27944547e-01])
         initial_joint_pos = np.reshape(initial_joint_pos, (len(initial_joint_pos), 1))
         initial_joint_ranges = np.concatenate((initial_joint_pos, initial_joint_pos), 1)
-        initial_joint_ranges[0] = np.array([-np.pi / 8, np.pi / 8])
-        # initial_joint_ranges[1] = np.array([-np.pi/4,0])
+        # initial_joint_ranges[0] = np.array([-np.pi / 8, np.pi / 8])
+        initial_joint_ranges[0] = np.array([-np.pi / 2, np.pi / 2])
+        initial_joint_ranges[1] = np.array([-np.pi / 8, np.pi / 8])
+        initial_joint_ranges[2] = np.array([-np.pi / 4, np.pi / 4])
 
         initial_state_space = np.concatenate((initial_joint_ranges, np.zeros((len(initial_joint_ranges), 2))), 0)
 
@@ -80,6 +82,7 @@ class Ur5ReacherEnv(ur5_env.UR5Env, utils.EzPickle):
             reward_type=reward_type, name=name, goal_space_train=goal_space_train, goal_space_test=goal_space_test,
             project_state_to_end_goal=project_state_to_end_goal, project_state_to_subgoal=project_state_to_subgoal,
             end_goal_thresholds=end_goal_thresholds, initial_state_space=initial_state_space,
+            initial_joint_pos=initial_joint_pos,
             subgoal_bounds=subgoal_bounds, subgoal_thresholds=subgoal_thresholds, obs_type=obs_type
         )
         utils.EzPickle.__init__(self)
