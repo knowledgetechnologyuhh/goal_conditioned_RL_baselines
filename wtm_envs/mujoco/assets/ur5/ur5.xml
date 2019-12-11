@@ -7,6 +7,7 @@
         <joint damping="1" />
         <geom condim="4" solref="0.01 1" solimp="0.99 0.99 0.01" />
     </default>
+    <include file="common/materials.xml"/>
     <asset>
         <mesh name="v_base" file="v_base.stl" />
         <mesh name="c_base" file="c_base.stl" />
@@ -34,7 +35,7 @@
         <mesh name="outer_finger_coarse" file="outer_finger_coarse.stl" />
     </asset>
     <worldbody>
-        <geom name="bottom_plane" size="5 5 0.1" type="plane" />
+        <geom name="bottom_plane" size="5 5 0.1" type="plane" condim="3" material="grid"/>
         <camera name="main" pos="0 1.5 1" quat="1.22206e-06 -5.16678e-07 0.389418 0.921061" />
         <light name="light1" pos="0 -0.25 3" dir="0 0 -1" directional="true" />
         <light name="light2" pos="0 0.25 3" dir="0 0 -1" directional="true" />
@@ -132,13 +133,13 @@
         </body>
 
         <body name="robot0:external_camera_body_1" pos="0 0 0">
-			<camera euler="0 0.75 1.57" fovy="43.3" name="external_camera_1" pos="1.68 0 1.8"></camera>
+			<camera euler="0 0.75 1.57" fovy="43.3" name="external_camera_1" pos="1.88 0 1.8"></camera>
 		</body>
 		<body name="robot0:internal_camera_body_r" pos="0 0 0">>
 			<!--<camera euler="0 -0.872665 -1.5708"  fovy="32.3" name="internal_camera_r" pos="-0.44 0 1.3"></camera>
 			<camera euler="0 -1.22 -1.5708"  fovy="40.3" name="internal_camera_r" pos="0.2 0 0.9"></camera>
 			<camera euler="0 -0.87 -1.5708"  fovy="50.3" name="internal_camera_r" pos="0.2 0 0.9"></camera>-->
-			<camera euler="0 -0.26 -1.5708"  fovy="65.5" name="internal_camera_r" pos="0.4506 0.05 1.325"></camera>
+			<camera euler="0 -0.26 -1.5708"  fovy="65.5" name="internal_camera_r" pos="-0.4 0.05 1.5"></camera>
 			<!-- parameters of realsense D435 at camera position of Fetch robot-->
 		</body>
 
