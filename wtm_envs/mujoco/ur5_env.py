@@ -16,6 +16,7 @@ class UR5Env(WTMEnv):
     def __init__(
         self, model_path, n_substeps, reward_type, name, goal_space_train, goal_space_test,
             project_state_to_end_goal, project_state_to_subgoal, end_goal_thresholds, initial_state_space,
+            initial_joint_pos,
             subgoal_bounds, subgoal_thresholds, obs_type=1
     ):
         """
@@ -58,6 +59,7 @@ class UR5Env(WTMEnv):
 
         self._viewers = {}
 
+        self.initial_joint_pos = initial_joint_pos
         self.initial_state_space = initial_state_space
         self.end_goal_thresholds = end_goal_thresholds
         self.sub_goal_thresholds = subgoal_thresholds
@@ -201,22 +203,26 @@ class UR5Env(WTMEnv):
 
     def _reset_sim(self):
         self.step_ctr = 0
-        self.sim.set_state(self.initial_state)
+
+        # Reset controls
+        self.sim.data.ctrl[:] = 0
+
+        # self.sim.set_state(self.initial_state)
 
         # Reset joint positions and velocities
         for i in range(len(self.sim.data.qpos)):
-            self.sim.data.qpos[i] = np.random.uniform(self.initial_state_space[i][0],self.initial_state_space[i][1])
-
+            self.sim.data.qpos[i] = self.initial_joint_pos[i] \
+                                    + np.random.uniform(self.initial_state_space[i][0], self.initial_state_space[i][1])
+        #
         for i in range(len(self.sim.data.qvel)):
             self.sim.data.qvel[i] = np.random.uniform(self.initial_state_space[len(self.sim.data.qpos) + i][0],self.initial_state_space[len(self.sim.data.qpos) + i][1])
 
-        # self.sim.step()
-
         self.sim.forward()
+        self.sim.step()
         return True
 
     def _sample_goal(self):
-        obs = self._get_obs()
+        # obs = self._get_obs()
         end_goal = np.zeros((len(self.goal_space_test)))
 
         if self.name == "ur5.xml":
