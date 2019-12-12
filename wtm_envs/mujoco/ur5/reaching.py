@@ -45,6 +45,8 @@ class Ur5ReacherEnv(ur5_env.UR5Env, utils.EzPickle):
         # has been achieved and the reward of 0 is granted.
         angle_threshold = np.deg2rad(10)
         end_goal_thresholds = np.array([angle_threshold, angle_threshold, angle_threshold])
+        for i in range(len(end_goal_thresholds)):
+            end_goal_thresholds[i] /= len(end_goal_thresholds) - i
 
         # Provide range for each dimension of subgoal space in order to configure subgoal actor networks.  Subgoal
         # space can be the same as the state space or some other projection out of the state space.  In our
