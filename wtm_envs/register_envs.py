@@ -141,4 +141,4 @@ for obs_type in range(0, 4):
     register(id='UR5ReacherEnv-v{}'.format(kwargs['obs_type']),
              entry_point='wtm_envs.mujoco.ur5.reaching:Ur5ReacherEnv',
              kwargs=kwargs,
-             max_episode_steps=50)
+             max_episode_steps=100) # originally is 600 but it is too long
