@@ -41,23 +41,23 @@
         <light name="light2" pos="0 0.25 3" dir="0 0 -1" directional="true" />
         <body name="base_link" childclass="all" pos="0 0 0">
             <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="4" diaginertia="0.0072 0.00443333 0.00443333" />
-            <geom name="v_base_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_base" />
-            <geom name="c_base_link" type="mesh" mesh="c_base" />
+            <geom name="v_base_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_base" material="robo_hull"/>
+            <geom name="c_base_link" type="mesh" mesh="c_base" material="robo_hull"/>
             <body name="shoulder_link" pos="0 0 0.089159">
                 <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />
                 <joint name="shoulder_pan_joint" pos="0 0 0" axis="0 0 1" damping="10" />
-                <geom name="v_shoulder_link" type="mesh" contype="0" conaffinity="0" group="1"  mesh="v_shoulder" />
-                <geom name="c_shoulder_link" type="mesh" mesh="c_shoulder" />
+                <geom name="v_shoulder_link" type="mesh" contype="0" conaffinity="0" group="1"  mesh="v_shoulder" material="robo_hull"/>
+                <geom name="c_shoulder_link" type="mesh" mesh="c_shoulder" material="robo_hull"/>
                 <body name="upper_arm_link" pos="0 0.13585 0" quat="0.707107 0 0.707107 0">
                     <inertial pos="0 0 0.28" mass="8.393" diaginertia="0.226891 0.226891 0.0151074" />
                     <joint name="shoulder_lift_joint" pos="0 0 0" axis="0 1 0" damping="10" />
-                    <geom name="v_upper_arm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_upperarm" />
-                    <geom name="c_upper_arm_link" type="mesh" mesh="c_upperarm" />
+                    <geom name="v_upper_arm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_upperarm" material="robo_hull"/>
+                    <geom name="c_upper_arm_link" type="mesh" mesh="c_upperarm" material="robo_hull"/>
                     <body name="forearm_link" pos="0 -0.1197 0.425">
                         <inertial pos="0 0 0.25" mass="2.275" diaginertia="0.0494433 0.0494433 0.004095" />
                         <joint name="elbow_joint" pos="0 0 0" axis="0 1 0" damping="10" />
-                        <geom name="v_forearm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_forearm" />
-                        <geom name="c_forearm_link" type="mesh" mesh="c_forearm" />
+                        <geom name="v_forearm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_forearm" material="robo_hull"/>
+                        <geom name="c_forearm_link" type="mesh" mesh="c_forearm" material="robo_hull"/>
                         <!--body name="wrist_1_link" pos="0 0 0.39225" quat="0.707107 0 0.707107 0">
                             <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="1.219" diaginertia="0.21942 0.111173 0.111173" />
                             <joint name="wrist_1_joint" pos="0 0 0" axis="0 1 0" damping="10" />
