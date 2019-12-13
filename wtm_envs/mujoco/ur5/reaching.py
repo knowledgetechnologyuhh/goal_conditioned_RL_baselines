@@ -43,7 +43,7 @@ class Ur5ReacherEnv(ur5_env.UR5Env, utils.EzPickle):
 
         # Set end goal achievement thresholds.  If the agent is within the threshold for each dimension, the end goal
         # has been achieved and the reward of 0 is granted.
-        angle_threshold = np.deg2rad(10)
+        angle_threshold = np.deg2rad(5)
         end_goal_thresholds = np.array([angle_threshold, angle_threshold, angle_threshold])
         for i in range(len(end_goal_thresholds)):
             end_goal_thresholds[i] /= len(end_goal_thresholds) - i
