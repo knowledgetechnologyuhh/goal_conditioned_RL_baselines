@@ -200,10 +200,22 @@ class RolloutWorker(Rollout):
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics."""
         logs = []
+
         logs += [('success_rate', np.mean(self.success_history))]
+
         if self.custom_histories:
             logs += [('mean_Q', np.mean(self.custom_histories[0]))]
+
         logs += [('episode', self.n_episodes)]
+
+        for i,l in enumerate(self.loss_histories):
+            loss_key = 'loss-{}'.format(i)
+            loss_key_map = ['observation loss', 'loss prediction loss']
+            if i < len(loss_key_map):
+                loss_key = loss_key_map[i]
+            if len(l) > 0:
+                logs += [(loss_key, l[-1])]
+
 
         return logger(logs, prefix)
 
