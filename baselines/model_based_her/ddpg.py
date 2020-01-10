@@ -6,8 +6,8 @@ from tensorflow.contrib.staging import StagingArea
 
 from baselines import logger
 from baselines.util import (import_function, store_args, flatten_grads, transitions_in_episode_batch)
-from baselines.her.normalizer import Normalizer
-from baselines.her.replay_buffer import ReplayBuffer
+from baselines.model_based_her.normalizer import Normalizer
+from baselines.model_based_her.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
 from baselines.model_based_her.model_replay_buffer import ModelReplayBuffer
@@ -15,7 +15,7 @@ from baselines.model_based_her.model_replay_buffer import ModelReplayBuffer
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
-#  TODO: Find better naming or structure #
+#  TODO: Find better naming and structure #
 class DDPG(Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2,
@@ -67,8 +67,14 @@ class DDPG(Policy):
         model_shapes['loss_pred'] = (None, time_dim, 1)
         self.model_shapes = model_shapes
 
+        #  TODO: Pass from click args #
+        buff_sampling = 'random'
+        memval_method = 'uniform'
+        self.model_replay_buffer = ModelReplayBuffer(self.model_shapes, self.model_buffer_size, buff_sampling, memval_method)
+
         # Create networks
         with tf.variable_scope(self.scope):
+
             self.staging_tf = StagingArea(dtypes=[tf.float32 for _ in self.stage_shapes.keys()], shapes=list(self.stage_shapes.values()))
             self.buffer_ph_tf = [tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
             self.stage_op = self.staging_tf.put(self.buffer_ph_tf)
@@ -81,8 +87,7 @@ class DDPG(Policy):
         #      print(i)
 
         # Configure the replay buffer.
-        buffer_shapes = {key: (self.T if key != 'o' else self.T+1, *self.input_shapes[key])
-                         for key, val in self.input_shapes.items()}
+        buffer_shapes = {key: (self.T if key != 'o' else self.T+1, *self.input_shapes[key]) for key, val in self.input_shapes.items()}
         buffer_shapes['g'] = (buffer_shapes['g'][0], self.dimg)
         buffer_shapes['ag'] = (self.T+1, self.dimg)
 
@@ -105,8 +110,7 @@ class DDPG(Policy):
         g = np.clip(g, -self.clip_obs, self.clip_obs)
         return o, g
 
-    def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False,
-                    compute_Q=False, exploit=True):
+    def get_actions(self, o, ag, g, noise_eps=0., random_eps=0., use_target_net=False, compute_Q=False, exploit=True):
         noise_eps = noise_eps if not exploit else 0.
         random_eps = random_eps if not exploit else 0.
 
@@ -142,10 +146,8 @@ class DDPG(Policy):
 
     def store_episode(self, episode_batch, update_stats=True):
         """
-        episode_batch: array of batch_size x (T or T+1) x dim_key
-                       'o' is of size T+1, others are of size T
+        episode_batch: array of batch_size x (T or T+1) x dim_key 'o' is of size T+1, others are of size T
         """
-
         self.buffer.store_episode(episode_batch)
 
         if update_stats:
@@ -168,13 +170,13 @@ class DDPG(Policy):
     def store_trajectory(self, episode, update_stats=True, mj_states=None):
         trajectories = []
         for e_idx in range(len(episode['o'])):
-            rollout = {}
-            rollout['o'] = episode['o'][e_idx][:-1]
-            rollout['u'] = episode['u'][e_idx]
-            rollout['o2'] = episode['o'][e_idx][1:]
-            rollouts.append(rollout)
+            traj = {}
+            traj['o'] = episode['o'][e_idx][:-1]
+            traj['u'] = episode['u'][e_idx]
+            traj['o2'] = episode['o'][e_idx][1:]
+            trajectories.append(traj)
 
-        new_idxs = self.model_replay_buffer.store_episode(rollouts, mj_states)
+        new_idxs = self.model_replay_buffer.store_episode(trajectories, mj_states)
         self.update_replay_buffer_losses(new_idxs)
         return new_idxs
 
@@ -195,6 +197,8 @@ class DDPG(Policy):
     def _sync_optimizers(self):
         self.Q_adam.sync()
         self.pi_adam.sync()
+        self.obs_pred_adam.sync()
+        self.loss_pred_adam.sync()
 
     def _grads(self):
         # Avoid feed_dict here for performance!
@@ -225,6 +229,35 @@ class DDPG(Policy):
             batch = self.sample_batch()
         assert len(self.buffer_ph_tf) == len(batch)
         self.sess.run(self.stage_op, feed_dict=dict(zip(self.buffer_ph_tf, batch)))
+
+    def _update_model(self, model_grads, loss_grads):
+        self.obs_pred_adam.update(model_grads, self.model_lr)
+        self.loss_pred_adam.update(loss_grads, self.model_lr)
+
+    def get_model_grads(self, batch):
+        fetches = [
+            self.prediction_model.obs_loss_per_step_tf,
+            self.prediction_model.loss_loss_per_step_tf,
+            self.prediction_model.loss_prediction_tf,
+            self.obs_model_grads_tf,
+            self.loss_model_grads_tf
+        ]
+        fd = {self.prediction_model.o_tf: batch[0],
+              self.prediction_model.o2_tf: batch[1],
+              self.prediction_model.u_tf: batch[2],
+              self.prediction_model.loss_tf: batch[3]}
+        obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads = self.sess.run(fetches, fd)
+        return obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads
+
+
+    def train_model(self, stage=False):
+        batch, buffer_idxs = self.sample_trajectory_batch()
+        obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads = self.get_model_grads(batch)
+        mean_obs_loss = np.mean(obs_loss_per_step)
+        mean_loss_loss = np.mean(loss_loss_per_step)
+        self.model_replay_buffer.update_with_loss(buffer_idxs, obs_loss_per_step, loss_pred_per_step)
+        self._update_model(obs_model_grads, loss_model_grads)
+        return mean_obs_loss, mean_loss_loss
 
     def train(self, stage=True):
         if stage:
@@ -315,16 +348,16 @@ class DDPG(Policy):
         self.main_vars = self._vars('main/Q') + self._vars('main/pi')
         self.target_vars = self._vars('target/Q') + self._vars('target/pi')
         self.stats_vars = self._global_vars('o_stats') + self._global_vars('g_stats')
-        self.init_target_net_op = list(
-            map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
-        self.update_target_net_op = list(
-            map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]), zip(self.target_vars, self.main_vars)))
+        self.init_target_net_op = list(map(lambda v: v[0].assign(v[1]), zip(self.target_vars, self.main_vars)))
+        self.update_target_net_op = list(map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]),
+                                             zip(self.target_vars, self.main_vars)))
 
         self._create_predictor_network()
 
         # initialize all variables
         tf.variables_initializer(self._global_vars('')).run()
         self._sync_optimizers()
+        #  TODO: Check this step #
         self._init_target_net()
 
     def _create_predictor_network(self):
@@ -351,6 +384,17 @@ class DDPG(Policy):
         loss_model_grads = tf.gradients(self.prediction_model.loss_loss_tf, self._vars('model/LossPredNN'))
         self.loss_model_grads_tf = flatten_grads(grads=loss_model_grads, var_list=self._vars('model/LossPredNN'))
 
+    def update_replay_buffer_losses(self, buffer_idxs):
+        batch_size_diff = self.model_train_batch_size - len(buffer_idxs)
+        if batch_size_diff < 0:
+            print("ERROR!!! cannot predict more episodes than model_train_buffer_size")
+            assert False
+        padded_buffer_idxs = buffer_idxs + [0] * batch_size_diff
+        batch, idxs = self.sample_trajectory_batch(idxs=padded_buffer_idxs)
+        obs_loss_per_step, loss_loss_per_step, loss_pred_per_step, obs_model_grads, loss_model_grads = self.get_model_grads(batch)
+        self.model_replay_buffer.update_with_loss(buffer_idxs, obs_loss_per_step[:len(buffer_idxs)], loss_pred_per_step[:len(buffer_idxs)])
+
+
     def logs(self, prefix=''):
         logs = []
         logs += [('stats_o/mean', np.mean(self.sess.run([self.o_stats.mean])))]
@@ -367,9 +411,9 @@ class DDPG(Policy):
         """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
         """
         # [print(key, ": ", item) for key,item in self.__dict__.items()]
-        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
-                             'main', 'target', 'lock', 'env', 'sample_transitions',
-                             'stage_shapes', 'create_actor_critic']
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats', 'main', 'target',
+                             'lock', 'env', 'sample_transitions', 'stage_shapes', 'create_actor_critic',
+                             'create_predictor_model', 'model_shapes', 'prediction_model', 'model_replay_buffer' ]
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size

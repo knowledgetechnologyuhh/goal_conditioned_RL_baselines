@@ -55,10 +55,7 @@ DEFAULT_PARAMS = {
     'model_train_batch_size': 10,
 }
 
-POLICY_ACTION_PARAMS = {
-
-    }
-
+POLICY_ACTION_PARAMS = { }
 CACHED_ENVS = {}
 
 ROLLOUT_PARAMS = {
@@ -134,7 +131,7 @@ def prepare_params(kwargs):
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
 
-    # Model-based Params
+    # Model-based params
     for name in ['model_buffer_size', 'model_network_class', 'model_lr', 'model_train_batch_size']:
         ddpg_params[name] = kwargs[name]
 
@@ -148,7 +145,7 @@ def log_params(params, logger=logger):
         logger.info('{}: {}'.format(key, params[key]))
 
 
-def configure_her(params):
+def configure_model_based_her(params):
     env = cached_make_env(params['make_env'])
     env.reset()
 
@@ -174,7 +171,7 @@ def simple_goal_subtract(a, b):
 
 
 def configure_policy(dims, params):
-    sample_her_transitions = configure_her(params)
+    sample_her_transitions = configure_model_based_her(params)
     # Extract relevant parameters.
     gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
@@ -195,11 +192,7 @@ def configure_policy(dims, params):
                         'sample_transitions': sample_her_transitions,
                         'gamma': gamma,
                         'reuse': reuse,
-                        'use_mpi': use_mpi,
-                        # 'n_preds' : 0,
-                        # 'h_level' : 0,
-                        # 'subgoal_scale': [1,1,1,1],
-                        # 'subgoal_offset': [0, 0, 0, 0],
+                        'use_mpi': use_mpi
                         })
     ddpg_params['info'] = {
         'env_name': params['env_name'],
@@ -213,7 +206,7 @@ def load_policy(restore_policy_file, params):
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
-    policy.sample_transitions = configure_her(params)
+    policy.sample_transitions = configure_model_based_her(params)
     policy.buffer.sample_transitions = policy.sample_transitions
     return policy
 

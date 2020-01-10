@@ -6,7 +6,6 @@ import numpy as np
 class ReplayBuffer:
     def __init__(self, buffer_shapes, size_in_transitions, T, sample_transitions):
         """Creates a replay buffer.
-
         Args:
             buffer_shapes (dict of ints): the shape for all buffers that are used in the replay
                 buffer
@@ -18,9 +17,7 @@ class ReplayBuffer:
         self.size = size_in_transitions // T
         self.T = T
         self.sample_transitions = sample_transitions
-
-        self.buffers = {key: np.empty([self.size, *shape])
-                        for key, shape in buffer_shapes.items()}
+        self.buffers = {key: np.empty([self.size, *shape]) for key, shape in buffer_shapes.items()}
 
         # memory management
         self.current_size = 0

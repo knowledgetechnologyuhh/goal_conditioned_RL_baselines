@@ -1,5 +1,5 @@
 import click
-_her_options = [
+_model_based_her_options = [
 click.option('--n_test_rollouts', type=int, default=10, help='The number of testing rollouts.'),
 click.option('--clip_return', type=int, default=1, help='whether or not returns should be clipped'),
 click.option('--network_class', type=str, default='baselines.model_based_her.actor_critic:ActorCritic', help='The Neural network model to use.'),
@@ -19,10 +19,14 @@ click.option('--replay_strategy', default='future',
 click.option('--model_train_batch_size', type=int, default=40, help='The batch size (parallel episodes) for model training.'),
 click.option('--model_lr', type=float, default=0.001, help='The initial learning rate.'),
 click.option('--model_network_class', type=str, default='baselines.model_based_her.model_rnn:ModelRNN', help='The network model class to use for the forward model.'),
+click.option('--buff_sampling', default='random',
+                 type=click.Choice(['random', 'max_loss_pred_err', 'mean_loss_pred_err', 'max_loss', 'mean_loss']),
+                 help='The method to sample from the replay buffer.'
+                 ),
 ]
 
 def click_main(func):
-    for option in reversed(_her_options):
+    for option in reversed(_model_based_her_options):
         func = option(func)
     return func
 

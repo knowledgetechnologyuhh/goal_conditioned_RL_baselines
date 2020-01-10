@@ -26,8 +26,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
         # Select which episodes and time steps to use.
         episode_idxs = np.random.randint(0, rollout_batch_size, batch_size)
         t_samples = np.random.randint(T, size=batch_size)
-        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy()
-                       for key in episode_batch.keys()}
+        transitions = {key: episode_batch[key][episode_idxs, t_samples].copy() for key in episode_batch.keys()}
 
         # Select future time indexes proportional with probability future_p. These
         # will be used for HER replay by substituting in future goals.
@@ -53,8 +52,7 @@ def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):
         reward_params['info'] = info
         transitions['r'] = reward_fun(**reward_params)
 
-        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:])
-                       for k in transitions.keys()}
+        transitions = {k: transitions[k].reshape(batch_size, *transitions[k].shape[1:]) for k in transitions.keys()}
 
         assert(transitions['u'].shape[0] == batch_size_in_transitions)
 
