@@ -5,52 +5,22 @@ import tensorflow as tf
 from tensorflow.contrib.staging import StagingArea
 
 from baselines import logger
-from baselines.util import (
-    import_function, store_args, flatten_grads, transitions_in_episode_batch)
+from baselines.util import (import_function, store_args, flatten_grads, transitions_in_episode_batch)
 from baselines.her.normalizer import Normalizer
 from baselines.her.replay_buffer import ReplayBuffer
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
+from baselines.model_based_her.model_replay_buffer import ModelReplayBuffer
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
 
-
+#  TODO: Find better naming or structure #
 class DDPG(Policy):
     @store_args
-    def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size,
-                 Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
-                 rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-                 sample_transitions, gamma, reuse=False, **kwargs):
-        """Implementation of DDPG that is used in combination with Hindsight Experience Replay (HER).
-
-        Args:
-            input_dims (dict of ints): dimensions for the observation (o), the goal (g), and the
-                actions (u)
-            buffer_size (int): number of transitions that are stored in the replay buffer
-            hidden (int): number of units in the hidden layers
-            layers (int): number of hidden layers
-            network_class (str): the network class that should be used (e.g. 'baselines.her.ActorCritic')
-            polyak (float): coefficient for Polyak-averaging of the target network
-            batch_size (int): batch size for training
-            Q_lr (float): learning rate for the Q (critic) network
-            pi_lr (float): learning rate for the pi (actor) network
-            norm_eps (float): a small value used in the normalizer to avoid numerical instabilities
-            norm_clip (float): normalized inputs are clipped to be in [-norm_clip, norm_clip]
-            max_u (float): maximum action magnitude, i.e. actions are in [-max_u, max_u]
-            action_l2 (float): coefficient for L2 penalty on the actions
-            clip_obs (float): clip observations before normalization to be in [-clip_obs, clip_obs]
-            scope (str): the scope used for the TensorFlow graph
-            T (int): the time horizon for rollouts
-            rollout_batch_size (int): number of parallel rollouts per DDPG agent
-            subtract_goals (function): function that subtracts goals from each other
-            relative_goals (boolean): whether or not relative goals should be fed into the network
-            clip_pos_returns (boolean): whether or not positive returns should be clipped
-            clip_return (float): clip returns to be in [-clip_return, clip_return]
-            sample_transitions (function) function that samples from the replay buffer
-            gamma (float): gamma used for Q learning updates
-            reuse (boolean): whether or not the networks should be reused
-        """
+    def __init__(self, input_dims, buffer_size, hidden, layers, network_class, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2,
+                 clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return, sample_transitions, gamma,
+                 reuse=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.hidden = hidden
@@ -79,16 +49,36 @@ class DDPG(Policy):
 
         self.create_actor_critic = import_function(self.network_class)
 
-        # Create network.
+        # model rnn
+        self.create_predictor_model = import_function(self.model_network_class)
+        model_shapes = OrderedDict()
+        time_dim = self.T
+        for key in sorted(self.input_dims.keys()):
+            if key.startswith('info_'):
+                continue
+            if key in ['o']:
+                model_shapes[key] = (None, time_dim, *self.input_shapes[key])
+                model_shapes[key +"2"] = (None, time_dim, *self.input_shapes[key])
+            if key in ['u']:
+                model_shapes[key] = (None, time_dim, *self.input_shapes[key])
+
+        # Add loss and loss prediction to model
+        model_shapes['loss'] = (None, time_dim, 1)
+        model_shapes['loss_pred'] = (None, time_dim, 1)
+        self.model_shapes = model_shapes
+
+        # Create networks
         with tf.variable_scope(self.scope):
-            self.staging_tf = StagingArea(
-                dtypes=[tf.float32 for _ in self.stage_shapes.keys()],
-                shapes=list(self.stage_shapes.values()))
-            self.buffer_ph_tf = [
-                tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
+            self.staging_tf = StagingArea(dtypes=[tf.float32 for _ in self.stage_shapes.keys()], shapes=list(self.stage_shapes.values()))
+            self.buffer_ph_tf = [tf.placeholder(tf.float32, shape=shape) for shape in self.stage_shapes.values()]
             self.stage_op = self.staging_tf.put(self.buffer_ph_tf)
 
+            self.model_buffer_ph_tf = [tf.placeholder(tf.float32, shape=(None, None, shape[2])) for _, shape in self.model_shapes.items()]
+
             self._create_network(reuse=reuse)
+
+        #  for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope):
+        #      print(i)
 
         # Configure the replay buffer.
         buffer_shapes = {key: (self.T if key != 'o' else self.T+1, *self.input_shapes[key])
@@ -98,6 +88,8 @@ class DDPG(Policy):
 
         buffer_size = (self.buffer_size // self.rollout_batch_size) * self.rollout_batch_size
         self.buffer = ReplayBuffer(buffer_shapes, buffer_size, self.T, self.sample_transitions)
+
+
 
     def _random_action(self, n):
         return np.random.uniform(low=-self.max_u, high=self.max_u, size=(n, self.dimu))
@@ -172,6 +164,30 @@ class DDPG(Policy):
 
             self.o_stats.recompute_stats()
             self.g_stats.recompute_stats()
+
+    def store_trajectory(self, episode, update_stats=True, mj_states=None):
+        trajectories = []
+        for e_idx in range(len(episode['o'])):
+            rollout = {}
+            rollout['o'] = episode['o'][e_idx][:-1]
+            rollout['u'] = episode['u'][e_idx]
+            rollout['o2'] = episode['o'][e_idx][1:]
+            rollouts.append(rollout)
+
+        new_idxs = self.model_replay_buffer.store_episode(rollouts, mj_states)
+        self.update_replay_buffer_losses(new_idxs)
+        return new_idxs
+
+    def sample_trajectory_batch(self, batch_size=None, idxs=None):
+        if idxs is not None:
+            batch_dict, idxs = self.model_replay_buffer.get_rollouts_by_idx(idxs)
+        else:
+            if batch_size is None:
+                batch_size = self.model_train_batch_size
+            batch_dict, idxs = self.model_replay_buffer.sample(batch_size)
+        batch = [batch_dict[key] for key in self.model_shapes.keys()]
+        return batch, idxs
+
 
     def get_current_buffer_size(self):
         return self.buffer.get_current_size()
@@ -304,10 +320,36 @@ class DDPG(Policy):
         self.update_target_net_op = list(
             map(lambda v: v[0].assign(self.polyak * v[0] + (1. - self.polyak) * v[1]), zip(self.target_vars, self.main_vars)))
 
+        self._create_predictor_network()
+
         # initialize all variables
         tf.variables_initializer(self._global_vars('')).run()
         self._sync_optimizers()
         self._init_target_net()
+
+    def _create_predictor_network(self):
+        logger.info("Creating a model-based agent with action space %d x %s..." % (self.dimu, self.max_u))
+
+        # mini-batch sampling.
+        model_batch_tf = OrderedDict([(key, self.model_buffer_ph_tf[i])
+                                      for i, key in enumerate(self.model_shapes.keys())])
+        # networks
+        with tf.variable_scope('model') as ms:
+            self.prediction_model = self.create_predictor_model(model_batch_tf, **self.__dict__)
+            ms.reuse_variables()
+
+        model_grads = tf.gradients(self.prediction_model.obs_loss_tf, self._vars('model/ModelRNN'))
+        self.model_grads_tf = flatten_grads(grads=model_grads, var_list=self._vars('model/ModelRNN'))
+
+        # optimizers
+        self.obs_pred_adam = MpiAdam(self._vars('model/ModelRNN'), scale_grad_by_procs=False)
+        self.loss_pred_adam = MpiAdam(self._vars('model/LossPredNN'), scale_grad_by_procs=False)
+
+        obs_model_grads = tf.gradients(self.prediction_model.obs_loss_tf, self._vars('model/ModelRNN'))
+        self.obs_model_grads_tf = flatten_grads(grads=obs_model_grads, var_list=self._vars('model/ModelRNN'))
+
+        loss_model_grads = tf.gradients(self.prediction_model.loss_loss_tf, self._vars('model/LossPredNN'))
+        self.loss_model_grads_tf = flatten_grads(grads=loss_model_grads, var_list=self._vars('model/LossPredNN'))
 
     def logs(self, prefix=''):
         logs = []

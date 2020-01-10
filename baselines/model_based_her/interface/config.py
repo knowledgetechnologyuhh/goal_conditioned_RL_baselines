@@ -3,8 +3,8 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.her.ddpg import DDPG
-from baselines.her.her import make_sample_her_transitions
+from baselines.model_based_her.ddpg import DDPG
+from baselines.model_based_her.her import make_sample_her_transitions
 
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
@@ -19,7 +19,7 @@ DEFAULT_PARAMS = {
     # ddpg
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden': 256,  # number of neurons in each hidden layers
-    'network_class': 'baselines.her.actor_critic:ActorCritic',
+    'network_class': 'baselines.model_based_her.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
     'buffer_size': int(1E6),  # for experience replay
@@ -47,6 +47,12 @@ DEFAULT_PARAMS = {
     # normalization
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
+
+    # Model-Based
+    'model_buffer_size': 1200, # number of rollouts to store for model training
+    'model_network_class': 'baselines.model_based_her.model_rnn:ModelRNN',
+    'model_lr': 0.001,
+    'model_train_batch_size': 10,
 }
 
 POLICY_ACTION_PARAMS = {
@@ -108,6 +114,7 @@ def prepare_params(kwargs):
 
     def make_env():
         return gym.make(env_name)
+
     kwargs['make_env'] = make_env
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
@@ -115,19 +122,22 @@ def prepare_params(kwargs):
     tmp_env.reset()
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
+
     if 'lr' in kwargs:
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr']
         del kwargs['lr']
-    for name in ['buffer_size', 'hidden', 'layers',
-                 'network_class',
-                 'polyak',
-                 'batch_size', 'Q_lr', 'pi_lr',
-                 'norm_eps', 'norm_clip', 'max_u',
+
+    for name in ['buffer_size', 'hidden', 'layers', 'network_class', 'polyak', 'batch_size', 'Q_lr', 'pi_lr', 'norm_eps', 'norm_clip', 'max_u',
                  'action_l2', 'clip_obs', 'scope', 'relative_goals']:
         ddpg_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
+
+    # Model-based Params
+    for name in ['model_buffer_size', 'model_network_class', 'model_lr', 'model_train_batch_size']:
+        ddpg_params[name] = kwargs[name]
+
     kwargs['ddpg_params'] = ddpg_params
 
     return kwargs

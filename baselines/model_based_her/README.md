@@ -1,1 +1,1 @@
-# Model Based Hindsight Experience Replay
+# Model-based Hindsight Experience Replay

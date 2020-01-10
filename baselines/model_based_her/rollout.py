@@ -181,8 +181,7 @@ class RolloutWorker(Rollout):
         return np.mean(self.custom_histories[0])
 
     def logs(self, prefix='worker'):
-        """Generates a dictionary that contains all collected statistics.
-        """
+        """Generates a dictionary that contains all collected statistics."""
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
         if self.custom_histories:
