@@ -29,6 +29,7 @@ class RolloutWorker(Rollout):
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
+        self.graph = kwargs['graph']
         Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):

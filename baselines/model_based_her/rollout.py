@@ -157,7 +157,7 @@ class RolloutWorker(Rollout):
             self.policy.store_episode(episode)
 
             trajectories, mj_states = super(RolloutWorker, self).generate_rollouts(return_states=True)
-            stored_idxs = self.policy.store_trajectory(trajectories, mj_states=mj_states)
+            stored_idxs = self.policy.model.store_trajectory(trajectories, mj_states=mj_states)
             last_stored_idxs = stored_idxs
             # Remove old rollouts from already replayed episodes.
             for i in stored_idxs:
@@ -170,7 +170,7 @@ class RolloutWorker(Rollout):
             for _ in range(n_train_batches):
                 self.policy.train()
 
-                losses = self.policy.train_model()
+                losses = self.policy.model.train_model()
                 if not isinstance(losses, tuple):
                     losses = [losses]
                 if self.loss_histories == []:

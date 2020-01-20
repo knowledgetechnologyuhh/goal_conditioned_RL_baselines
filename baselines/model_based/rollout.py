@@ -23,8 +23,7 @@ import imageio
 class RolloutWorker(Rollout):
     @store_args
     def __init__(self, make_env, policy, dims, logger, T, **kwargs):
-        """Rollout worker generates experience by interacting with one or many environments.
-        """
+        """Rollout worker generates experience by interacting with one or many environments."""
         Rollout.__init__(self, make_env, policy, dims, logger, T, **kwargs)
 
         self.pred_err = None
@@ -47,6 +46,7 @@ class RolloutWorker(Rollout):
         self.do_plot = False
         self.test_mujoco_err = True
         self.acc_err_steps = 5 # Number of steps to accumulate the prediction error
+        self.graph = kwargs['graph']
 
     def logs(self, prefix='worker'):
         """Generates a dictionary that contains all collected statistics.
