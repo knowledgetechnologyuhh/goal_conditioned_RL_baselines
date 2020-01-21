@@ -188,6 +188,7 @@ def configure_policy(dims, params):
                         'clip_pos_returns': True,  # clip positive returns
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
+                        'env': env.env,
                         'subtract_goals': simple_goal_subtract,
                         'sample_transitions': sample_her_transitions,
                         'gamma': gamma,

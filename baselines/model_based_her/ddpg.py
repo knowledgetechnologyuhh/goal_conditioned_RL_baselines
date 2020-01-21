@@ -11,7 +11,6 @@ from baselines.model_based_her.replay_buffer import ReplayBuffer
 from baselines.model_based_her.model import Model
 from baselines.common.mpi_adam import MpiAdam
 from baselines.template.policy import Policy
-from baselines.model_based_her.model_replay_buffer import ModelReplayBuffer
 
 def dims_to_shapes(input_dims):
     return {key: tuple([val]) if val > 0 else tuple() for key, val in input_dims.items()}
@@ -45,6 +44,7 @@ class DDPG(Policy):
         self.norm_clip = norm_clip
         self.action_l2 = action_l2
 
+        self.env = kwargs['env']
         self.model = Model(input_dims, T, rollout_batch_size, max_u, scope, **kwargs)
 
         if self.clip_return is None:
@@ -63,8 +63,8 @@ class DDPG(Policy):
 
             self._create_network(reuse=reuse)
 
-        for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope):
-            print(i)
+        #  for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope):
+        #      print(i)
 
         # Configure the replay buffer.
         buffer_shapes = {key: (self.T if key != 'o' else self.T+1, *self.input_shapes[key]) for key, val in self.input_shapes.items()}
@@ -101,7 +101,8 @@ class DDPG(Policy):
         if compute_Q:
             vals += [policy.Q_pi_tf]
 
-        curios_u = self.model.get_actions_max_surprise(o)
+        #  curious_u = self.model.get_actions_max_surprise(o)
+        #  TODO: Decide for exploration or exploitation #
 
         # feed
         feed = {
@@ -302,13 +303,9 @@ class DDPG(Policy):
             return logs
 
     def __getstate__(self):
-        """Our policies can be loaded from pkl, but after unpickling you cannot continue training.
-        """
-        # [print(key, ": ", item) for key,item in self.__dict__.items()]
+        """Our policies can be loaded from pkl, but after unpickling you cannot continue training."""
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats', 'main', 'target',
-                             'lock', 'env', 'sample_transitions', 'stage_shapes', 'create_actor_critic',
-                             'create_predictor_model', 'model_shapes', 'prediction_model', 'model_replay_buffer' ]
-
+                             'lock', 'env', 'sample_transitions', 'stage_shapes', 'create_actor_critic' ]
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
         state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name])

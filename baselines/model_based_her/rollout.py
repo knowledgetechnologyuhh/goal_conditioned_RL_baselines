@@ -20,13 +20,32 @@ class RolloutWorker(Rollout):
 
         self.env_name = self.first_env.env.spec._env_name
 
-        self.replayed_trajectories = []
+        self.replayed_episodes = []
         self.loss_histories = []
+
+        self.pred_err = None
+        self.pred_accumulated_err = None
+        self.pred_err_std = None
+        self.pred_steps = None
+        self.mj_pred_err = None
+        self.mj_pred_accumulated_err = None
+        self.mj_pred_err_std = None
+        self.mj_pred_steps = None
+        self.loss_pred_steps = None
+        self.buff_obs_variance = None
+        self.surprise_fig = None
+        self.top_exp_replay_values = deque(maxlen=10)
+        self.episodes_per_epoch = None
+        self.visualize_replay = False
+        self.record_replay = True
+        self.do_plot = False
+        self.test_mujoco_err = True
+        self.acc_err_steps = 5 # Number of steps to accumulate the prediction error
+
 
     def generate_rollouts(self, return_states=False):
         """Performs `rollout_batch_size` rollouts in parallel for time horizon `T` with the current
-        policy acting on it accordingly.
-        """
+           policy acting on it accordingly. """
 
         self.reset_all_rollouts()
 
@@ -153,39 +172,26 @@ class RolloutWorker(Rollout):
             # logger.info("Performing ")
             ro_start = time.time()
 
-            episode = self.generate_rollouts()
+            # use method of parent class
+            episode = super(RolloutWorker, self).generate_rollouts()
             self.policy.store_episode(episode)
 
-            trajectories, mj_states = super(RolloutWorker, self).generate_rollouts(return_states=True)
-            stored_idxs = self.policy.model.store_trajectory(trajectories, mj_states=mj_states)
+            # use custom generate_rollouts method
+            rollouts, mj_states = self.generate_rollouts(return_states=True)
+            stored_idxs = self.policy.model.store_trajectory(rollouts, mj_states=mj_states)
             last_stored_idxs = stored_idxs
+
             # Remove old rollouts from already replayed episodes.
             for i in stored_idxs:
-                if i in self.replayed_trajectories:
-                    self.replayed_trajectories.remove(i)
-
+                if i in self.replayed_episodes:
+                    self.replayed_episodes.remove(i)
 
             dur_ro += time.time() - ro_start
-            train_start = time.time()
-            for _ in range(n_train_batches):
-                self.policy.train()
+            dur_train += self.train_models(n_episodes, n_train_batches, avg_epoch_losses)
 
-                losses = self.policy.model.train_model()
-                if not isinstance(losses, tuple):
-                    losses = [losses]
-                if self.loss_histories == []:
-                    self.loss_histories = [deque(maxlen=2) for _ in losses]
-                if avg_epoch_losses == []:
-                    avg_epoch_losses = [0 for _ in losses]
-                for idx, loss in enumerate(losses):
-                    avg_epoch_losses[idx] += loss
-
-            self.policy.update_target_net()
-            dur_train += time.time() - train_start
-
-        for idx,loss in enumerate(avg_epoch_losses):
-            avg_loss = (loss / n_episodes) / n_train_batches
-            self.loss_histories[idx].append(avg_loss)
+        self.buff_obs_variance = self.policy.model.model_replay_buffer.get_variance(column='o')
+        print('VAR', self.buff_obs_variance)
+        self.test_prediction_error(last_stored_idxs)
 
         dur_total = time.time() - dur_start
         updated_policy = self.policy
@@ -193,6 +199,32 @@ class RolloutWorker(Rollout):
         #  TODO: Plot loss #
 
         return updated_policy, time_durations
+
+    def train_models(self, n_episodes, n_train_batches, avg_epoch_losses):
+        """train policy and forward model"""
+        train_start = time.time()
+
+        for _ in range(n_train_batches):
+            self.policy.train()
+            losses = self.policy.model.train_model()
+
+            if not isinstance(losses, tuple):
+                losses = [losses]
+            if self.loss_histories == []:
+                self.loss_histories = [deque(maxlen=2) for _ in losses]
+            if avg_epoch_losses == []:
+                avg_epoch_losses = [0 for _ in losses]
+            for idx, loss in enumerate(losses):
+                avg_epoch_losses[idx] += loss
+
+        dur_train = time.time() - train_start
+        self.policy.update_target_net()
+
+        for idx,loss in enumerate(avg_epoch_losses):
+            avg_loss = (loss / n_episodes) / n_train_batches
+            self.loss_histories[idx].append(avg_loss)
+
+        return dur_train
 
     def current_mean_Q(self):
         return np.mean(self.custom_histories[0])
@@ -216,6 +248,134 @@ class RolloutWorker(Rollout):
             if len(l) > 0:
                 logs += [(loss_key, l[-1])]
 
+        if self.buff_obs_variance is not None:
+            logs += [('buffer observation variance', self.buff_obs_variance)]
+
+
 
         return logger(logs, prefix)
+
+    def test_prediction_error(self, buffer_idxs):
+
+        this_pred_err_hist = []
+        this_accumulated_pred_err = []
+        this_pred_std_hist = []
+        this_mj_pred_err_hist = []
+        this_mj_accumulated_pred_err = []
+        this_mj_pred_std_hist = []
+
+        loss_pred_threshold_perc = 20 # Loss prediction threshold in %
+        batch, idxs = self.policy.model.sample_trajectory_batch(idxs=buffer_idxs)
+        s = None
+        o_s_batch, o2_s_batch, u_s_batch, loss_s_batch, loss_pred_s_batch = batch[0], batch[1], batch[2], batch[3], batch[4]
+
+        # Measure mean prediction error
+        for step in range(self.T):
+            o_s_step, o2_s_step, u_s_step = \
+                o_s_batch[:, step:step + 1, :], o2_s_batch[:, step:step + 1, :], \
+                u_s_batch[:, step:step + 1, :]
+            o2_pred, l_s, s = self.policy.model.forward_step(u_s_step, o_s_step, s)
+            err = np.abs(o2_s_step - o2_pred)
+            ep_err_mean_step = np.mean(err,axis=2)
+            ep_err_mean = np.mean(ep_err_mean_step)
+            ep_err_std = np.std(err)
+            this_pred_err_hist.append(ep_err_mean)
+            this_pred_std_hist.append(ep_err_std)
+
+        # Test mujoco prediction error as baseline
+        if self.test_mujoco_err:
+            for step in range(self.T):
+                o_s_step, o2_s_step, u_s_step = \
+                    o_s_batch[:, step, :], o2_s_batch[:, step, :], \
+                    u_s_batch[:, step, :]
+                assert len(self.envs) == len(buffer_idxs) # Number of parallel rollout environment instances must be equal to to batch size.
+                mj_states = [self.policy.model.model_replay_buffer.mj_states[buff_idx][step] for buff_idx in buffer_idxs]
+                [self.envs[i].env.sim.set_state(mj_state) for i, mj_state in enumerate(mj_states)]
+                [self.envs[i].env.sim.forward() for i, mj_state in enumerate(mj_states)]
+                o_pred = np.array([self.envs[i].env._get_obs()['observation'] for i in range(len(buffer_idxs))])
+
+                # TODO: For debugging... tmp_err should be 0 or very close to 0, as we are just reloading the mujoco state that corresponds to the observation.
+                # TODO: However, tt is larger than expected. Specifically, it is larger that the accumulated mujoco error computed below.
+                # TODO: This should not be the case.
+                tmp_err = np.abs(o_s_step - o_pred)
+                tmp_err_mean = np.mean(tmp_err)
+
+                [self.envs[i].env.step(u) for i, u in enumerate(u_s_step)]
+                o2_pred = np.array([self.envs[i].env._get_obs()['observation'] for i in range(len(buffer_idxs))])
+                err = np.abs(o2_s_step - o2_pred)
+                ep_err_mean = np.mean(err)
+                ep_err_std = np.std(err)
+                this_mj_pred_err_hist.append(ep_err_mean)
+                this_mj_pred_std_hist.append(ep_err_std)
+
+
+        # Measure the number of steps that can be forward propagated until the observation error gets larger than the goal achievement threshold.
+        initial_o_s = o_s_batch[:,0:1,:]
+        s = None
+        this_pred_steps = [self.T for _ in initial_o_s]
+        this_mj_pred_steps = [self.T for _ in initial_o_s]
+        this_loss_pred_steps = [self.T for _ in initial_o_s]
+        o_s_step = initial_o_s
+        for step in range(self.T):
+            o2_s_step, u_s_step = o2_s_batch[:, step:step + 1, :], u_s_batch[:, step:step + 1, :]
+            o_s_step, l_s, s = self.policy.model.forward_step(u_s_step, o_s_step, s)
+            flattened_o_s_step = o_s_step[:, 0,:]
+            flattened_o2_s_step = o2_s_step[:, 0, :]
+            fwd_goal_g = self.policy.model.env._obs2goal(flattened_o_s_step)
+            orig_g = self.policy.model.env._obs2goal(flattened_o2_s_step)
+            pred_successes = self.policy.model.env._is_success(fwd_goal_g, orig_g)
+            for batch_idx, pred_success in enumerate(pred_successes):
+                if not pred_success and this_pred_steps[batch_idx] == self.T:
+                    this_pred_steps[batch_idx] = step
+                loss_pred_ok = loss_s_batch[batch_idx][step] + (loss_s_batch[batch_idx][step] * loss_pred_threshold_perc / 100) < l_s[batch_idx][0]
+                if not loss_pred_ok and this_loss_pred_steps[batch_idx] == self.T:
+                    this_loss_pred_steps[batch_idx] = step
+            if step == self.acc_err_steps:
+                this_accumulated_pred_err = np.abs(flattened_o_s_step - flattened_o2_s_step)
+
+        # TODO: The accumulated mujoco error is smaller than the per-step mujoco error computed above. Also,
+        # TODO: Mujoco seems to always be able to reproduce all steps. This should also not be the case.
+        if self.test_mujoco_err:
+            assert len(self.envs) == len(buffer_idxs)  # Number of parallel rollout environment instances must be equal to to batch size.
+            init_mj_states = [self.policy.model.model_replay_buffer.mj_states[buff_idx][0] for buff_idx in buffer_idxs]
+            [self.envs[i].env.sim.set_state(mj_state) for i, mj_state in enumerate(init_mj_states)]
+            [self.envs[i].env.sim.forward() for i, mj_state in enumerate(mj_states)]
+            for step in range(self.T):
+                o2_s_step, u_s_step = o2_s_batch[:, step, :], u_s_batch[:, step, :]
+                [self.envs[i].env.step(u) for i, u in enumerate(u_s_step)]
+                o_s_step = np.array([self.envs[i].env._get_obs()['observation'] for i in range(len(buffer_idxs))])
+                fwd_goal_g = self.policy.model.env._obs2goal(o_s_step)
+                orig_g = self.policy.model.env._obs2goal(o2_s_step)
+                pred_successes = self.policy.model.env._is_success(fwd_goal_g, orig_g)
+                err = np.abs(o_s_step - o2_s_step)
+                tmp_mean_err = np.mean(err)
+                # print(tmp_mean_err)
+                for batch_idx, pred_success in enumerate(pred_successes):
+                    if not pred_success and this_pred_steps[batch_idx] == self.T:
+                        this_mj_pred_steps[batch_idx] = step
+                if step == self.acc_err_steps:
+                    this_mj_accumulated_pred_err = err
+
+        pred_err_mean = np.mean(this_pred_err_hist)
+        pred_err_std_mean = np.mean(this_pred_std_hist)
+        pred_steps_mean = np.mean(this_pred_steps)
+        this_accumulated_pred_err_mean = np.mean(this_accumulated_pred_err)
+        loss_pred_steps_mean = np.mean(this_loss_pred_steps)
+        self.pred_err = pred_err_mean
+        self.pred_err_std = pred_err_std_mean
+        self.pred_steps = pred_steps_mean
+        self.pred_accumulated_err = this_accumulated_pred_err_mean
+        self.loss_pred_steps = loss_pred_steps_mean
+        self.policy.model.loss_pred_reliable_fwd_steps = self.loss_pred_steps
+
+        if self.test_mujoco_err:
+            mj_pred_err_mean = np.mean(this_mj_pred_err_hist)
+            mj_pred_err_std_mean = np.mean(this_mj_pred_std_hist)
+            mj_pred_steps_mean = np.mean(this_mj_pred_steps)
+            mj_accumulated_pred_err_mean = np.mean(this_mj_accumulated_pred_err)
+            self.mj_pred_err = mj_pred_err_mean
+            self.mj_pred_err_std = mj_pred_err_std_mean
+            self.mj_pred_steps = mj_pred_steps_mean
+            self.mj_pred_accumulated_err = mj_accumulated_pred_err_mean
+
 

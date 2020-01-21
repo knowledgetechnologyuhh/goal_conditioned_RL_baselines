@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from baselines import logger
-from baselines.util import (import_function, store_args, flatten_grads, transitions_in_episode_batch)
+from baselines.util import (import_function, store_args, flatten_grads)
 from baselines.common.mpi_adam import MpiAdam
 from baselines.model_based_her.model_replay_buffer import ModelReplayBuffer
 from baselines.template.policy import Policy
@@ -191,6 +191,21 @@ class Model(Policy):
         self.model_replay_buffer.update_with_loss(buffer_idxs, obs_loss_per_step, loss_pred_per_step)
         self._update_model(obs_model_grads, loss_model_grads)
         return mean_obs_loss, mean_loss_loss
+
+    def _global_vars(self, scope):
+        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
+        return res
+
+
+    def __getstate__(self):
+        """Our model can be loaded from pkl, but after unpickling you cannot continue training. """
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'model_replay_buffer', 'sess', '_stats',
+                             'prediction_model', 'lock', 'stage_shapes', 'model_shapes', 'create_predictor_model']
+
+        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
+        state['model_buffer_size'] = self.model_buffer_size
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'model_replay_buffer' not in x.name])
+        return state
 
 
 
