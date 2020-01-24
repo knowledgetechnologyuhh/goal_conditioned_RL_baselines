@@ -22,5 +22,5 @@ class RockerMujocoEnv(rocker_env.RockerEnv, utils.EzPickle):
             distance_threshold=0.02,
             initial_qpos=initial_qpos, reward_type=reward_type,
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.05,
-            min_tower_height=min_tower_height, max_tower_height=max_tower_height)
+            min_tower_height=min_tower_height, max_tower_height=n_objects)
         utils.EzPickle.__init__(self)

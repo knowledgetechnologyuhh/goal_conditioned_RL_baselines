@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco>
+	<compiler angle="radian" coordinate="local" meshdir="../stls/fetch" texturedir="../textures"></compiler>
+	<option timestep="0.002">
+		<flag warmstart="enable"></flag>
+	</option>
+
+	<include file="shared.xml"></include>
+	<include file="../shared/graph_canvas.xml"></include>
+	
+	<worldbody>
+		<geom name="floor0" pos="0.8 0.25 0" size="2 2 1" type="plane" condim="3" material="floor_mat"></geom>
+
+		<include file="robot.xml"></include>
+
+		<body pos="0.922 0.25 0.25" name="table0">
+			<geom name="table0" size="0.35 0.35 0.25" type="box" mass="2000" material="table_mat_wood"></geom>
+		</body>
+
+		<!-- goal object-->
+		<body name="object0" pos="0.025 -0.7 0.025">
+			<joint name="object0:joint" type="free" damping="0.01"></joint>
+			<geom size="0.025 0.01" type="cylinder" condim="3" name="object0" material="block_mat" rgba="1 0 0 1" mass="2"></geom>
+		</body>
+		<!-- buttons with substitutions-->
+		<body name="object1" pos="0.025 -0.6 0.025">
+			<joint name="object1:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object1" material="block_mat" rgba="0.1 0.1 0.9 1" mass="2"></geom>
+			<geom size="0.025 0.006" type="cylinder" condim="3" name="frame1" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object1sub" pos="-0.03 -0.6 0.025">
+			<joint name="object1sub:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object1sub" material="block_mat" rgba="0.1 0.9 0.1 1" mass="2000"></geom>
+			<geom size="0.025 0.005" type="cylinder" condim="3" name="frame1sub" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object2" pos="0.025 -0.5 0.025">
+			<joint name="object2:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object2" material="block_mat" rgba="0.1 0.1 0.9 1" mass="2"></geom>
+			<geom size="0.025 0.006" type="cylinder" condim="3" name="frame2" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object2sub" pos="-0.03 -0.5 0.025">
+			<joint name="object2sub:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object2sub" material="block_mat" rgba="0.1 0.9 0.1 1" mass="2000"></geom>
+			<geom size="0.025 0.005" type="cylinder" condim="3" name="frame2sub" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object3" pos="0.025 -0.4 0.025">
+			<joint name="object3:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object3" material="block_mat" rgba="0.1 0.1 0.9 1" mass="2"></geom>
+			<geom size="0.025 0.006" type="cylinder" condim="3" name="frame3" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object3sub" pos="-0.03 -0.4 0.025">
+			<joint name="object3sub:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object3sub" material="block_mat" rgba="0.1 0.9 0.1 1" mass="2000"></geom>
+			<geom size="0.025 0.005" type="cylinder" condim="3" name="frame3sub" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object4" pos="0.025 -0.3 0.025">
+			<joint name="object4:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object4" material="block_mat" rgba="0.1 0.1 0.9 1" mass="2"></geom>
+			<geom size="0.025 0.006" type="cylinder" condim="3" name="frame4" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="object4sub" pos="-0.03 -0.3 0.025">
+			<joint name="object4sub:joint" type="free" damping="0.01"></joint>
+            <geom size="0.022 0.022 0.008" type="ellipsoid" condim="3" name="object4sub" material="block_mat" rgba="0.1 0.9 0.1 1" mass="2000"></geom>
+			<geom size="0.025 0.005" type="cylinder" condim="3" name="frame4sub" material="block_mat" rgba="0.8 0.8 0.81 1" mass="2" pos="0 0 -0.003"></geom>
+		</body>
+		<body name="cage" pos="0.85 0.25 0.55">
+			<joint name="cage:joint" type="free"></joint>
+			<geom name="cage:botback" type="box" condim="3" pos="0 0.05 -0.045" size="0.055 0.005 0.005" mass="20000" rgba="0.8 0.8 0.81 1"></geom>
+			<geom name="cage:botfront" type="box" condim="3" pos="0 -0.05 -0.045" size="0.055 0.005 0.005" mass="20000" rgba="0.8 0.8 0.81 1"></geom>
+			<geom name="cage:botleft" type="box" condim="3" pos="-0.05 0 -0.045" size="0.005 0.055 0.005" mass="20000" rgba="0.8 0.8 0.81 1"></geom>
+			<geom name="cage:botright" type="box" condim="3" pos="0.05 0 -0.045" size="0.005 0.055 0.005" mass="20000" rgba="0.8 0.8 0.81 1"></geom>
+			<body name="cage:glass" pos="0 0.05 -0.04">
+				<joint name="cage:glassjoint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-2 0"></joint>
+				<geom name="cage:glassback" type="box" condim="3" pos="0 0 0.0255" size="0.051 0.001 0.025" mass="200" rgba="0.8 0.8 0.81 0.3"></geom>
+				<geom name="cage:glassfront" type="box" condim="3" pos="0 -0.1 0.0255" size="0.051 0.001 0.025" mass="200" rgba="0.8 0.8 0.81 0.3"></geom>
+				<geom name="cage:glassleft" type="box" condim="3" pos="-0.05 -0.05 0.0255" size="0.001 0.051 0.025" mass="200" rgba="0.8 0.8 0.81 0.3"></geom>
+				<geom name="cage:glassright" type="box" condim="3" pos="0.05 -0.05 0.0255" size="0.001 0.051 0.025" mass="200" rgba="0.8 0.8 0.81 0.3"></geom>
+				<geom name="cage:glasstop" type="box" condim="3" pos="0 -0.05 0.05" size="0.05 0.05 0.001" mass="200" rgba="0.8 0.8 0.81 0.3"></geom>
+			</body>
+		</body>
+		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
+	</worldbody>
+</mujoco>

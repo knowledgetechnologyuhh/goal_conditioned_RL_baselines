@@ -1,145 +1,112 @@
 
 from gym.envs.registration import register
 
-# Tower environment using the Fetch robot
+# blockstack environment using the Fetch robot
+IDsAndEPs = [['BlockStackMujocoEnv', 'stack_blocks:'], ['BlockPickAndPlaceMujocoEnv', 'pick_and_place:'],
+             ['BlockSlideMujocoEnv', 'slide:'], ['BlockReachMujocoEnv', 'reach:'], ['BlockPushMujocoEnv', 'push:']]
 for n_objects in range(-1, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
-                              'gripper_goal': gripper_goal,
-                              'min_tower_height': min_tower_height + 1,
-                              'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 50 * (n_objects +1)
+    for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+        kwargs = {'n_objects': n_objects + 1,
+                  'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects +1)
+        for idep in IDsAndEPs:
+            register(
+                id=idep[0]+'-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+                entry_point='wtm_envs.mujoco.blocks.' + idep[1] + idep[0],
+                kwargs=kwargs,
+                max_episode_steps=max_ep_steps,
+        )
 
-                    register(
-                        id='TowerBuildMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                             kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.mujoco.tower.build_tower:TowerBuildMujocoEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=max_ep_steps,
-                    )
-
+# causal dependencies environment using the Fetch robot
 for n_objects in range(-1, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
-                              'gripper_goal': gripper_goal,
-                              'min_tower_height': min_tower_height + 1,
-                              'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 50 * (n_objects +1)
+    kwargs = {'n_objects': n_objects + 1}
+    max_ep_steps = 50 * (n_objects +1)
 
-                    register(
-                        id='KeybotTowerBuildMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                             kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.mujoco.keybot.build_tower:KeybotTowerBuildMujocoEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=max_ep_steps,
-                    )
+    register(
+        id='CausalDependenciesMujocoEnv-o{}-v0'.format(kwargs['n_objects']),
+        entry_point='wtm_envs.mujoco.causal_dep.unlock_goal:CausalDependenciesMujocoEnv',
+        kwargs=kwargs,
+        max_episode_steps=max_ep_steps)
 
+# blockstack environment using the Key robot
+for n_objects in range(-1, 5):
+    for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+        kwargs = {'n_objects': n_objects + 1,
+                  'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects +1)
+
+        register(
+            id='KeybotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects'],),
+            entry_point='wtm_envs.mujoco.keybot.stack_blocks:KeybotBlockStackMujocoEnv',
+            kwargs=kwargs,
+            max_episode_steps=max_ep_steps,
+        )
+
+# blockstack environment using the Jarvis robot
 for n_objects in range(0, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    kwargs = {'reward_type': reward_type, 'n_objects': n_objects,
-                              'gripper_goal': gripper_goal,
-                              'min_tower_height': min_tower_height + 1,
-                              'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 50 * (n_objects)
-                    max_ep_steps = max(50,max_ep_steps)
+    for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+        kwargs = {'n_objects': n_objects, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * n_objects
+        max_ep_steps = max(50, max_ep_steps)
 
-                    register(
-                        id='JarvisbotTowerBuildMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                             kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.mujoco.jarvisbot.build_tower:JarvisbotTowerBuildMujocoEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=max_ep_steps,
-                    )
+        register(
+            id='JarvisbotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.mujoco.jarvisbot.stack_blocks:JarvisbotBlockStackMujocoEnv',
+            kwargs=kwargs,
+            max_episode_steps=max_ep_steps,
+        )
 
+# blockstack environment using the Nico robot
 for n_objects in range(-1, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
-                              'gripper_goal': gripper_goal,
-                              'min_tower_height': min_tower_height + 1,
-                              'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 50 * (n_objects +1)
+    for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+        kwargs = {'n_objects': n_objects + 1, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects + 1)
 
-                    register(
-                        id='NicobotTowerBuildMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                             kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.mujoco.nicobot.build_tower:NicobotTowerBuildMujocoEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=max_ep_steps,
-                    )
+        register(
+            id='NicobotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.mujoco.nicobot.stack_blocks:NicobotBlockStackMujocoEnv',
+            kwargs=kwargs,
+            max_episode_steps=max_ep_steps,
+        )
 
+# Physical blockstack environment using the Key robot
 for n_objects in range(-1, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
-                              'gripper_goal': gripper_goal,
-                              'min_tower_height': min_tower_height + 1,
-                              'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 50 * (n_objects +1)
+    for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+        kwargs = {'n_objects': n_objects + 1, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects +1)
 
-                    register(
-                        id='KeybotTowerBuildPhysicalEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                             kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.physical.keybot.build_tower:KeybotTowerBuildPhysicalEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=max_ep_steps,
-                    )
+        register(
+            id='KeybotBlockStackPhysicalEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.physical.keybot.stack_blocks:KeybotBlockStackPhysicalEnv',
+            kwargs=kwargs,
+            max_episode_steps=max_ep_steps,
+        )
 
 # Rocker environment using the Fetch robot
 for n_objects in range(-1, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
-                              'gripper_goal': gripper_goal,
-                              'min_tower_height': min_tower_height + 1,
-                              'max_tower_height': max_tower_height + 1}
-                    max_ep_steps = 50 * (n_objects +1)
+    for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+        kwargs = {'n_objects': n_objects + 1, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects +1)
 
-                    register(
-                        id='RockerMujocoEnv-{}-{}-o{}-h{}-{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                             kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height']),
-                        entry_point='wtm_envs.mujoco.rocker.press_grasp:RockerMujocoEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=max_ep_steps,
-                    )
+        register(
+            id='RockerMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
+            entry_point='wtm_envs.mujoco.rocker.press_grasp:RockerMujocoEnv',
+            kwargs=kwargs,
+            max_episode_steps=max_ep_steps,
+        )
 
 # Hook environment using the Fetch robot
-for n_objects in range(-1, 5):
-    for min_tower_height in range(5):
-        for max_tower_height in range(7):
-            for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-                for reward_type in ['dense', 'sparse', 'subgoal']:
-                    for easy in range(2):
-                        kwargs = {'reward_type': reward_type, 'n_objects': n_objects + 1,
-                                  'gripper_goal': gripper_goal,
-                                  'min_tower_height': min_tower_height + 1,
-                                  'max_tower_height': max_tower_height + 1,
-                                  'easy': easy}
-                        max_ep_steps = 50 * (n_objects +1)
+for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
+    for easy in range(2):
+        kwargs = {'gripper_goal': gripper_goal, 'easy': easy}
+        max_ep_steps = 50 * 3  # (n_objects +1)
 
-                        register(
-                            id='HookMujocoEnv-{}-{}-o{}-h{}-{}-e{}-v1'.format(kwargs['reward_type'], kwargs['gripper_goal'],
-                                                                              kwargs['n_objects'], kwargs['min_tower_height'], kwargs['max_tower_height'],
-                                                                              kwargs['easy']),
-                            entry_point='wtm_envs.mujoco.hook.pull_object:HookMujocoEnv',
-                            kwargs=kwargs,
-                            max_episode_steps=max_ep_steps,
-                        )
+        register(
+            id='HookMujocoEnv-{}-e{}-v1'.format(kwargs['gripper_goal'], kwargs['easy']),
+            entry_point='wtm_envs.mujoco.hook.pull_object:HookMujocoEnv',
+            kwargs=kwargs,
+            max_episode_steps=max_ep_steps,
+        )
 
 
 # Ant Envs:

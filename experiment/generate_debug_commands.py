@@ -34,24 +34,24 @@ def get_herhrl_cmds(base_cmd):
 if __name__ == "__main__":
     cmds = []
 
-    n_episodes = 2
+    n_train_rollouts = 2
     n_test_rollouts = 2
     n_epochs = 2
     rollout_batch_size = 1
     n_cpu = 2
     penalty_magnitude = 10
 
-    environments = ['TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1',
-                    'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1',
+    environments = ['BlockStackMujocoEnv-gripper_random-o2-v1',
+                    'BlockStackMujocoEnv-gripper_above-o1-v1',
                     'AntFourRoomsEnv-v0',
-                    'HookMujocoEnv-sparse-gripper_above-o2-h1-1-e1-v1']
+                    'HookMujocoEnv-gripper_above-e1-v1']
 
     whoami = getpass.getuser()
     opts_values = {"general": {}}
     opts_values["general"]['num_cpu'] = n_cpu
     opts_values["general"]['rollout_batch_size'] = rollout_batch_size
     opts_values["general"]['n_epochs'] = n_epochs
-    opts_values["general"]['n_episodes'] = n_episodes
+    opts_values["general"]['n_train_rollouts'] = n_train_rollouts
     opts_values["general"]['n_test_rollouts'] = n_test_rollouts
     opts_values["general"]['base_logdir'] = "/data/" + whoami + "/herhrl"
     opts_values["general"]['render'] = 0

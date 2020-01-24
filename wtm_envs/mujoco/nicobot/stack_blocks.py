@@ -2,7 +2,7 @@ from gym import utils
 from wtm_envs.mujoco import nicobot_env
 
 
-class NicobotTowerBuildMujocoEnv(nicobot_env.NicobotEnv, utils.EzPickle):
+class NicobotBlockStackMujocoEnv(nicobot_env.NicobotEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse', gripper_goal='gripper_none',
                  n_objects=3, min_tower_height=1, max_tower_height=3):
         initial_qpos = {
@@ -23,6 +23,6 @@ class NicobotTowerBuildMujocoEnv(nicobot_env.NicobotEnv, utils.EzPickle):
             obj_range=0.10, target_range=0.05, distance_threshold=0.05, gripper_relative_target=False,
             initial_qpos=initial_qpos, reward_type=reward_type,
             gripper_goal=gripper_goal, n_objects=n_objects, table_height=0.5, obj_height=0.04,
-            min_tower_height=min_tower_height, max_tower_height=max_tower_height)
+            min_tower_height=min_tower_height, max_tower_height=n_objects)
         utils.EzPickle.__init__(self)
 

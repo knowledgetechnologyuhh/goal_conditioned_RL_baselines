@@ -4,7 +4,6 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
-from wtm_envs.mujoco.tower_env_pddl import *    # TODO: fix this
 import mujoco_py
 
 
