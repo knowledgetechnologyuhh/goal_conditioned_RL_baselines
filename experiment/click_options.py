@@ -6,7 +6,7 @@ import importlib
 _global_options = [
 click.option('--env', type=str, default='AntFourRoomsEnv-v0', help='the name of the OpenAI Gym environment that you want to train on. E.g. TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1, AntFourRoomsEnv-v0'),
 click.option('--algorithm', default='baselines.her', help='the name of the algorithm to be used',
-             type=click.Choice(['baselines.her', 'baselines.model_based', 'baselines.her_pddl', 'baselines.herhrl', 'baselines.model_based_her'])),
+             type=click.Choice(['baselines.her', 'baselines.model_based', 'baselines.her_pddl', 'baselines.herhrl', 'baselines.model_based_her', 'baselines.mbhac'])),
 click.option('--base_logdir', type=str, default='data', help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/'),
 click.option('--n_epochs', type=int, default=300, help='the max. number of training epochs to run'),
 click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)'),
