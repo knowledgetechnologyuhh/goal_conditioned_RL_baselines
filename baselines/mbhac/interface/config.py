@@ -76,12 +76,6 @@ EVAL_PARAMS = {
                                  # 'use_target_net': params['test_with_polyak'],
                                  }
     }
-"""
-compute_Q=self.compute_Q,
-noise_eps=self.noise_eps if not self.exploit else 0.,
-random_eps=self.random_eps if not self.exploit else 0.,
-use_target_net=self.use_target_net)
-"""
 
 OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
 
