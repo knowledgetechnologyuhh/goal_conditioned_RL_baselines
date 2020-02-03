@@ -6,6 +6,8 @@
 .pytest_cache
 .DS_Store
 .idea
+hac_levy_baseline/hac_logs
+baselines/hac/hac_logs
 
 # Setuptools distribution and build folders.
 /dist/
