@@ -7,7 +7,7 @@ import os
 import pickle as cpickle
 from datetime import datetime
 import json
-
+import time
 from baselines.util import get_git_label
 
 # Below class instantiates an agent
@@ -149,6 +149,7 @@ class Agent():
 
     # Train agent for an episode
     def train(self,env, episode_num, total_episodes, eval_data):
+        start_time = time.time()
 
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
         self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
@@ -178,8 +179,9 @@ class Agent():
                 for k,v in learn_summary.items():
                     eval_data["train_{}/avg_{}".format(l,k)] = v
 
+        duration = time.time() - start_time
         # Return whether end goal was achieved
-        return goal_status[self.FLAGS.layers-1], eval_data
+        return goal_status[self.FLAGS.layers-1], eval_data, duration
 
 
     # Save performance evaluations

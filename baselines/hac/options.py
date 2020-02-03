@@ -48,7 +48,6 @@ def parse_options():
         '--retrain',
         action='store_true',
         help='Include to reset policy',
-        default=True
     )
 
     parser.add_argument(

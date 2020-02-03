@@ -27,6 +27,7 @@ class HACPolicy(Policy):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
 
+
         currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
         parentdir = os.path.dirname(currentdir)
         sys.path.insert(0,parentdir)
@@ -37,6 +38,9 @@ class HACPolicy(Policy):
 
         # Determine training options specified by user.  The full list of available options can be found in "options.py" file.
         self.FLAGS = parse_options()
+        self.FLAGS.mix_train_test = True
+        self.FLAGS.retrain = True
+        #  self.FLAGS.show = True
         env_import_name = "baselines.hac.env_designs.ANT_FOUR_ROOMS_2_design_agent_and_env"
         design_agent_and_env_module = importlib.import_module(env_import_name)
 
