@@ -26,19 +26,10 @@ class HACPolicy(Policy):
             sample_transitions, gamma, reuse=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
-        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        parentdir = os.path.dirname(currentdir)
-        sys.path.insert(0,parentdir)
-
-        abspath = os.path.abspath(__file__)
-        dname = os.path.dirname(abspath)
-        os.chdir(dname)
-
         # Determine training options specified by user.  The full list of available options can be found in "options.py" file.
         self.FLAGS = parse_options()
         self.FLAGS.mix_train_test = True
         self.FLAGS.retrain = True
-        self.FLAGS.show = True
 
         agent, env = self.init_levy(self.FLAGS)
         wtm_agent, wtm_env, self.FLAGS = self.wtm_env_levy_style(kwargs['make_env'], self.FLAGS)
@@ -46,9 +37,12 @@ class HACPolicy(Policy):
 
         self.agent = wtm_agent
         self.env = wtm_env
+        #  self.agent = agent
+        #  self.env = env
 
     def check_envs(self, env, wtm_env):
         #  assert env.model == wtm_env.model
+        assert env.name == wtm_env.name
         assert type(env.sim) == type(wtm_env.sim)
         assert env.state_dim == wtm_env.state_dim
         assert env.action_dim == wtm_env.action_dim
@@ -60,6 +54,13 @@ class HACPolicy(Policy):
         assert (env.subgoal_bounds_symmetric == wtm_env.subgoal_bounds_symmetric).all()
         assert (env.subgoal_bounds_offset == wtm_env.subgoal_bounds_offset).all()
         assert env.max_actions == wtm_env.max_actions
+        assert(env.initial_state_space == wtm_env.initial_state_space).all()
+        assert(env.end_goal_thresholds == wtm_env.end_goal_thresholds).all()
+        assert(env.subgoal_thresholds == wtm_env.sub_goal_thresholds).all()
+        assert env.goal_space_train == wtm_env.goal_space_train
+        assert env.goal_space_test == wtm_env.goal_space_test
+        assert(env.subgoal_bounds == wtm_env.subgoal_bounds).all()
+
         print('PASSED ASSERTS')
 
     def wtm_env_levy_style(self,make_env, FLAGS):
@@ -78,18 +79,27 @@ class HACPolicy(Policy):
         env.max_actions = max_actions
         env.visualize = False
 
+        env.state_dim = self.input_dims['o']
+
+        env.action_dim = len(env.sim.model.actuator_ctrlrange)
         env.action_bounds = env.sim.model.actuator_ctrlrange[:,1]
         env.action_offset = np.zeros((len(env.action_bounds)))
-        env.action_dim = len(env.sim.model.actuator_ctrlrange)
+
+        # different naming
+        env.project_state_to_subgoal = env.project_state_to_sub_goal
+        env.subgoal_thresholds = env.sub_goal_thresholds
+
         env.end_goal_dim = len(env.goal_space_test)
         env.subgoal_dim = len(env.subgoal_bounds)
-        env.state_dim = self.input_dims['o']
+        print('dims: action = {}, subgoal = {}, end_goal = {}'.format(env.action_dim, env.subgoal_dim, env.end_goal_dim))
+
         env.subgoal_bounds_symmetric = np.zeros((len(env.subgoal_bounds)))
         env.subgoal_bounds_offset = np.zeros((len(env.subgoal_bounds)))
-
         for i in range(len(env.subgoal_bounds)):
             env.subgoal_bounds_symmetric[i] = (env.subgoal_bounds[i][1] - env.subgoal_bounds[i][0])/2
             env.subgoal_bounds_offset[i] = env.subgoal_bounds[i][1] - env.subgoal_bounds_symmetric[i]
+
+        print('subgoal_bounds: symmetric {}, offset {}'.format(env.subgoal_bounds_symmetric, env.subgoal_bounds_offset))
 
         def next_goal(test):
             end_goal = np.zeros((len(env.goal_space_test)))
@@ -214,16 +224,14 @@ class HACPolicy(Policy):
             env.sim.step()
 
             if env.visualize:
-                env.render()
+                self.viewer.render()
 
             return np.concatenate((env.sim.data.qpos, env.sim.data.qvel))
 
 
         env.execute_action = exe_action
 
-        env.project_state_to_subgoal = lambda sim, state: np.concatenate((sim.data.qpos[:2], np.array([1 if sim.data.qpos[2] > 1 else sim.data.qpos[2]]), np.array([3 if sim.data.qvel[i] > 3 else -3 if sim.data.qvel[i] < -3 else sim.data.qvel[i] for i in range(2)])))
         env.velo_threshold = 0.8
-        env.subgoal_thresholds = np.concatenate((env.end_goal_thresholds ,[env.velo_threshold, env.velo_threshold]))
 
         agent_params = {}
         agent_params["subgoal_test_perc"] = 0.3
@@ -239,13 +247,17 @@ class HACPolicy(Policy):
 
 
     def init_levy(self, FLAGS):
+        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        parentdir = os.path.dirname(currentdir)
+        sys.path.insert(0,parentdir)
+        abspath = os.path.abspath(__file__)
+        dname = os.path.dirname(abspath)
+        os.chdir(dname)
+
         env_import_name = "baselines.hac.env_designs.ANT_FOUR_ROOMS_2_design_agent_and_env"
         design_agent_and_env_module = importlib.import_module(env_import_name)
-        # Instantiate the agent and Mujoco environment.  The designer must assign values to the hyperparameters listed in the "design_agent_and_env.py" file.
+        # simple tag for agent's tf scope
         FLAGS.id = 0
+        # Instantiate the agent and Mujoco environment.  The designer must assign values to the hyperparameters listed in the "design_agent_and_env.py" file.
         agent, env = design_agent_and_env_module.design_agent_and_env(FLAGS)
         return agent, env
-
-
-
-

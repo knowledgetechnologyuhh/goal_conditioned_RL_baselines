@@ -8,9 +8,6 @@ from tqdm import tqdm
 from baselines.hac.utils import print_summary
 import sys
 
-NUM_BATCH = 50
-TEST_FREQ = 2
-
 class RolloutWorker(Rollout):
 
 
@@ -23,8 +20,8 @@ class RolloutWorker(Rollout):
         self.env = self.policy.env
         self.env.visualize = render
         self.FLAGS = self.policy.FLAGS
-
         print_summary(self.FLAGS, self.env)
+
         if not self.FLAGS.test and not self.FLAGS.train_only:
             self.mix_train_test = True
         else:
@@ -34,13 +31,10 @@ class RolloutWorker(Rollout):
         self.total_train_steps = 0
         self.total_test_episodes = 0
         self.total_test_steps = 0
-
         self.n_epochs = self.agent.FLAGS.n_epochs
-
         # Determine training mode.  If not testing and not solely training, interleave training and testing to track progress
         self.num_train_episodes = self.agent.FLAGS.n_train_rollouts
         self.num_test_episodes = self.agent.FLAGS.n_test_rollouts
-
         self.successful_train_episodes = 0
         self.successful_test_episodes = 0
 
@@ -53,9 +47,7 @@ class RolloutWorker(Rollout):
         for batch in range(self.n_epochs):
             print("\n--- TRAINING epoch {}---".format(batch))
             self.agent.FLAGS.test = False
-            # Evaluate policy every TEST_FREQ batches if interleaving training and testing
             self.eval_data = {}
-
             for episode in tqdm(range(self.num_train_episodes)):
                 ro_start = time.time()
 
@@ -81,7 +73,7 @@ class RolloutWorker(Rollout):
             self.eval_data['train/epoch_episodes'] = self.num_train_episodes
 
             if self.mix_train_test:
-                break_condition, test_duration = self.test(batch, episode)
+                break_condition, test_duration = self.test(batch)
 
                 if break_condition:
                     break
@@ -93,7 +85,7 @@ class RolloutWorker(Rollout):
         updated_policy = self.agent
         return updated_policy, time_durations
 
-    def test(self, batch, episode):
+    def test(self, batch):
         break_condition = False
         # Finish evaluating policy if tested prior batch
         print("\n--- TESTING epoch {}---".format(batch))
@@ -119,6 +111,8 @@ class RolloutWorker(Rollout):
 
         if self.agent.FLAGS.verbose:
             print("\nTesting Success Rate %.2f%%" % success_rate)
+
+        self.success_history.append(success_rate)
 
         self.eval_data['test/total_episodes'] = self.total_test_episodes
         self.eval_data['test/epoch_episodes'] = self.num_test_episodes
@@ -154,9 +148,6 @@ class RolloutWorker(Rollout):
         """
         logs = []
         logs += [('success_rate', np.mean(self.success_history))]
-        if self.custom_histories:
-            logs += [('mean_Q', np.mean(self.custom_histories[0]))]
-        logs += [('episode', self.n_episodes)]
 
         return logger(logs, prefix)
 
