@@ -31,7 +31,7 @@ class Actor():
         else:
             self.action_space_size = env.subgoal_dim
 
-        self.actor_name = 'actor_' + str(layer_number)
+        self.actor_name = 'actor{}_'.format(FLAGS.id) + str(layer_number)
 
         # Dimensions of goal placeholder will differ depending on layer level
         if layer_number == FLAGS.layers - 1:

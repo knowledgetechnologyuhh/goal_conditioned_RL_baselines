@@ -166,9 +166,10 @@ def configure_policy(dims, params):
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
 
-    # DDPG agent
+    # HAC agent
     env = cached_make_env(params['make_env'])
     env.reset()
+    subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
     hac_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns
@@ -176,6 +177,8 @@ def configure_policy(dims, params):
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
                         'sample_transitions': sample_her_transitions,
+                        'subgoal_scale': subgoal_scale,
+                        'subgoal_offset': subgoal_offset,
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
@@ -183,6 +186,12 @@ def configure_policy(dims, params):
     hac_params['info'] = {
         'env_name': params['env_name'],
     }
+
+    def make_env():
+        return gym.make(params['env_name'])
+
+    hac_params['make_env'] = make_env
+
     policy = HACPolicy(**hac_params)
 
     return policy
