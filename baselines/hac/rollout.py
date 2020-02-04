@@ -21,6 +21,7 @@ class RolloutWorker(Rollout):
 
         self.agent = self.policy.agent
         self.env = self.policy.env
+        self.env.visualize = render
         self.FLAGS = self.policy.FLAGS
 
         print_summary(self.FLAGS, self.env)

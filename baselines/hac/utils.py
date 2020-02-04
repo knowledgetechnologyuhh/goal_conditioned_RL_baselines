@@ -16,7 +16,7 @@ def flatten_mixed_np_array(a):
 def layer(input_layer, num_next_neurons, is_output=False):
     num_prev_neurons = int(input_layer.shape[1])
     shape = [num_prev_neurons, num_next_neurons]
-    
+
     if is_output:
         weight_init = tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3)
         bias_init = tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3)
@@ -24,7 +24,7 @@ def layer(input_layer, num_next_neurons, is_output=False):
         # 1/sqrt(f)
         fan_in_init = 1 / num_prev_neurons ** 0.5
         weight_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init)
-        bias_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init) 
+        bias_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init)
 
     weights = tf.get_variable("weights", shape, initializer=weight_init)
     biases = tf.get_variable("biases", [num_next_neurons], initializer=bias_init)
@@ -40,11 +40,11 @@ def layer(input_layer, num_next_neurons, is_output=False):
 def layer_goal_nn(input_layer, num_next_neurons, is_output=False):
     num_prev_neurons = int(input_layer.shape[1])
     shape = [num_prev_neurons, num_next_neurons]
-    
-    
+
+
     fan_in_init = 1 / num_prev_neurons ** 0.5
     weight_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init)
-    bias_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init) 
+    bias_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init)
 
     weights = tf.get_variable("weights", shape, initializer=weight_init)
     biases = tf.get_variable("biases", [num_next_neurons], initializer=bias_init)
@@ -90,9 +90,9 @@ def check_validity(model_name, goal_space_test, goal_space_train, goal_threshold
 
     for i in range(len(initial_state_space)):
         assert initial_state_space[i][1] >= initial_state_space[i][0], "In initial state space, upper bound must be >= lower bound"
-    
+
     for i in range(len(subgoal_bounds)):
-        assert subgoal_bounds[i][1] >= subgoal_bounds[i][0], "In subgoal space, upper bound must be >= lower bound" 
+        assert subgoal_bounds[i][1] >= subgoal_bounds[i][0], "In subgoal space, upper bound must be >= lower bound"
 
     # Make sure end goal spaces and thresholds have same first dimension
     if goal_space_train is not None and goal_space_test is not None:

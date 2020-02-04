@@ -38,7 +38,7 @@ class HACPolicy(Policy):
         self.FLAGS = parse_options()
         self.FLAGS.mix_train_test = True
         self.FLAGS.retrain = True
-        #  self.FLAGS.show = True
+        self.FLAGS.show = True
 
         agent, env = self.init_levy(self.FLAGS)
         wtm_agent, wtm_env, self.FLAGS = self.wtm_env_levy_style(kwargs['make_env'], self.FLAGS)
@@ -75,9 +75,9 @@ class HACPolicy(Policy):
         max_actions = 700
         max_actions = FLAGS.time_scale**(FLAGS.layers)
         timesteps_per_action = 15
-
-
         env.max_actions = max_actions
+        env.visualize = False
+
         env.action_bounds = env.sim.model.actuator_ctrlrange[:,1]
         env.action_offset = np.zeros((len(env.action_bounds)))
         env.action_dim = len(env.sim.model.actuator_ctrlrange)
@@ -212,6 +212,10 @@ class HACPolicy(Policy):
         def exe_action(action):
             env.sim.data.ctrl[:] = action
             env.sim.step()
+
+            if env.visualize:
+                env.render()
+
             return np.concatenate((env.sim.data.qpos, env.sim.data.qvel))
 
 
