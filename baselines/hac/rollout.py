@@ -20,6 +20,12 @@ class RolloutWorker(Rollout):
         self.env = self.policy.env
         self.env.visualize = render
         self.FLAGS = self.policy.FLAGS
+
+        #  if render:
+        #      from mujoco_py import MjViewer
+        #      self.FLAGS.show =  True
+        #      self.env.viewer = MjViewer(self.env.sim)
+
         print_summary(self.FLAGS, self.env)
 
         if not self.FLAGS.test and not self.FLAGS.train_only:

@@ -101,136 +101,20 @@ class HACPolicy(Policy):
 
         print('subgoal_bounds: symmetric {}, offset {}'.format(env.subgoal_bounds_symmetric, env.subgoal_bounds_offset))
 
-        def next_goal(test):
-            end_goal = np.zeros((len(env.goal_space_test)))
-                        # Randomly select one of the four rooms in which the goal will be located
-            room_num = np.random.randint(0,4)
-
-            # Pick exact goal location
-            end_goal[0] = np.random.uniform(3,6.5)
-            end_goal[1] = np.random.uniform(3,6.5)
-            end_goal[2] = np.random.uniform(0.45,0.55)
-
-            # If goal should be in top left quadrant
-            if room_num == 1:
-                end_goal[0] *= -1
-
-            # Else if goal should be in bottom left quadrant
-            elif room_num == 2:
-                end_goal[0] *= -1
-                end_goal[1] *= -1
-
-            # Else if goal should be in bottom right quadrant
-            elif room_num == 3:
-                end_goal[1] *= -1
-
-            return end_goal
-
-
-        env.get_next_goal = next_goal
-
-        def reset_sim(next_goal = None):
-
-            # Reset controls
-            env.sim.data.ctrl[:] = 0
-
-            if env.name == "ant_reacher.xml":
-                while True:
-                    # Reset joint positions and velocities
-                    for i in range(len(env.sim.data.qpos)):
-                        env.sim.data.qpos[i] = np.random.uniform(env.initial_state_space[i][0],env.initial_state_space[i][1])
-
-                    for i in range(len(env.sim.data.qvel)):
-                        env.sim.data.qvel[i] = np.random.uniform(
-                            env.initial_state_space[len(env.sim.data.qpos) + i][0],
-                            env.initial_state_space[len(env.sim.data.qpos) + i][1])
-
-                    # Ensure initial ant position is more than min_dist away from goal
-                    min_dist = 8
-                    if np.linalg.norm(next_goal[:2] - env.sim.data.qpos[:2]) > min_dist:
-                        break
-
-            elif env.name == "ant_four_rooms.xml":
-
-                # Choose initial start state to be different than room containing the end goal
-
-                # Determine which of four rooms contains goal
-                goal_room = 0
-
-                if next_goal[0] < 0 and next_goal[1] > 0:
-                    goal_room = 1
-                elif next_goal[0] < 0 and next_goal[1] < 0:
-                    goal_room = 2
-                elif next_goal[0] > 0 and next_goal[1] < 0:
-                    goal_room = 3
-
-
-                # Place ant in room different than room containing goal
-                # initial_room = (goal_room + 2) % 4
-
-
-                initial_room = np.random.randint(0,4)
-                while initial_room == goal_room:
-                    initial_room = np.random.randint(0,4)
-
-
-                # Set initial joint positions and velocities
-                for i in range(len(env.sim.data.qpos)):
-                    env.sim.data.qpos[i] = np.random.uniform(env.initial_state_space[i][0],env.initial_state_space[i][1])
-
-                for i in range(len(env.sim.data.qvel)):
-                    env.sim.data.qvel[i] = np.random.uniform(env.initial_state_space[len(env.sim.data.qpos) + i][0],env.initial_state_space[len(env.sim.data.qpos) + i][1])
-
-                # Move ant to correct room
-                env.sim.data.qpos[0] = np.random.uniform(3,6.5)
-                env.sim.data.qpos[1] = np.random.uniform(3,6.5)
-
-                # If goal should be in top left quadrant
-                if initial_room == 1:
-                    env.sim.data.qpos[0] *= -1
-
-                # Else if goal should be in bottom left quadrant
-                elif initial_room == 2:
-                    env.sim.data.qpos[0] *= -1
-                    env.sim.data.qpos[1] *= -1
-
-                # Else if goal should be in bottom right quadrant
-                elif initial_room == 3:
-                    env.sim.data.qpos[1] *= -1
-
-                # print("Goal Room: %d" % goal_room)
-                # print("Initial Ant Room: %d" % initial_room)
-
-            else:
-
-                # Reset joint positions and velocities
-                for i in range(len(env.sim.data.qpos)):
-                    env.sim.data.qpos[i] = np.random.uniform(env.initial_state_space[i][0],env.initial_state_space[i][1])
-
-                for i in range(len(env.sim.data.qvel)):
-                    env.sim.data.qvel[i] = np.random.uniform(
-                        env.initial_state_space[len(env.sim.data.qpos) + i][0],
-                        env.initial_state_space[len(env.sim.data.qpos) + i][1])
-
-            env.sim.step()
-
-            # Return state
-            return np.concatenate((env.sim.data.qpos, env.sim.data.qvel))
-
-        env.reset_sim = reset_sim
+        env.get_next_goal = env._sample_goal
+        env.reset_sim = env._reset_sim
 
         def exe_action(action):
             env.sim.data.ctrl[:] = action
             env.sim.step()
+            #  env._set_action(action)
 
             if env.visualize:
-                self.viewer.render()
+                env.render()
 
-            return np.concatenate((env.sim.data.qpos, env.sim.data.qvel))
-
+            return env._get_state()
 
         env.execute_action = exe_action
-
         env.velo_threshold = 0.8
 
         agent_params = {}

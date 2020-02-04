@@ -232,7 +232,7 @@ class Environment():
 
 
     # Function returns an end goal
-    def get_next_goal(self,test):
+    def get_next_goal(self):
 
         end_goal = np.zeros((len(self.goal_space_test)))
 
@@ -302,7 +302,7 @@ class Environment():
 
 
 
-        elif not test and self.goal_space_train is not None:
+        elif not self.test and self.goal_space_train is not None:
             for i in range(len(self.goal_space_train)):
                 end_goal[i] = np.random.uniform(self.goal_space_train[i][0],self.goal_space_train[i][1])
         else:
@@ -310,10 +310,6 @@ class Environment():
 
             for i in range(len(self.goal_space_test)):
                 end_goal[i] = np.random.uniform(self.goal_space_test[i][0],self.goal_space_test[i][1])
-
-
-        # Visualize End Goal
-        self.display_end_goal(end_goal)
 
         return end_goal
 
