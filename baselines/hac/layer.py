@@ -2,7 +2,6 @@ import numpy as np
 from baselines.hac.experience_buffer import ExperienceBuffer
 from baselines.hac.actor import Actor
 from baselines.hac.critic import Critic
-from time import sleep
 
 class Layer():
     def __init__(self, layer_number, FLAGS, env, sess, agent_params):

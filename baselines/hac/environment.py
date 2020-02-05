@@ -232,7 +232,7 @@ class Environment():
 
 
     # Function returns an end goal
-    def get_next_goal(self):
+    def get_next_goal(self, test):
 
         end_goal = np.zeros((len(self.goal_space_test)))
 
@@ -302,7 +302,7 @@ class Environment():
 
 
 
-        elif not self.test and self.goal_space_train is not None:
+        elif not test and self.goal_space_train is not None:
             for i in range(len(self.goal_space_train)):
                 end_goal[i] = np.random.uniform(self.goal_space_train[i][0],self.goal_space_train[i][1])
         else:

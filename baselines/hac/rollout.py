@@ -18,13 +18,16 @@ class RolloutWorker(Rollout):
 
         self.agent = self.policy.agent
         self.env = self.policy.env
+
         self.env.visualize = render
+        self.agent.FLAGS.show = render
+
         self.FLAGS = self.policy.FLAGS
 
-        #  if render:
-        #      from mujoco_py import MjViewer
-        #      self.FLAGS.show =  True
-        #      self.env.viewer = MjViewer(self.env.sim)
+        if self.policy.original and render:
+            from mujoco_py import MjViewer
+            self.FLAGS.show =  True
+            self.env.viewer = MjViewer(self.env.sim)
 
         print_summary(self.FLAGS, self.env)
 
