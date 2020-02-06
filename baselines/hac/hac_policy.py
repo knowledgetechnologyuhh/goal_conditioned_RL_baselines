@@ -30,6 +30,7 @@ class HACPolicy(Policy):
         self.FLAGS = parse_options()
         self.FLAGS.mix_train_test = True
         self.FLAGS.retrain = True
+        self.FLAGS.Q_values = True
 
         agent, env = self.init_levy(self.FLAGS)
         wtm_agent, wtm_env, self.FLAGS = self.wtm_env_levy_style(kwargs['make_env'], self.FLAGS)
