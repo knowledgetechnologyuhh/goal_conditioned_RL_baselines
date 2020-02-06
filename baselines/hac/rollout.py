@@ -2,6 +2,7 @@ import numpy as np
 import time
 
 from baselines.template.util import store_args, logger
+import pickle
 from mujoco_py import MujocoException
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
@@ -91,6 +92,8 @@ class RolloutWorker(Rollout):
 
         dur_total = time.time() - dur_start
         time_durations = (dur_total, dur_ro, dur_train)
+
+        self.agent.eval_data = self.eval_data
         updated_policy = self.agent
         return updated_policy, time_durations
 
@@ -159,4 +162,11 @@ class RolloutWorker(Rollout):
         logs += [('success_rate', np.mean(self.success_history))]
 
         return logger(logs, prefix)
+
+    def save_policy(self, path):
+        pass
+        #  TODO: Transfer Agent to actual polic file #
+        #  with open(path, 'wb') as f:
+        #      pickle.dump(self.agent, f)
+
 

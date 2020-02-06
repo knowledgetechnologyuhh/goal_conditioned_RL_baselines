@@ -213,10 +213,8 @@ class Agent():
                 txt_logfile.write(
                     "{},{},{},{},".format("DateTime", "epoch", "episode", "train/steps"))
                 for k,v in sorted(eval_data.items()):
-                    txt_logfile.write(
-                        "{},".format(k))
-                txt_logfile.write(
-                    "{}\n".format("test/success_rate"))
+                    txt_logfile.write("{},".format(k))
+                txt_logfile.write("{}\n".format("test/success_rate"))
         return eval_data
 
 
@@ -248,3 +246,14 @@ class Agent():
             with open(self.performance_txt_file, "a") as txt_logfile:
                 txt_logfile.write(log_str)
 
+    def logs(self, prefix=''):
+        eval_data = self.eval_data
+        logs = []
+
+        for k,v in sorted(eval_data.items()):
+            logs += [(k , v)]
+
+        if prefix is not '' and not prefix.endswith('/'):
+            return [(prefix + '/' + key, val) for key, val in logs]
+        else:
+            return logs
