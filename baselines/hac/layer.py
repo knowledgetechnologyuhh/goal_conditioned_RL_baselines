@@ -2,7 +2,6 @@ import numpy as np
 from baselines.hac.experience_buffer import ExperienceBuffer
 from baselines.hac.actor import Actor
 from baselines.hac.critic import Critic
-from time import sleep
 
 class Layer():
     def __init__(self, layer_number, FLAGS, env, sess, agent_params):
@@ -337,6 +336,7 @@ class Layer():
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.layer_number]
         self.current_state = agent.current_state
+        #  print('GOAL ARR', self.goal, agent.goal_array)
 
         # Reset flag indicating whether layer has ran out of attempts.  This will be used for subgoal testing.
         self.maxed_out = False
@@ -345,7 +345,7 @@ class Layer():
         if self.layer_number == 0 and agent.FLAGS.show and agent.FLAGS.layers > 1:
             env.display_subgoals(agent.goal_array)
             # env.sim.data.mocap_pos[3] = env.project_state_to_end_goal(env.sim,self.current_state)
-            # print("Subgoal Pos: ", env.sim.data.mocap_pos[1])
+            #  print("Subgoal Pos: ", env.sim.data.mocap_pos[1])
 
         # Current layer has self.time_limit attempts to each its goal state.
         attempts_made = 0

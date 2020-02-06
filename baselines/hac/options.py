@@ -1,46 +1,5 @@
 import argparse
 
-"""
-Below are training options user can specify in command line.
-
-Options Include:
-
-1. Retrain boolean ("--retrain")
-- If included, actor and critic neural network parameters are reset
-
-2. Testing boolean ("--test")
-- If included, agent only uses greedy policy without noise.  No changes are made to policy and neural networks.
-- If not included, periods of training are by default interleaved with periods of testing to evaluate progress.
-
-3. Show boolean ("--show")
-- If included, training will be visualized
-
-4. Train Only boolean ("--train_only")
-- If included, agent will be solely in training mode and will not interleave periods of training and testing
-
-5. Verbosity boolean ("--verbose")
-- If included, summary of each transition will be printed
-
-6. All Trans boolean ("--all_trans")
-- If included, all transitions including (i) hindsight action, (ii) subgoal penalty, (iii) preliminary HER, and (iv) final HER transitions will be printed.  Use below options to print out specific types of transitions.
-
-7. Hindsight Action trans boolean ("hind_action")
-- If included, prints hindsight actions transitions for each level
-
-8. Subgoal Penalty trans ("penalty")
-- If included, prints the subgoal penalty transitions
-
-9. Preliminary HER trans ("prelim_HER")
--If included, prints the preliminary HER transitions (i.e., with TBD reward and goal components)
-
-10.  HER trans ("HER")
-- If included, prints the final HER transitions for each level
-
-11. Show Q-values ("--Q_values")
-- Show Q-values for each action by each level
-
-"""
-
 def parse_options():
     parser = argparse.ArgumentParser()
 
@@ -112,7 +71,9 @@ def parse_options():
 
     parser.add_argument(
         '--env',
-        choices=['ANT_FOUR_ROOMS_2', 'ANT_FOUR_ROOMS_3', 'ANT_REACHER_2','ANT_REACHER_2_SMALL_SUBG', 'ANT_REACHER_2_VEL_GOAL', 'ANT_REACHER_3', 'PENDULUM_LAY_1', 'PENDULUM_LAY_2', 'PENDULUM_LAY_3', 'UR5_LAY_1', 'UR5_LAY_2', 'UR5_LAY_3'],
+        choices=['ANT_FOUR_ROOMS_2', 'ANT_FOUR_ROOMS_3', 'ANT_REACHER_2','ANT_REACHER_2_SMALL_SUBG',
+            'ANT_REACHER_2_VEL_GOAL', 'ANT_REACHER_3', 'PENDULUM_LAY_1', 'PENDULUM_LAY_2', 'PENDULUM_LAY_3',
+            'UR5_LAY_1', 'UR5_LAY_2', 'UR5_LAY_3'],
         help='The environment to run. The options are the files in the \'env_designs\' subfolder',
         type=str
     )

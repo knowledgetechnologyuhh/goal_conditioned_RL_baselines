@@ -153,9 +153,7 @@ class Agent():
         start_time = time.time()
 
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
-        #  self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
-        env.test = self.FLAGS.test
-        self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal()
+        self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
         env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
 
         if self.FLAGS.verbose:
@@ -164,7 +162,7 @@ class Agent():
         # Select initial state from in initial state space, defined in environment.py
         self.current_state = env.reset_sim(self.goal_array[self.FLAGS.layers - 1])
 
-        if 'observation' in self.current_state:
+        if isinstance(self.current_state, dict) and 'observation' in self.current_state.keys():
             self.current_state = self.current_state['observation']
 
         if env.name == "ant_reacher.xml":
