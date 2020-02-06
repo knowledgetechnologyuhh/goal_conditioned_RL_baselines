@@ -4,7 +4,7 @@ from baselines.template.policy import Policy
 from baselines.hac.agent import Agent
 import baselines.hac.env_designs
 from baselines.hac.options import parse_options
-from baselines.hac.utils import EnvWrapper, check_envs
+from baselines.hac.utils import EnvWrapper, check_envs, check_validity
 import os,sys,inspect
 import importlib
 
@@ -41,6 +41,8 @@ class HACPolicy(Policy):
     def wtm_env_levy_style(self,make_env, FLAGS):
         env = make_env().env
         env = EnvWrapper(env, FLAGS, self.input_dims)
+        check_validity(env.name, env.goal_space_test, env.goal_space_train, env.end_goal_thresholds,
+                env.initial_state_space, env.subgoal_bounds, env.subgoal_thresholds, env.max_actions, 15)
         # get modified FLAGS
         FLAGS = env.FLAGS
 

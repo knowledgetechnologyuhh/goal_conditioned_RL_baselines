@@ -165,32 +165,19 @@ class EnvWrapper(object):
             FLAGS.time_scale = 30
 
         self.FLAGS = FLAGS
-        max_actions = 700
-        max_actions = FLAGS.time_scale**(FLAGS.layers)
-        timesteps_per_action = 15
-        self.max_actions = max_actions
         self.visualize = False
 
-        self.state_dim = input_dims['o']
-
+        self.state_dim = len(env.sim.data.qpos) + len(env.sim.data.qvel)
         self.action_dim = len(self.sim.model.actuator_ctrlrange)
         self.action_bounds = self.sim.model.actuator_ctrlrange[:,1]
         self.action_offset = np.zeros((len(self.action_bounds)))
-
-        #  def reset(next_goal=None):
-        #      return env.reset()
-        #
-        #  env.reset_sim = reset
-        #  suspicious behavior
-        self.reset_sim = self._reset_sim
-
-        # different naming
-        self.project_state_to_subgoal = self.project_state_to_sub_goal
-        self.subgoal_thresholds = self.sub_goal_thresholds
-
         self.end_goal_dim = len(self.goal_space_test)
         self.subgoal_dim = len(self.subgoal_bounds)
         print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
+
+        # different naming
+        self.project_state_to_subgoal = self.project_state_to_sub_goal
+
 
         self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
         self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
@@ -199,7 +186,17 @@ class EnvWrapper(object):
             self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
 
         print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
-        self.velo_threshold = 0.8
+
+        # different naming
+        self.subgoal_thresholds = self.sub_goal_thresholds
+        env.subgoal_colors = ["Magenta","Green","Red","Blue","Cyan","Orange","Maroon","Gray","White","Black"]
+
+        max_actions = 700
+        max_actions = FLAGS.time_scale**(FLAGS.layers)
+        self.max_actions = max_actions
+
+        self.reset_sim = self._reset_sim
+
 
     def __getattr__(self, attr):
         return self.wrapped_env.__getattribute__(attr)
@@ -251,4 +248,7 @@ class EnvWrapper(object):
                 end_goal[i] = np.random.uniform(self.goal_space_test[i][0],self.goal_space_test[i][1])
 
         return end_goal
+
+    #  def reset_sim(self, next_goal=None):
+    #      return env.reset()
 
