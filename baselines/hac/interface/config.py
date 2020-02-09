@@ -12,7 +12,6 @@ DEFAULT_ENV_PARAMS = {
     },
 }
 
-
 DEFAULT_PARAMS = {
     # env
     'max_u': 1.,  # max absolute value of actions on different coordinates
@@ -118,7 +117,7 @@ def prepare_params(kwargs):
                  'polyak',
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',
-                 'action_l2', 'clip_obs', 'scope', 'relative_goals']:
+                 'action_l2', 'clip_obs', 'scope', 'relative_goals', 'levy_env']:
         hac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]

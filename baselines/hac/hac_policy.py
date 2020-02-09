@@ -13,7 +13,7 @@ class HACPolicy(Policy):
     def __init__(self, input_dims, buffer_size, hidden, layers, polyak, batch_size,
             Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
             rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-            sample_transitions, gamma, reuse=False, **kwargs):
+            sample_transitions, gamma, reuse=False, levy_env=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         # Determine training options specified by user.  The full list of available options can be found in "options.py" file.
@@ -24,18 +24,17 @@ class HACPolicy(Policy):
         #  self.FLAGS.verbose = True
         #  self.FLAGS.penalty = True
 
-        agent, env = self.init_levy(self.FLAGS)
-        wtm_agent, wtm_env, self.FLAGS = self.wtm_env_levy_style(kwargs['make_env'], self.FLAGS)
-        check_envs(env, wtm_env)
+        #  agent, env = self.init_levy(self.FLAGS)
+        #  wtm_agent, wtm_env, self.FLAGS = self.wtm_env_levy_style(kwargs['make_env'], self.FLAGS)
+        #  check_envs(env, wtm_env)
 
-        self.original = False
+        self.levy_env = levy_env
 
-        if self.original:
-            self.agent = agent
-            self.env = env
+        if levy_env:
+            print('\n\n-------Using LEVY ENV----------\n\n')
+            self.agent, self.env = self.init_levy(self.FLAGS)
         else:
-            self.agent = wtm_agent
-            self.env = wtm_env
+            self.agent, self.env, self.FLAGS = self.wtm_env_levy_style(kwargs['make_env'], self.FLAGS)
 
 
     def wtm_env_levy_style(self,make_env, FLAGS):

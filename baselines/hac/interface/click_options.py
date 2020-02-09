@@ -14,7 +14,8 @@ click.option('--replay_strategy', default='future',
                  '2) \'future_mask\': the original goals are masked with observations from somewhere in the future. I think this is what we used for CGM, but not 100% sure anymore'
                  '3) \'now_mask\': the original goals are masked with observations from the current timestep.'
                  '4) \'final_mask\' : the original goals are masked with observations from the final timestep.'
-                 '5) \'full_mask\' : replay transition sampling is completely masked. TODO: Not yet Implemented')
+                 '5) \'full_mask\' : replay transition sampling is completely masked. TODO: Not yet Implemented'),
+click.option('--levy_env', is_flag=True, default=False)
 ]
 
 def click_main(func):

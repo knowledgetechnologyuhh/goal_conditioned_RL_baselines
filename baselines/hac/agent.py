@@ -4,7 +4,6 @@ from baselines.hac.environment import Environment
 import pickle as cpickle
 import tensorflow as tf
 import os
-import pickle as cpickle
 from datetime import datetime
 import json
 import time
@@ -17,7 +16,6 @@ class Agent():
 
         self.FLAGS = FLAGS
         timestamp = datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
-        # timestamp = "now"
         git_label = get_git_label()
         self.model_dir = '{}/{}/{}/{}'.format(FLAGS.base_logdir,git_label,self.FLAGS.env,timestamp)
         if not os.path.exists(self.model_dir):
@@ -110,7 +108,6 @@ class Agent():
                 max_lay_achieved = i
             else:
                 goal_status[i] = False
-
 
         return goal_status, max_lay_achieved
 

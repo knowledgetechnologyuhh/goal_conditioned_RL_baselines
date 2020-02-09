@@ -25,7 +25,7 @@ class RolloutWorker(Rollout):
 
         self.FLAGS = self.policy.FLAGS
 
-        if self.policy.original and render:
+        if self.policy.levy_env and render:
             from mujoco_py import MjViewer
             self.FLAGS.show =  True
             self.env.viewer = MjViewer(self.env.sim)
@@ -43,8 +43,8 @@ class RolloutWorker(Rollout):
         self.total_test_steps = 0
         self.n_epochs = self.agent.FLAGS.n_epochs
         # Determine training mode.  If not testing and not solely training, interleave training and testing to track progress
-        self.num_train_episodes = self.agent.FLAGS.n_train_rollouts
-        self.num_test_episodes = self.agent.FLAGS.n_test_rollouts
+        self.num_train_episodes = self.FLAGS.n_train_rollouts
+        self.num_test_episodes = self.FLAGS.n_test_rollouts
         self.successful_train_episodes = 0
         self.successful_test_episodes = 0
 
@@ -58,6 +58,7 @@ class RolloutWorker(Rollout):
             print("\n--- TRAINING epoch {}---".format(batch))
             self.agent.FLAGS.test = False
             self.eval_data = {}
+
             for episode in tqdm(range(self.num_train_episodes)):
                 ro_start = time.time()
 
