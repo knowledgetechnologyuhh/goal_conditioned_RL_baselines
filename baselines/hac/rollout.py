@@ -8,11 +8,6 @@ from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from baselines.hac.utils import print_summary
 import sys
-import baselines.hac.env_designs
-from baselines.hac.options import parse_options
-from baselines.hac.utils import EnvWrapper, check_envs, check_validity
-import os,sys,inspect
-import importlib
 
 class RolloutWorker(Rollout):
 
@@ -22,114 +17,136 @@ class RolloutWorker(Rollout):
         Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
         self.graph = kwargs['graph']
 
+        self.agent = self.policy.agent
+        self.env = self.policy.env
+
+        self.env.visualize = render
+        self.agent.FLAGS.show = render
+
+        self.FLAGS = self.policy.FLAGS
+
+        if self.policy.levy_env and render:
+            from mujoco_py import MjViewer
+            self.FLAGS.show =  True
+            self.env.viewer = MjViewer(self.env.sim)
+
+        print_summary(self.FLAGS, self.env)
+
+        if not self.FLAGS.test and not self.FLAGS.train_only:
+            self.mix_train_test = True
+        else:
+            self.mix_train_test = False
+
+        self.total_train_episodes = 0
+        self.total_train_steps = 0
+        self.total_test_episodes = 0
+        self.total_test_steps = 0
+        self.n_epochs = self.agent.FLAGS.n_epochs
+        # Determine training mode.  If not testing and not solely training, interleave training and testing to track progress
+        self.num_train_episodes = self.FLAGS.n_train_rollouts
+        self.num_test_episodes = self.FLAGS.n_test_rollouts
+        self.successful_train_episodes = 0
+        self.successful_test_episodes = 0
+
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):
-        currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        parentdir = os.path.dirname(currentdir)
-        sys.path.insert(0,parentdir)
-        abspath = os.path.abspath(__file__)
-        dname = os.path.dirname(abspath)
-        os.chdir(dname)
+        dur_start = time.time()
+        dur_train = 0
+        dur_ro = 0
 
-        FLAGS = parse_options()
-        FLAGS.mix_train_test = True
-        FLAGS.retrain = True
-        FLAGS.Q_values = True
-        FLAGS.show = True
-        env_import_name = "baselines.hac.env_designs.ANT_FOUR_ROOMS_2_design_agent_and_env"
-        design_agent_and_env_module = importlib.import_module(env_import_name)
-        # simple tag for agent's tf scope
-        FLAGS.id = 0
-        # Instantiate the agent and Mujoco environment.  The designer must assign values to the hyperparameters listed in the "design_agent_and_env.py" file.
-        agent, env = design_agent_and_env_module.design_agent_and_env(FLAGS)
-
-        # Print task summary
-        print_summary(FLAGS,env)
-
-        total_train_episodes = 0
-        total_train_steps = 0
-        total_test_episodes = 0
-        total_test_steps = 0
-
-        # Determine training mode.  If not testing and not solely training, interleave training and testing to track progress
-        mix_train_test = False
-        if not FLAGS.test and not FLAGS.train_only:
-            mix_train_test = True
-        # agent.other_params["num_exploration_episodes"] = 3
-        num_train_episodes = agent.FLAGS.n_train_rollouts
-        num_test_episodes = agent.FLAGS.n_test_rollouts
-
-        for batch in range(agent.FLAGS.n_epochs):
-
-            successful_train_episodes = 0
-            successful_test_episodes = 0
+        for batch in range(self.n_epochs):
             print("\n--- TRAINING epoch {}---".format(batch))
-            agent.FLAGS.test = False
-            # Evaluate policy every TEST_FREQ batches if interleaving training and testing
-            eval_data = {}
+            self.agent.FLAGS.test = False
+            self.eval_data = {}
 
-            for episode in tqdm(range(num_train_episodes)):
+            for episode in tqdm(range(self.num_train_episodes)):
+                ro_start = time.time()
 
-                if agent.FLAGS.verbose:
+                if self.agent.FLAGS.verbose:
                     print("\nBatch %d, Episode %d" % (batch, episode))
 
                 # Train for an episode
-                success, eval_data, _ = agent.train(env, episode, total_train_episodes, eval_data)
+                success, self.eval_data, train_duration = self.agent.train(self.env, episode, self.total_train_episodes, self.eval_data)
+                dur_train += train_duration
+
                 if success:
-                    if agent.FLAGS.verbose:
+                    if self.agent.FLAGS.verbose:
                         print("Batch %d, Episode %d End Goal Achieved\n" % (batch, episode))
                     # Increment successful episode counter if applicable
-                    successful_train_episodes += 1
+                    self.successful_train_episodes += 1
 
-                total_train_episodes += 1
-                total_train_steps += agent.steps_taken
+                self.total_train_episodes += 1
+                self.total_train_steps += self.agent.steps_taken
 
             # Save agent
-            agent.save_model(batch)
-            eval_data['train/total_episodes'] = total_train_episodes
-            eval_data['train/epoch_episodes'] = num_train_episodes
-            # Finish evaluating policy if tested prior batch
-            if mix_train_test:
-                print("\n--- TESTING epoch {}---".format(batch))
-                agent.FLAGS.test = True
-                for episode in tqdm(range(num_test_episodes)):
-                    # Train for an episode
-                    success, eval_data, _ = agent.train(env, episode, total_train_episodes, eval_data)
+            self.agent.save_model(batch)
+            self.eval_data['train/total_episodes'] = self.total_train_episodes
+            self.eval_data['train/epoch_episodes'] = self.num_train_episodes
 
-                    if success:
-                        if agent.FLAGS.verbose:
-                            print("Batch %d, Episode %d End Goal Achieved\n" % (batch, episode))
-                        # Increment successful episode counter if applicable
-                        successful_test_episodes += 1
+            if self.mix_train_test:
+                break_condition, test_duration = self.test(batch)
 
-                    # if FLAGS.train_only or (mix_train_test and batch % TEST_FREQ != 0):
-                    total_test_episodes += 1
-                    total_test_steps += agent.steps_taken
-                # Log performance
-                success_rate = 0
-                if num_test_episodes > 0:
-                    success_rate = successful_test_episodes / num_test_episodes
-                if agent.FLAGS.verbose:
-                    print("\nTesting Success Rate %.2f%%" % success_rate)
-                eval_data['test/total_episodes'] = total_test_episodes
-                eval_data['test/epoch_episodes'] = num_test_episodes
-                eval_data = agent.prepare_eval_data_for_log(eval_data)
-                agent.log_performance(success_rate, eval_data, steps=total_train_steps, episode=total_train_episodes, batch=batch)
+                if break_condition:
+                    break
 
-                print("\n--- END TESTING ---\n")
-                early_stop_col = FLAGS.early_stop_data_column
-                if early_stop_col in eval_data.keys():
-                    early_stop_val = eval_data[early_stop_col]
-                    if FLAGS.early_stop_threshold <= early_stop_val:
-                        break
-                else:
-                    print("Warning, early stop column not in keys")
+            dur_ro += time.time() - ro_start
 
-                for k,v in eval_data.items():
-                    gap = max(1, 30 - len(k))
-                    gap_str = " " * gap
-                    print("{}: {} {:.2f}".format(k, gap_str, v))
+        dur_total = time.time() - dur_start
+        time_durations = (dur_total, dur_ro, dur_train)
 
+        self.agent.eval_data = self.eval_data
+        updated_policy = self.agent
+        return updated_policy, time_durations
+
+    def test(self, batch):
+        break_condition = False
+        # Finish evaluating policy if tested prior batch
+        print("\n--- TESTING epoch {}---".format(batch))
+        self.agent.FLAGS.test = True
+        for episode in tqdm(range(self.num_test_episodes)):
+            # Train for an episode
+            success, self.eval_data, test_duration = self.agent.train(self.env,
+                    episode, self.total_train_episodes, self.eval_data)
+
+            if success:
+                if self.agent.FLAGS.verbose:
+                    print("Batch %d, Episode %d End Goal Achieved\n" % (batch, episode))
+                # Increment successful episode counter if applicable
+                self.successful_test_episodes += 1
+
+            # if FLAGS.train_only or (mix_train_test and batch % TEST_FREQ != 0):
+            self.total_test_episodes += 1
+            self.total_test_steps += self.agent.steps_taken
+        # Log performance
+        success_rate = 0
+        if self.num_test_episodes > 0:
+            success_rate = self.successful_test_episodes / self.num_test_episodes
+
+        if self.agent.FLAGS.verbose:
+            print("\nTesting Success Rate %.2f%%" % success_rate)
+
+        self.success_history.append(success_rate)
+
+        self.eval_data['test/total_episodes'] = self.total_test_episodes
+        self.eval_data['test/epoch_episodes'] = self.num_test_episodes
+        self.eval_data = self.agent.prepare_eval_data_for_log(self.eval_data)
+        self.agent.log_performance(success_rate, self.eval_data,
+                steps=self.total_train_steps, episode=self.total_train_episodes, batch=batch)
+        print("\n--- END TESTING ---\n")
+        early_stop_col = self.FLAGS.early_stop_data_column
+        if early_stop_col in self.eval_data.keys():
+            early_stop_val = self.eval_data[early_stop_col]
+            if self.FLAGS.early_stop_threshold <= early_stop_val:
+                break_condition = True
+        else:
+            print("Warning, early stop column not in keys")
+
+        for k,v in self.eval_data.items():
+            gap = max(1, 30 - len(k))
+            gap_str = " " * gap
+            print("{}: {} {:.2f}".format(k, gap_str, v))
+
+        return break_condition, test_duration
 
 
     def generate_rollouts(self, return_states=False):
@@ -152,5 +169,3 @@ class RolloutWorker(Rollout):
         #  TODO: Transfer Agent to actual polic file #
         #  with open(path, 'wb') as f:
         #      pickle.dump(self.agent, f)
-
-
