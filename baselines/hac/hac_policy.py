@@ -67,7 +67,7 @@ class HACPolicy(Policy):
         dname = os.path.dirname(abspath)
         os.chdir(dname)
 
-        env_import_name = "baselines.hac.env_designs.ANT_FOUR_ROOMS_2_design_agent_and_env"
+        env_import_name = "baselines.hac.env_designs.ANT_REACHER_2_SMALL_SUBG_design_agent_and_env"
         design_agent_and_env_module = importlib.import_module(env_import_name)
         # simple tag for agent's tf scope (debugging)
         #  FLAGS.id = 0

@@ -26,11 +26,11 @@ class RolloutWorker(Rollout):
         os.chdir(dname)
 
         FLAGS = parse_options()
-        self.FLAGS.mix_train_test = True
-        self.FLAGS.retrain = True
-        self.FLAGS.Q_values = True
+        FLAGS.mix_train_test = True
+        FLAGS.retrain = True
+        FLAGS.Q_values = True
 
-        env_import_name = "env_designs." + FLAGS.env+"_design_agent_and_env"
+        env_import_name = "baselines.hac.env_designs.ANT_REACHER_2_SMALL_SUBG_design_agent_and_env"
         design_agent_and_env_module = importlib.import_module(env_import_name)
         # simple tag for agent's tf scope
         FLAGS.id = 0

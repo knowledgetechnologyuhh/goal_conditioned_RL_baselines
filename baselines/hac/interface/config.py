@@ -7,7 +7,8 @@ from baselines.hac.hac_policy import HACPolicy
 from baselines.mbhac.her import make_sample_her_transitions
 
 DEFAULT_ENV_PARAMS = {
-    'AntFourRoomsEnv-v0': {
+    #  'AntFourRoomsEnv-v0': {
+    'AntReacherEnv-v0':{
         'n_cycles': 20
     },
 }

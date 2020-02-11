@@ -3,9 +3,9 @@ This file provides the template for designing the agent and environment.  The be
 """
 
 import numpy as np
-from environment import Environment
-from utils import check_validity
-from agent import Agent
+from baselines.hac.environment import Environment
+from baselines.hac.utils import check_validity
+from baselines.hac.agent import Agent
 
 def design_agent_and_env(FLAGS):
 
