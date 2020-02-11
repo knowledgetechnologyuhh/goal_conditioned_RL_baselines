@@ -1,13 +1,9 @@
 import numpy as np
 import time
-
 from baselines.template.util import store_args, logger
-import pickle
-from mujoco_py import MujocoException
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from baselines.hac.utils import print_summary
-import sys
 
 class RolloutWorker(Rollout):
 
@@ -19,10 +15,8 @@ class RolloutWorker(Rollout):
 
         self.agent = self.policy.agent
         self.env = self.policy.env
-
         self.env.visualize = render
         self.agent.FLAGS.show = render
-
         self.FLAGS = self.policy.FLAGS
 
         if self.policy.levy_env and render:
@@ -41,21 +35,21 @@ class RolloutWorker(Rollout):
         self.total_train_steps = 0
         self.total_test_episodes = 0
         self.total_test_steps = 0
-        self.n_epochs = self.agent.FLAGS.n_epochs
-        # Determine training mode.  If not testing and not solely training, interleave training and testing to track progress
+
         self.num_train_episodes = self.FLAGS.n_train_rollouts
         self.num_test_episodes = self.FLAGS.n_test_rollouts
-        self.successful_train_episodes = 0
-        self.successful_test_episodes = 0
-
 
     def generate_rollouts_update(self, n_episodes, n_train_batches):
         dur_start = time.time()
         dur_train = 0
         dur_ro = 0
 
-        for batch in range(self.n_epochs):
+        for batch in range(self.agent.FLAGS.n_epochs):
+
             print("\n--- TRAINING epoch {}---".format(batch))
+
+            self.successful_train_episodes = 0
+            self.successful_test_episodes = 0
             self.agent.FLAGS.test = False
             self.eval_data = {}
 
@@ -99,10 +93,12 @@ class RolloutWorker(Rollout):
         return updated_policy, time_durations
 
     def test(self, batch):
-        break_condition = False
-        # Finish evaluating policy if tested prior batch
         print("\n--- TESTING epoch {}---".format(batch))
+        # Finish evaluating policy if tested prior batch
+
+        break_condition = False
         self.agent.FLAGS.test = True
+
         for episode in tqdm(range(self.num_test_episodes)):
             # Train for an episode
             success, self.eval_data, test_duration = self.agent.train(self.env,
@@ -126,13 +122,13 @@ class RolloutWorker(Rollout):
             print("\nTesting Success Rate %.2f%%" % success_rate)
 
         self.success_history.append(success_rate)
-
         self.eval_data['test/total_episodes'] = self.total_test_episodes
         self.eval_data['test/epoch_episodes'] = self.num_test_episodes
         self.eval_data = self.agent.prepare_eval_data_for_log(self.eval_data)
-        self.agent.log_performance(success_rate, self.eval_data,
-                steps=self.total_train_steps, episode=self.total_train_episodes, batch=batch)
+        self.agent.log_performance(success_rate, self.eval_data, steps=self.total_train_steps, episode=self.total_train_episodes, batch=batch)
+
         print("\n--- END TESTING ---\n")
+
         early_stop_col = self.FLAGS.early_stop_data_column
         if early_stop_col in self.eval_data.keys():
             early_stop_val = self.eval_data[early_stop_col]

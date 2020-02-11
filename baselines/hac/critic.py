@@ -6,7 +6,8 @@ class Critic():
 
     def __init__(self, sess, env, layer_number, FLAGS, learning_rate=0.001, gamma=0.98, tau=0.05):
         self.sess = sess
-        self.critic_name = 'critic{}_'.format(FLAGS.id) + str(layer_number)
+        #  self.critic_name = 'critic{}_'.format(FLAGS.id) + str(layer_number)
+        self.critic_name = 'critic_' + str(layer_number)
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.tau = tau
