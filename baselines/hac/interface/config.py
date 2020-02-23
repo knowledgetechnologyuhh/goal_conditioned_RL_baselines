@@ -118,7 +118,7 @@ def prepare_params(kwargs):
                  'polyak',
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',
-                 'action_l2', 'clip_obs', 'scope', 'relative_goals', 'levy_env']:
+                 'action_l2', 'clip_obs', 'scope', 'relative_goals']:
         hac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
