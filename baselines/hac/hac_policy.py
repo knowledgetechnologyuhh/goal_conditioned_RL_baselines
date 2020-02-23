@@ -1,18 +1,17 @@
 from baselines.util import (store_args)
 from baselines.template.policy import Policy
-import baselines.hac.env_designs
 from baselines.hac.options import parse_options
-import os,sys,inspect
+import os
 import numpy as np
 from baselines.hac.layer import Layer
 import pickle as cpickle
 import tensorflow as tf
-import os
 from datetime import datetime
 import json
 import time
 from baselines.util import get_git_label
-from baselines.hac.utils import EnvWrapper, check_envs, check_validity
+from baselines.hac.utils import EnvWrapper
+from baselines import logger
 
 class HACPolicy(Policy):
     @store_args
@@ -27,17 +26,20 @@ class HACPolicy(Policy):
         FLAGS = self.FLAGS
 
         self.env = EnvWrapper(kwargs['make_env']().env, FLAGS, self.input_dims)
-        agent_params = {}
-        agent_params["subgoal_test_perc"] = 0.3 # FLAGS.test_subgoal_perc
-        agent_params["subgoal_penalty"] = -FLAGS.time_scale
-        agent_params["atomic_noise"] = [0.1 for i in range(8)]
-        agent_params["subgoal_noise"] = [0.1 for i in range(len(self.env.sub_goal_thresholds))]
+        agent_params = {
+            "subgoal_test_perc": 0.3, # FLAGS.test_subgoal_perc
+            "subgoal_penalty": -FLAGS.time_scale,
+            "atomic_noise": [0.1 for i in range(8)],
+            "subgoal_noise": [0.1 for i in range(len(self.env.sub_goal_thresholds))],
+        }
 
         timestamp = datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
         git_label = get_git_label()
         self.model_dir = '{}/{}/{}/{}'.format(FLAGS.base_logdir,git_label,self.FLAGS.env,timestamp)
+
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
+
         self.performance_txt_file = self.model_dir + "/progress.csv".format(self.FLAGS.env)
         self.params_json_file = self.model_dir + "/params.json".format(self.FLAGS.env)
         if not os.path.isfile(self.params_json_file):
@@ -45,18 +47,13 @@ class HACPolicy(Policy):
                 params = vars(FLAGS)
                 params['env_name'] = params['env']
                 json.dump(params, json_file)
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        self.sess = tf.Session(config=config)
-        # Set subgoal testing ratio each layer will use
-        self.subgoal_test_perc = agent_params["subgoal_test_perc"]
-        # Create agent with number of levels specified by user
-        self.layers = [Layer(i,FLAGS,self.env,self.sess,agent_params) for i in range(FLAGS.layers)]
         # Below attributes will be used help save network parameters
         self.saver = None
         self.model_loc = None
-        # Initialize actor/critic networks.  Load saved parameters if not retraining
-        self.initialize_networks()
+
+        with tf.variable_scope(self.scope):
+            self._create_networks(FLAGS, agent_params)
+
         # goal_array will store goal for each layer of agent.
         self.goal_array = [None for i in range(FLAGS.layers)]
         self.current_state = None
@@ -86,7 +83,7 @@ class HACPolicy(Policy):
         max_lay_achieved = None
 
         # Project current state onto the subgoal and end goal spaces
-        proj_subgoal = env.project_state_to_subgoal(env.sim, self.current_state)
+        proj_subgoal = env.project_state_to_sub_goal(env.sim, self.current_state)
         proj_end_goal = env.project_state_to_end_goal(env.sim, self.current_state)
 
         for i in range(self.FLAGS.layers):
@@ -109,11 +106,11 @@ class HACPolicy(Policy):
             else:
 
                 # Check that dimensions are appropriate
-                assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.subgoal_thresholds), "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
+                assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
 
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
                 for j in range(len(proj_subgoal)):
-                    if np.absolute(self.goal_array[i][j] - proj_subgoal[j]) > env.subgoal_thresholds[j]:
+                    if np.absolute(self.goal_array[i][j] - proj_subgoal[j]) > env.sub_goal_thresholds[j]:
                         goal_achieved = False
                         break
 
@@ -127,7 +124,15 @@ class HACPolicy(Policy):
         return goal_status, max_lay_achieved
 
 
-    def initialize_networks(self):
+    def _create_networks(self, FLAGS, agent_params):
+        logger.info("Creating a HAC agent with action space %d x %s..." % (self.dimu, self.max_u))
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=config)
+        # Set subgoal testing ratio each layer will use
+        self.subgoal_test_perc = agent_params["subgoal_test_perc"]
+        # Create agent with number of levels specified by user
+        self.layers = [Layer(i,FLAGS,self.env,self.sess, agent_params) for i in range(FLAGS.layers)]
 
         model_vars = tf.trainable_variables()
         self.saver = tf.train.Saver(model_vars)
@@ -165,14 +170,15 @@ class HACPolicy(Policy):
         start_time = time.time()
 
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
-        self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
+        #  self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
+        self.goal_array[self.FLAGS.layers - 1] = env._sample_goal()
         env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
 
         if self.FLAGS.verbose:
             print("Next End Goal: ", self.goal_array[self.FLAGS.layers - 1])
 
         # Select initial state from in initial state space, defined in environment.py
-        self.current_state = env.reset_sim(self.goal_array[self.FLAGS.layers - 1])
+        self.current_state = env._reset_sim(self.goal_array[self.FLAGS.layers - 1])
 
         if isinstance(self.current_state, dict) and 'observation' in self.current_state.keys():
             self.current_state = self.current_state['observation']
@@ -265,7 +271,7 @@ class HACPolicy(Policy):
         for k,v in sorted(eval_data.items()):
             logs += [(k , v)]
 
-        if prefix is not '' and not prefix.endswith('/'):
+        if prefix != '' and not prefix.endswith('/'):
             return [(prefix + '/' + key, val) for key, val in logs]
         else:
             return logs

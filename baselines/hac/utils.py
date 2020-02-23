@@ -98,61 +98,12 @@ def check_validity(model_name, goal_space_test, goal_space_train, goal_threshold
     if goal_space_train is not None and goal_space_test is not None:
         assert len(goal_space_train) == len(goal_space_test) == len(goal_thresholds), "End goal space and thresholds must have same first dimension"
 
-    # Makde sure suboal spaces and thresholds have same dimensions
+    # Make sure suboal spaces and thresholds have same dimensions
     assert len(subgoal_bounds) == len(subgoal_thresholds), "Subgoal space and thresholds must have same first dimension"
-
-    # for i in range(len(goal_bounds)):
-    #     assert goal_bounds[i][1] >= goal_bounds[i][0], "In goal space, upper bound must be >= lower bound"
-    #
-    # # Make sure goal spaces and thresholds have same dimensions
-    # assert len(goal_bounds) == len(
-    #     goal_thresholds), "Goal space and thresholds must have same first dimension"
-
     # Ensure max action and timesteps_per_action are postive integers
     assert max_actions > 0, "Max actions should be a positive integer"
 
     assert timesteps_per_action > 0, "Timesteps per action should be a positive integer"
-
-def check_envs(env, wtm_env):
-    #  assert env.model == wtm_env.model
-    #  print(env.name, wtm_env.name)
-    assert env.name == wtm_env.name
-    #  print("SIM", env.sim, wtm_env.sim)
-    assert type(env.sim) == type(wtm_env.sim)
-    #  print("STATE DIM", env.state_dim, wtm_env.state_dim)
-    assert env.state_dim == wtm_env.state_dim
-    #  print("ACTION DIM", env.action_dim, wtm_env.action_dim)
-    assert env.action_dim == wtm_env.action_dim
-    #  print("ACTION BOUNDS", env.action_bounds, wtm_env.action_bounds)
-    assert (env.action_bounds == wtm_env.action_bounds).all()
-    #  print("A OFFSET", env.action_offset, wtm_env.action_offset)
-    assert (env.action_offset == wtm_env.action_offset).all()
-    #  print("END GOAL DIM", env.end_goal_dim, wtm_env.end_goal_dim)
-    assert env.end_goal_dim == wtm_env.end_goal_dim
-    #  print("SGOAL DIM", env.subgoal_dim, wtm_env.subgoal_dim)
-    assert env.subgoal_dim == wtm_env.subgoal_dim
-    #  print("SGOAL BOUNDS", env.subgoal_bounds, wtm_env.subgoal_bounds)
-    assert (env.subgoal_bounds == wtm_env.subgoal_bounds).all()
-    #  print("SGOAL BOUNDS SYMM", env.subgoal_bounds_symmetric, wtm_env.subgoal_bounds_symmetric)
-    assert (env.subgoal_bounds_symmetric == wtm_env.subgoal_bounds_symmetric).all()
-    #  print("SGOAL BOUNDS OFFSET", env.subgoal_bounds_offset, wtm_env.subgoal_bounds_offset)
-    assert (env.subgoal_bounds_offset == wtm_env.subgoal_bounds_offset).all()
-    #  print("MAX A", env.max_actions, wtm_env.max_actions)
-    assert env.max_actions == wtm_env.max_actions
-    #  print("INI STATE SPACE", env.initial_state_space, wtm_env.initial_state_space)
-    assert(env.initial_state_space == wtm_env.initial_state_space).all()
-    #  print("GOAL THRES", env.end_goal_thresholds, wtm_env.end_goal_thresholds)
-    assert(env.end_goal_thresholds == wtm_env.end_goal_thresholds).all()
-    #  print("SGOAL THRES", env.subgoal_thresholds, wtm_env.subgoal_thresholds)
-    assert(env.subgoal_thresholds == wtm_env.sub_goal_thresholds).all()
-    #  print("GOAL SPACE TRAIN", env.goal_space_train, wtm_env.goal_space_train)
-    assert env.goal_space_train == wtm_env.goal_space_train
-    #  print("GOAL SPACE TEST", env.goal_space_test, wtm_env.goal_space_test)
-    assert env.goal_space_test == wtm_env.goal_space_test
-    #  print("SGOAL BOUNDS", env.subgoal_bounds, wtm_env.subgoal_bounds)
-    assert(env.subgoal_bounds == wtm_env.subgoal_bounds).all()
-    #  print(dir(env), dir(wtm_env))
-    print('PASSED ASSERTS')
 
 class EnvWrapper(object):
     def __init__(self, env, FLAGS, input_dims):
@@ -175,10 +126,6 @@ class EnvWrapper(object):
         self.subgoal_dim = len(self.subgoal_bounds)
         print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
 
-        # different naming
-        self.project_state_to_subgoal = self.project_state_to_sub_goal
-
-
         self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
         self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
         for i in range(len(self.subgoal_bounds)):
@@ -187,16 +134,9 @@ class EnvWrapper(object):
 
         print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
-        # different naming
-        self.subgoal_thresholds = self.sub_goal_thresholds
-        env.subgoal_colors = ["Magenta","Green","Red","Blue","Cyan","Orange","Maroon","Gray","White","Black"]
-
         max_actions = 700
         max_actions = FLAGS.time_scale**(FLAGS.layers)
         self.max_actions = max_actions
-
-        self.reset_sim = self._reset_sim
-
 
     def __getattr__(self, attr):
         return self.wrapped_env.__getattribute__(attr)

@@ -140,7 +140,7 @@ class Layer():
                 action = np.zeros_like(action)
         if enforce_random:
             if self.layer_number != 0:
-                subg = env.project_state_to_subgoal(env.sim, agent.current_state)
+                subg = env.project_state_to_sub_goal(env.sim, agent.current_state)
                 low = np.array(env.subgoal_bounds)[:,0]
                 high = np.array(env.subgoal_bounds)[:, 1]
                 rnd_factor = (high - low) / 12
@@ -179,7 +179,7 @@ class Layer():
         if self.layer_number == total_layers - 1:
             hindsight_goal = env.project_state_to_end_goal(env.sim, next_state)
         else:
-            hindsight_goal = env.project_state_to_subgoal(env.sim, next_state)
+            hindsight_goal = env.project_state_to_sub_goal(env.sim, next_state)
 
         transition = [self.current_state, hindsight_action, None, next_state, None, None, hindsight_goal]
 
@@ -415,7 +415,7 @@ class Layer():
                     if self.layer_number == agent.FLAGS.layers - 1:
                         print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
                     else:
-                        print("Hindsight Goal: ", env.project_state_to_subgoal(env.sim, agent.current_state))
+                        print("Hindsight Goal: ", env.project_state_to_sub_goal(env.sim, agent.current_state))
 
             # Perform hindsight learning using action actually executed (low-level action or hindsight subgoal)
             if self.layer_number == 0:
@@ -426,7 +426,7 @@ class Layer():
                     hindsight_action = action
                 # Otherwise, use subgoal that was achieved in hindsight
                 else:
-                    hindsight_action = env.project_state_to_subgoal(env.sim, agent.current_state)
+                    hindsight_action = env.project_state_to_sub_goal(env.sim, agent.current_state)
 
 
             # Next, create hindsight transitions if not testing
@@ -462,7 +462,7 @@ class Layer():
                 if self.layer_number == agent.FLAGS.layers - 1:
                     print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
                 else:
-                    print("Hindsight Goal: ", env.project_state_to_subgoal(env.sim, agent.current_state))
+                    print("Hindsight Goal: ", env.project_state_to_sub_goal(env.sim, agent.current_state))
                 print("Goal Status: ", goal_status, "\n")
                 print("All Goals: ", agent.goal_array)
 
@@ -489,7 +489,7 @@ class Layer():
                     if self.layer_number == agent.FLAGS.layers - 1:
                         goal_thresholds = env.end_goal_thresholds
                     else:
-                        goal_thresholds = env.subgoal_thresholds
+                        goal_thresholds = env.sub_goal_thresholds
 
                     self.finalize_goal_replay(goal_thresholds)
 
