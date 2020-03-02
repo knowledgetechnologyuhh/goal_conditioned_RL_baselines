@@ -5,6 +5,7 @@ from baselines.template.util import store_args, logger
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from baselines.hac.utils import print_summary
+import tensorflow as tf
 
 class RolloutWorker(Rollout):
 
@@ -84,6 +85,7 @@ class RolloutWorker(Rollout):
         dur_total = time.time() - dur_start
         time_durations = (dur_total, dur_ro, dur_train)
 
+        # TODO
         self.policy.eval_data = self.eval_data
         updated_policy = self.policy
         return updated_policy, time_durations
@@ -142,22 +144,10 @@ class RolloutWorker(Rollout):
 
 
     def generate_rollouts(self, return_states=False):
+        self.reset_all_rollouts()
+        #  TODO: Evaluation #
         ret = None
         return ret
 
     def current_mean_Q(self):
         return np.mean(self.custom_histories[0])
-
-    def logs(self, prefix='worker'):
-        """Generates a dictionary that contains all collected statistics.
-        """
-        logs = []
-        logs += [('success_rate', np.mean(self.success_history))]
-
-        return logger(logs, prefix)
-
-    def save_policy(self, path):
-        pass
-        #  TODO: Transfer Agent to actual polic file #
-        #  with open(path, 'wb') as f:
-        #      pickle.dump(self.policy, f)

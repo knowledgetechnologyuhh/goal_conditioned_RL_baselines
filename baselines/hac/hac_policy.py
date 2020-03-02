@@ -15,9 +15,8 @@ from baselines import logger
 
 class HACPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, buffer_size, hidden, layers, polyak, batch_size,
-            Q_lr, pi_lr, norm_eps, norm_clip, max_u, action_l2, clip_obs, scope, T,
-            rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
+    def __init__(self, input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
+            action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
             sample_transitions, gamma, reuse=False, **kwargs):
 
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
@@ -25,7 +24,7 @@ class HACPolicy(Policy):
         self._set_FLAGS()
         FLAGS = self.FLAGS
 
-        self.env = EnvWrapper(kwargs['make_env']().env, FLAGS, self.input_dims)
+        self.env = EnvWrapper(kwargs['make_env']().env, FLAGS, input_dims, max_u)
         agent_params = {
             "subgoal_test_perc": 0.3, # FLAGS.test_subgoal_perc
             "subgoal_penalty": -FLAGS.time_scale,
@@ -42,11 +41,13 @@ class HACPolicy(Policy):
 
         self.performance_txt_file = self.model_dir + "/progress.csv".format(self.FLAGS.env)
         self.params_json_file = self.model_dir + "/params.json".format(self.FLAGS.env)
+
         if not os.path.isfile(self.params_json_file):
             with open(self.params_json_file,'w') as json_file:
                 params = vars(FLAGS)
                 params['env_name'] = params['env']
                 json.dump(params, json_file)
+
         # Below attributes will be used help save network parameters
         self.saver = None
         self.model_loc = None
@@ -170,8 +171,7 @@ class HACPolicy(Policy):
         start_time = time.time()
 
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
-        #  self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
-        self.goal_array[self.FLAGS.layers - 1] = env._sample_goal()
+        self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
         env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
 
         if self.FLAGS.verbose:
@@ -183,10 +183,8 @@ class HACPolicy(Policy):
         if isinstance(self.current_state, dict) and 'observation' in self.current_state.keys():
             self.current_state = self.current_state['observation']
 
-        if env.name == "ant_reacher.xml":
-            if self.FLAGS.verbose:
-                print("Initial Ant Position: ", self.current_state[:3])
-        # print("Initial State: ", self.current_state)
+        if self.FLAGS.verbose:
+            print("Initial State: ", self.current_state[:3])
 
         # Reset step counter
         self.steps_taken = 0
@@ -275,3 +273,20 @@ class HACPolicy(Policy):
             return [(prefix + '/' + key, val) for key, val in logs]
         else:
             return logs
+
+    def _global_vars(self, scope):
+        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
+        return res
+
+    def __getstate__(self):
+        #  TODO: modfiy exclude array #
+        excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
+                             'main', 'target', 'lock', 'env', 'sample_transitions',
+                             'stage_shapes', 'create_actor_critic',
+                             'obs2preds_buffer', 'obs2preds_model']
+        state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
+        state['buffer_size'] = self.buffer_size
+        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
+        return state
+
+

@@ -298,14 +298,19 @@ class Layer():
     # Determine whether layer is finished training
     def return_to_higher_level(self, max_lay_achieved, agent, env, attempts_made):
 
-        # Return to higher level if (i) a higher level goal has been reached, (ii) maxed out episode time steps (env.max_actions), (iii) not testing and layer is out of attempts, and (iv) testing, layer is not the highest level, and layer is out of attempts.  NOTE: during testing, highest level will continue to ouput subgoals until either (i) the maximum number of episdoe time steps or (ii) the end goal has been achieved.
+        assert env.step_ctr == agent.steps_taken
+        # Return to higher level if
+        # (i) a higher level goal has been reached,
+        # (ii) maxed out episode time steps (env.max_actions)
+        # (iii) not testing and layer is out of attempts, and (iv) testing, layer is not the highest level, and layer is out of attempts.
+        # NOTE: during testing, highest level will continue to ouput subgoals until either (i) the maximum number of episdoe time steps or (ii) the end goal has been achieved.
 
         # Return to previous level when any higher level goal achieved.  NOTE: if not testing and agent achieves end goal, training will continue until out of time (i.e., out of time steps or highest level runs out of attempts).  This will allow agent to experience being around the end goal.
         if max_lay_achieved is not None and max_lay_achieved >= self.layer_number:
             return True
 
         # Return when out of time
-        elif agent.steps_taken >= env.max_actions:
+        elif env.step_ctr >= env.max_actions:
             return True
 
         # Return when layer has maxed out attempts
@@ -386,16 +391,15 @@ class Layer():
             # If layer is bottom level, execute low-level action
             else:
                 next_state = env.execute_action(action)
+
                 # print("Current Velo: ", env.sim.data.qvel[:2])
                 # sleep(1)
-
-                # Increment steps taken
                 agent.steps_taken += 1
-                # print("Num Actions Taken: ", agent.steps_taken)
 
-                if agent.steps_taken >= env.max_actions:
+                assert env.step_ctr == agent.steps_taken
+                if env.step_ctr >= env.max_actions:
                     if agent.FLAGS.verbose:
-                        print("Out of actions (Steps: %d)" % agent.steps_taken)
+                        print("Out of actions (Steps: %d)" % env.step_ctr)
 
                 agent.current_state = next_state
 
@@ -471,8 +475,10 @@ class Layer():
 
             # Return to previous level to receive next subgoal if applicable
             # if self.return_to_higher_level(max_lay_achieved, agent, env, attempts_made):
+
+            assert env.step_ctr == env.step_ctr
             if (max_lay_achieved is not None and max_lay_achieved >= self.layer_number) or \
-                    agent.steps_taken >= env.max_actions or attempts_made >= self.time_limit:
+                    env.step_ctr >= env.max_actions or attempts_made >= self.time_limit:
 
                 if self.layer_number == agent.FLAGS.layers-1:
                     if agent.FLAGS.verbose:
