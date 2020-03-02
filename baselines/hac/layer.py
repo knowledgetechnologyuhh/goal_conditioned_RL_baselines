@@ -476,7 +476,7 @@ class Layer():
             # Return to previous level to receive next subgoal if applicable
             # if self.return_to_higher_level(max_lay_achieved, agent, env, attempts_made):
 
-            assert env.step_ctr == env.step_ctr
+            assert env.step_ctr == agent.steps_taken
             if (max_lay_achieved is not None and max_lay_achieved >= self.layer_number) or \
                     env.step_ctr >= env.max_actions or attempts_made >= self.time_limit:
 

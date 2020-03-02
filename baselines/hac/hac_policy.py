@@ -168,8 +168,6 @@ class HACPolicy(Policy):
 
     # Train agent for an episode
     def train(self,env, episode_num, total_episodes, eval_data):
-        start_time = time.time()
-
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
         self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
         env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
@@ -178,10 +176,7 @@ class HACPolicy(Policy):
             print("Next End Goal: ", self.goal_array[self.FLAGS.layers - 1])
 
         # Select initial state from in initial state space, defined in environment.py
-        self.current_state = env._reset_sim(self.goal_array[self.FLAGS.layers - 1])
-
-        if isinstance(self.current_state, dict) and 'observation' in self.current_state.keys():
-            self.current_state = self.current_state['observation']
+        self.current_state = env._reset_sim(self.goal_array[self.FLAGS.layers - 1])['observation']
 
         if self.FLAGS.verbose:
             print("Initial State: ", self.current_state[:3])
@@ -202,19 +197,21 @@ class HACPolicy(Policy):
                 for k,v in learn_summary.items():
                     eval_data["train_{}/avg_{}".format(l,k)] = v
 
-        duration = time.time() - start_time
         # Return whether end goal was achieved
-        return goal_status[self.FLAGS.layers-1], eval_data, duration
+        return goal_status[self.FLAGS.layers-1], eval_data
 
 
     # Save performance evaluations
     def prepare_eval_data_for_log(self, eval_data):
+
         for i in range(10):
             for prefx in ['train', 'test']:
                 layer_prefix = '{}_{}/'.format(prefx, i)
+
                 if "{}subgoal_succ".format(layer_prefix) in eval_data.keys():
                     subg_succ_rate = eval_data["{}subgoal_succ".format(layer_prefix)] / eval_data["{}n_subgoals".format(layer_prefix)]
                     eval_data['{}subgoal_succ_rate'.format(layer_prefix)] = subg_succ_rate
+
                 if "{}Q".format(layer_prefix) in eval_data.keys():
                     if "{}n_subgoals".format(layer_prefix) in eval_data.keys():
                         n_qvals = eval_data[
@@ -231,6 +228,7 @@ class HACPolicy(Policy):
                 for k,v in sorted(eval_data.items()):
                     txt_logfile.write("{},".format(k))
                 txt_logfile.write("{}\n".format("test/success_rate"))
+
         return eval_data
 
 
@@ -283,7 +281,8 @@ class HACPolicy(Policy):
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic',
-                             'obs2preds_buffer', 'obs2preds_model']
+                             # TODO: fix layers
+                             'obs2preds_buffer', 'obs2preds_model', 'saver', 'eval_data', 'layers']
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
         state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])

@@ -41,7 +41,7 @@ class RolloutWorker(Rollout):
         dur_train = 0
         dur_ro = 0
 
-        for batch in range(self.policy.FLAGS.n_epochs):
+        for batch in range(n_train_batches):
 
             print("\n--- TRAINING epoch {}---".format(batch))
 
@@ -50,15 +50,16 @@ class RolloutWorker(Rollout):
             self.policy.FLAGS.test = False
             self.eval_data = {}
 
-            for episode in tqdm(range(self.num_train_episodes)):
+            for episode in tqdm(range(n_episodes)):
                 ro_start = time.time()
 
                 if self.policy.FLAGS.verbose:
                     print("\nBatch %d, Episode %d" % (batch, episode))
 
                 # Train for an episode
-                success, self.eval_data, train_duration = self.policy.train(self.env, episode, self.total_train_episodes, self.eval_data)
-                dur_train += train_duration
+                train_start = time.time()
+                success, self.eval_data, = self.policy.train(self.env, episode, self.total_train_episodes, self.eval_data)
+                dur_train += time.time() - train_start
 
                 if success:
                     if self.policy.FLAGS.verbose:
@@ -75,7 +76,9 @@ class RolloutWorker(Rollout):
             self.eval_data['train/epoch_episodes'] = self.num_train_episodes
 
             if self.mix_train_test:
-                break_condition, test_duration = self.test(batch)
+                test_time = time.time()
+                break_condition = self.test(batch, n_episodes)
+                dur_ro += time.time() - test_time
 
                 if break_condition:
                     break
@@ -90,16 +93,16 @@ class RolloutWorker(Rollout):
         updated_policy = self.policy
         return updated_policy, time_durations
 
-    def test(self, batch):
+    def test(self, batch, n_episodes):
         print("\n--- TESTING epoch {}---".format(batch))
         # Finish evaluating policy if tested prior batch
 
         break_condition = False
         self.policy.FLAGS.test = True
 
-        for episode in tqdm(range(self.num_test_episodes)):
+        for episode in tqdm(range(max(1, n_episodes // 3))):
             # Train for an episode
-            success, self.eval_data, test_duration = self.policy.train(self.env,
+            success, self.eval_data = self.policy.train(self.env,
                     episode, self.total_train_episodes, self.eval_data)
 
             if success:
@@ -135,19 +138,29 @@ class RolloutWorker(Rollout):
         else:
             print("Warning, early stop column not in keys")
 
-        for k,v in self.eval_data.items():
-            gap = max(1, 30 - len(k))
-            gap_str = " " * gap
-            print("{}: {} {:.2f}".format(k, gap_str, v))
+        #  for k,v in self.eval_data.items():
+        #      gap = max(1, 30 - len(k))
+        #      gap_str = " " * gap
+        #      print("{}: {} {:.2f}".format(k, gap_str, v))
 
-        return break_condition, test_duration
+        return break_condition
 
 
     def generate_rollouts(self, return_states=False):
-        self.reset_all_rollouts()
-        #  TODO: Evaluation #
         ret = None
         return ret
 
     def current_mean_Q(self):
         return np.mean(self.custom_histories[0])
+
+    def logs(self, prefix=''):
+        eval_data = self.policy.eval_data
+        logs = []
+
+        for k,v in sorted(eval_data.items()):
+            logs += [(k , v)]
+
+        if prefix != '' and not prefix.endswith('/'):
+            return [(prefix + '/' + key, val) for key, val in logs]
+        else:
+            return logs
