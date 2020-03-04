@@ -35,7 +35,7 @@ DEFAULT_PARAMS = {
     'n_cycles': 50,  # per epoch
     'rollout_batch_size': 1,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
-    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    'batch_size': 1024,
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
     'test_with_polyak': False,  # run test episodes with the target network
     # exploration
@@ -62,7 +62,8 @@ ROLLOUT_PARAMS = {
                                  'compute_Q': False,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
-                                 'use_target_net': False}
+                                 'use_target_net': False},
+        'print_summary': True
     }
 
 EVAL_PARAMS = {
@@ -74,7 +75,8 @@ EVAL_PARAMS = {
                                  'random_eps': 0.3,
                                  'use_target_net': False
                                  # 'use_target_net': params['test_with_polyak'],
-                                 }
+                                 },
+        'print_summary': False
     }
 
 OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']

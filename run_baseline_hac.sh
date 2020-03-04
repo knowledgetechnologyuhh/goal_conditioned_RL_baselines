@@ -1,12 +1,9 @@
 #!/bin/bash
-# source ../set_paths.sh
-# source ../venv/bin/activate
 
-cmd="python experiment/train.py --algorithm baselines.hac --num_cpu 1 --render 0"
-# cmd="python experiment/train.py --algorithm baselines.hac --num_cpu 1 --render 0 --levy_env 1"
+cmd="python experiment/train.py --algorithm baselines.hac --num_cpu 1 --render 0 --n_epochs 100  --n_train_rollouts 100 --n_test_rollouts 30"
 
-max_active_procs=12
-n_runs=12
+max_active_procs=16
+n_runs=8
 
 # declare -a repeated_cmd_array=()
 cmd_ctr=0

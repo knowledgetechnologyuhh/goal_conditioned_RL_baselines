@@ -347,10 +347,8 @@ class Layer():
         self.maxed_out = False
 
         # Display all subgoals if visualizing training and current layer is bottom layer
-        if self.layer_number == 0 and agent.FLAGS.show and agent.FLAGS.layers > 1:
+        if self.layer_number == 0 and agent.env.visualize and agent.FLAGS.layers > 1:
             env.display_subgoals(agent.goal_array)
-            # env.sim.data.mocap_pos[3] = env.project_state_to_end_goal(env.sim,self.current_state)
-            #  print("Subgoal Pos: ", env.sim.data.mocap_pos[1])
 
         # Current layer has self.time_limit attempts to each its goal state.
         attempts_made = 0
@@ -363,18 +361,9 @@ class Layer():
             action, action_type, next_subgoal_test = self.choose_action(agent, env, subgoal_test, enforce_random=enforce_random, enforce_zero_ll=enforce_zero_ll)
 
             if self.FLAGS.Q_values:
-                # if self.layer_number == self.FLAGS.layers-1:
-                #     test_action = np.copy(action)
-                #     test_action[:3] = self.goal
-                #     q_val = self.critic.get_Q_value(np.reshape(self.current_state, (1, len(self.current_state))),
-                #                                     np.reshape(self.goal, (1, len(self.goal))),
-                #                                     np.reshape(test_action, (1, len(test_action))))
-                #     print("Layer %d Goal Q-Value: " % self.layer_number, q_val)
-                # else:
                 q_val = self.critic.get_Q_value(np.reshape(self.current_state, (1, len(self.current_state))),
                                                 np.reshape(self.goal, (1, len(self.goal))),
                                                 np.reshape(action, (1, len(action))))
-                # print("Layer %d Q-Value: " % self.layer_number, q_val)
                 eval_data["{}Q".format(train_test_prefix)] += q_val[0]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
@@ -507,32 +496,34 @@ class Layer():
 
     # Update actor and critic networks
     def learn(self, num_updates):
-        if self.layer_number == 0: # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
+        # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
+        if self.layer_number == 0:
             return {}
+
         learn_history = {}
         learn_history['reward'] = []
-        # if self.replay_buffer.size > self.replay_buffer.batch_size * 3:
+
         if self.replay_buffer.size > 0:
             for _ in range(num_updates):
                 old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
                 learn_history['reward'] += list(rewards)
                 next_batch_size = min(self.replay_buffer.size, self.replay_buffer.batch_size)
                 q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor.get_action(new_states,goals), is_terminals)
+
                 for k,v in q_update.items():
                     if k not in learn_history.keys(): learn_history[k] = []
                     learn_history[k].append(v)
+
                 action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
-                # self.actor.update(old_states, goals, action_derivs, next_batch_size)
 
         r_vals = [-0.0, -1.0]
+
         if self.layer_number != 0:
             r_vals.append(float(-self.FLAGS.time_scale))
+
         for reward_val in r_vals:
             learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
-        # if self.layer_number == 1:
-        #     for k in ['critic_loss', 'next_state_qs', 'this_qs']:
-        #         print("{}: {}".format(k, learn_history[k]))
-        #         print("{} mean: {}".format(k,np.mean(learn_history[k])))
+
         learn_summary = {}
         for k,v in learn_history.items():
             learn_summary[k] = np.mean(v)

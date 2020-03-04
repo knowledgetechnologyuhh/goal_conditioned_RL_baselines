@@ -1,11 +1,10 @@
 import numpy as np
 from collections import deque
-import time
-from baselines.template.util import store_args, logger
+import time, sys
+from baselines.template.util import store_args # , logger
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from baselines.hac.utils import print_summary
-import tensorflow as tf
 
 class RolloutWorker(Rollout):
 
@@ -16,151 +15,120 @@ class RolloutWorker(Rollout):
 
         self.env = self.policy.env
         self.env.visualize = render
-        self.policy.FLAGS.show = render
         self.FLAGS = self.policy.FLAGS
+        self.T = T
+        self.graph = kwargs['graph']
 
-        print_summary(self.FLAGS, self.env)
+        if kwargs['print_summary']:
+            print_summary(self.FLAGS, self.env)
 
-        if not self.FLAGS.test and not self.FLAGS.train_only:
-            self.mix_train_test = True
-        else:
-            self.mix_train_test = False
+        self.successful_train_episodes = 0
+        self.successful_test_episodes = 0
 
-        self.total_train_episodes = 0
-        self.total_train_steps = 0
-        self.total_test_episodes = 0
-        self.total_test_steps = 0
+        self.eval_data = {}
 
-        self.num_train_episodes = self.FLAGS.n_train_rollouts
-        self.num_test_episodes = self.FLAGS.n_test_rollouts
+    def train_policy(self, n_train_rollouts, n_train_batches):
+        for episode in tqdm(range(n_train_rollouts), file=sys.__stdout__, desc='Train Rollout'):
 
-        self.success_history = deque(maxlen=history_len)
+            success, self.eval_data = self.policy.train(self.env, episode, self.eval_data, num_updates=n_train_batches)
 
-    def generate_rollouts_update(self, n_episodes, n_train_batches):
-        dur_start = time.time()
-        dur_train = 0
+            if success:
+                self.successful_train_episodes += 1
+
+            self.n_episodes += 1
+
+        success_rate = 0
+        if n_train_rollouts > 0:
+            success_rate = self.successful_train_episodes / n_train_rollouts
+        self.success_history.append(success_rate)
+
+    def generate_rollouts_update(self, n_train_rollouts, n_train_batches):
         dur_ro = 0
-
-        for batch in range(n_train_batches):
-
-            print("\n--- TRAINING epoch {}---".format(batch))
-
-            self.successful_train_episodes = 0
-            self.successful_test_episodes = 0
-            self.policy.FLAGS.test = False
-            self.eval_data = {}
-
-            for episode in tqdm(range(n_episodes)):
-                ro_start = time.time()
-
-                if self.policy.FLAGS.verbose:
-                    print("\nBatch %d, Episode %d" % (batch, episode))
-
-                # Train for an episode
-                train_start = time.time()
-                success, self.eval_data, = self.policy.train(self.env, episode, self.total_train_episodes, self.eval_data)
-                dur_train += time.time() - train_start
-
-                if success:
-                    if self.policy.FLAGS.verbose:
-                        print("Batch %d, Episode %d End Goal Achieved\n" % (batch, episode))
-                    # Increment successful episode counter if applicable
-                    self.successful_train_episodes += 1
-
-                self.total_train_episodes += 1
-                self.total_train_steps += self.policy.steps_taken
-
-            # Save agent
-            self.policy.save_model(batch)
-            self.eval_data['train/total_episodes'] = self.total_train_episodes
-            self.eval_data['train/epoch_episodes'] = self.num_train_episodes
-
-            if self.mix_train_test:
-                test_time = time.time()
-                break_condition = self.test(batch, n_episodes)
-                dur_ro += time.time() - test_time
-
-                if break_condition:
-                    break
-
-            dur_ro += time.time() - ro_start
+        dur_train = 0
+        dur_start = time.time()
+        self.policy.FLAGS.test = False
+        ro_start = time.time()
+        # TODO
+        #  episode = self.generate_rollouts()
+        #  self.policy.store_episode(episode)
+        #  dur_ro += time.time() - ro_start
+        train_start = time.time()
+        self.train_policy(n_train_rollouts, n_train_batches)
+        dur_train += time.time() - train_start
 
         dur_total = time.time() - dur_start
         time_durations = (dur_total, dur_ro, dur_train)
-
-        # TODO
-        self.policy.eval_data = self.eval_data
         updated_policy = self.policy
         return updated_policy, time_durations
 
-    def test(self, batch, n_episodes):
-        print("\n--- TESTING epoch {}---".format(batch))
-        # Finish evaluating policy if tested prior batch
-
-        break_condition = False
+    def generate_rollouts(self, return_states=False):
+        #  self.reset_all_rollouts()
+        # called for n_test_rollouts
         self.policy.FLAGS.test = True
 
-        for episode in tqdm(range(max(1, n_episodes // 3))):
-            # Train for an episode
-            success, self.eval_data = self.policy.train(self.env,
-                    episode, self.total_train_episodes, self.eval_data)
+        for t in range(self.rollout_batch_size):
+            success, self.eval_data = self.policy.train(self.env, t, self.eval_data)
 
             if success:
-                if self.policy.FLAGS.verbose:
-                    print("Batch %d, Episode %d End Goal Achieved\n" % (batch, episode))
-                # Increment successful episode counter if applicable
                 self.successful_test_episodes += 1
 
-            # if FLAGS.train_only or (mix_train_test and batch % TEST_FREQ != 0):
-            self.total_test_episodes += 1
-            self.total_test_steps += self.policy.steps_taken
-        # Log performance
-        success_rate = 0
-        if self.num_test_episodes > 0:
-            success_rate = self.successful_test_episodes / self.num_test_episodes
+            self.n_episodes += 1
 
-        if self.policy.FLAGS.verbose:
-            print("\nTesting Success Rate %.2f%%" % success_rate)
+        success_rate = 0
+
+        if self.T > 0:
+            success_rate = self.successful_test_episodes / self.T
 
         self.success_history.append(success_rate)
-        self.eval_data['test/total_episodes'] = self.total_test_episodes
-        self.eval_data['test/epoch_episodes'] = self.num_test_episodes
-        self.eval_data = self.policy.prepare_eval_data_for_log(self.eval_data)
-        self.policy.log_performance(success_rate, self.eval_data, steps=self.total_train_steps, episode=self.total_train_episodes, batch=batch)
 
-        print("\n--- END TESTING ---\n")
-
-        early_stop_col = self.FLAGS.early_stop_data_column
-        if early_stop_col in self.eval_data.keys():
-            early_stop_val = self.eval_data[early_stop_col]
-            if self.FLAGS.early_stop_threshold <= early_stop_val:
-                break_condition = True
-        else:
-            print("Warning, early stop column not in keys")
-
-        #  for k,v in self.eval_data.items():
-        #      gap = max(1, 30 - len(k))
-        #      gap_str = " " * gap
-        #      print("{}: {} {:.2f}".format(k, gap_str, v))
-
-        return break_condition
-
-
-    def generate_rollouts(self, return_states=False):
-        ret = None
-        return ret
+        return self.eval_data
 
     def current_mean_Q(self):
         return np.mean(self.custom_histories[0])
 
     def logs(self, prefix=''):
-        eval_data = self.policy.eval_data
+        eval_data = self.eval_data
+
         logs = []
+        logs += [('success_rate', np.mean(self.success_history))]
+        logs += [('episodes', self.n_episodes)]
+
+        for i in range(10):
+            layer_prefix = '{}_{}/'.format(prefix, i)
+            if "{}subgoal_succ".format(layer_prefix) in eval_data.keys():
+                subg_succ_rate = eval_data["{}subgoal_succ".format(layer_prefix)] / eval_data["{}n_subgoals".format(layer_prefix)]
+                eval_data['{}subgoal_succ_rate'.format(layer_prefix)] = subg_succ_rate
+
+            if "{}Q".format(layer_prefix) in eval_data.keys():
+
+                if "{}n_subgoals".format(layer_prefix) in eval_data.keys():
+                    n_qvals = eval_data[
+                            "{}n_subgoals".format(layer_prefix)]
+                else:
+                    n_qvals = 1
+
+                avg_q = eval_data["{}Q".format(layer_prefix)] / n_qvals
+                eval_data["{}avg_Q".format(layer_prefix)] = avg_q
 
         for k,v in sorted(eval_data.items()):
-            logs += [(k , v)]
+            if k.startswith(prefix):
+                logs += [(k , v)]
 
         if prefix != '' and not prefix.endswith('/'):
-            return [(prefix + '/' + key, val) for key, val in logs]
-        else:
-            return logs
+            new_logs = []
+            for key, val in logs:
+                if not key.startswith(prefix):
+                    new_logs +=[((prefix + '/' + key, val))]
+                else:
+                    new_logs += [(key, val)]
+
+            logs = new_logs
+
+        return logs
+
+    def clear_history(self):
+        self.success_history.clear()
+        self.custom_histories.clear()
+        if hasattr(self, 'eval_data'):
+            self.eval_data.clear()
+

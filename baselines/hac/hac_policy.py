@@ -8,7 +8,6 @@ import pickle as cpickle
 import tensorflow as tf
 from datetime import datetime
 import json
-import time
 from baselines.util import get_git_label
 from baselines.hac.utils import EnvWrapper
 from baselines import logger
@@ -21,8 +20,10 @@ class HACPolicy(Policy):
 
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
-        self._set_FLAGS()
-        FLAGS = self.FLAGS
+        FLAGS = parse_options()
+        FLAGS.Q_values = True
+        FLAGS.batch_size = batch_size
+        self.FLAGS = FLAGS
 
         self.env = EnvWrapper(kwargs['make_env']().env, FLAGS, input_dims, max_u)
         agent_params = {
@@ -32,26 +33,6 @@ class HACPolicy(Policy):
             "subgoal_noise": [0.1 for i in range(len(self.env.sub_goal_thresholds))],
         }
 
-        timestamp = datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
-        git_label = get_git_label()
-        self.model_dir = '{}/{}/{}/{}'.format(FLAGS.base_logdir,git_label,self.FLAGS.env,timestamp)
-
-        if not os.path.exists(self.model_dir):
-            os.makedirs(self.model_dir)
-
-        self.performance_txt_file = self.model_dir + "/progress.csv".format(self.FLAGS.env)
-        self.params_json_file = self.model_dir + "/params.json".format(self.FLAGS.env)
-
-        if not os.path.isfile(self.params_json_file):
-            with open(self.params_json_file,'w') as json_file:
-                params = vars(FLAGS)
-                params['env_name'] = params['env']
-                json.dump(params, json_file)
-
-        # Below attributes will be used help save network parameters
-        self.saver = None
-        self.model_loc = None
-
         with tf.variable_scope(self.scope):
             self._create_networks(FLAGS, agent_params)
 
@@ -60,20 +41,7 @@ class HACPolicy(Policy):
         self.current_state = None
         # Track number of low-level actions executed
         self.steps_taken = 0
-        # Below hyperparameter specifies number of Q-value updates made after each episode
-        self.num_updates = self.FLAGS.n_train_batches
-        # Below parameters will be used to store performance results
-        self.performance_log = []
-        self.other_params = agent_params
-
-
-    def _set_FLAGS(self):
-        # Determine training options specified by user.
-        # The full list of available options can be found in "options.py" file.
-        self.FLAGS = parse_options()
-        self.FLAGS.mix_train_test = True
-        self.FLAGS.retrain = True
-        self.FLAGS.Q_values = True
+        self.total_steps = 0
 
     # Determine whether or not each layer's goal was achieved.  Also, if applicable, return the highest level whose goal was achieved.
     def check_goals(self,env):
@@ -134,40 +102,22 @@ class HACPolicy(Policy):
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
         self.layers = [Layer(i,FLAGS,self.env,self.sess, agent_params) for i in range(FLAGS.layers)]
-
-        model_vars = tf.trainable_variables()
-        self.saver = tf.train.Saver(model_vars)
-
-        # Set up location for saving models
-        self.model_loc = self.model_dir + '/HAC.ckpt'
-
         # Initialize actor/critic networks
         self.sess.run(tf.global_variables_initializer())
 
-        # If not retraining, restore weights
-        # if we are not retraining from scratch, just restore weights
-        if self.FLAGS.retrain == False:
-            self.saver.restore(self.sess, tf.train.latest_checkpoint(self.model_dir))
-
-
-    # Save neural network parameters
-    def save_model(self, episode):
-        self.saver.save(self.sess, self.model_loc, global_step=episode)
-
-
     # Update actor and critic networks for each layer
-    def learn(self):
+    def learn(self, num_updates):
         learn_summaries = []
 
         for i in range(len(self.layers)):
-            learn_summay = self.layers[i].learn(self.num_updates)
+            learn_summay = self.layers[i].learn(num_updates)
             learn_summaries.append(learn_summay)
 
         return learn_summaries
 
 
     # Train agent for an episode
-    def train(self,env, episode_num, total_episodes, eval_data):
+    def train(self,env, episode_num, eval_data, num_updates=0):
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
         self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
         env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
@@ -190,87 +140,26 @@ class HACPolicy(Policy):
 
         # Update actor/critic networks if not testing
         if not self.FLAGS.test:
-        # if not self.FLAGS.test and total_episodes > 30:
-            learn_summaries = self.learn()
+            learn_summaries = self.learn(num_updates)
             for l in range(self.FLAGS.layers):
                 learn_summary = learn_summaries[l]
                 for k,v in learn_summary.items():
                     eval_data["train_{}/avg_{}".format(l,k)] = v
 
+        self.total_steps += self.steps_taken
         # Return whether end goal was achieved
         return goal_status[self.FLAGS.layers-1], eval_data
 
 
-    # Save performance evaluations
-    def prepare_eval_data_for_log(self, eval_data):
-
-        for i in range(10):
-            for prefx in ['train', 'test']:
-                layer_prefix = '{}_{}/'.format(prefx, i)
-
-                if "{}subgoal_succ".format(layer_prefix) in eval_data.keys():
-                    subg_succ_rate = eval_data["{}subgoal_succ".format(layer_prefix)] / eval_data["{}n_subgoals".format(layer_prefix)]
-                    eval_data['{}subgoal_succ_rate'.format(layer_prefix)] = subg_succ_rate
-
-                if "{}Q".format(layer_prefix) in eval_data.keys():
-                    if "{}n_subgoals".format(layer_prefix) in eval_data.keys():
-                        n_qvals = eval_data[
-                            "{}n_subgoals".format(layer_prefix)]
-                    else:
-                        n_qvals = 1
-                    avg_q = eval_data["{}Q".format(layer_prefix)] / n_qvals
-                    eval_data["{}avg_Q".format(layer_prefix)] = avg_q
-
-        if not os.path.isfile(self.performance_txt_file):
-            with open(self.performance_txt_file, "w") as txt_logfile:
-                txt_logfile.write(
-                    "{},{},{},{},".format("DateTime", "epoch", "episode", "train/steps"))
-                for k,v in sorted(eval_data.items()):
-                    txt_logfile.write("{},".format(k))
-                txt_logfile.write("{}\n".format("test/success_rate"))
-
-        return eval_data
-
-
-    def log_performance(self, success_rate, eval_data, steps=None, episode=None, batch=None):
-
-        # Add latest success_rate to list
-        self.performance_log.append(success_rate)
-
-        # Save log
-        cpickle.dump(self.performance_log,open(self.model_dir + "/performance_log.p","wb"))
-
-        log_str = ""
-        if batch is not None:
-            log_str += "{},".format(batch)
-        if episode is not None:
-            log_str += "{},".format(episode)
-        if steps is not None:
-            log_str += "{},".format(steps)
-        if log_str != "":
-            for k,v in sorted(eval_data.items()):
-                log_str += "{},".format(v)
-
-            log_str += "{}".format(success_rate)
-            # datetime object containing current date and time
-            now = datetime.now()
-            # dd/mm/YY H:M:S
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            log_str = "{},{}\n".format(dt_string, log_str)
-            with open(self.performance_txt_file, "a") as txt_logfile:
-                txt_logfile.write(log_str)
-
     def logs(self, prefix=''):
-        eval_data = self.eval_data
+        #  eval_data = self.eval_data
         logs = []
-
-        for k,v in sorted(eval_data.items()):
-            logs += [(k , v)]
+        logs += [('episodes', self.total_steps)]
 
         if prefix != '' and not prefix.endswith('/'):
-            return [(prefix + '/' + key, val) for key, val in logs]
-        else:
-            return logs
+            logs = [(prefix + '/' + key, val) for key, val in logs]
+
+        return logs
 
     def _global_vars(self, scope):
         res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
@@ -282,7 +171,7 @@ class HACPolicy(Policy):
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic',
                              # TODO: fix layers
-                             'obs2preds_buffer', 'obs2preds_model', 'saver', 'eval_data', 'layers']
+                             'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers']
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
         state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
