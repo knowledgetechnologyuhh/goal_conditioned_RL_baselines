@@ -1,7 +1,7 @@
 import numpy as np
 from collections import deque
 import time, sys
-from baselines.template.util import store_args # , logger
+from baselines.template.util import convert_episode_to_batch_major, store_args
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 from baselines.hac.utils import print_summary
@@ -22,39 +22,38 @@ class RolloutWorker(Rollout):
         if kwargs['print_summary']:
             print_summary(self.FLAGS, self.env)
 
-        self.successful_train_episodes = 0
-        self.successful_test_episodes = 0
-
         self.eval_data = {}
 
     def train_policy(self, n_train_rollouts, n_train_batches):
+        successful_train_episodes = 0
+        dur_train = 0
+        dur_ro = 0
         for episode in tqdm(range(n_train_rollouts), file=sys.__stdout__, desc='Train Rollout'):
-
-            success, self.eval_data = self.policy.train(self.env, episode, self.eval_data, n_train_batches)
+            ro_start = time.time()
+            success, self.eval_data, train_duration = self.policy.train(self.env, episode, self.eval_data, n_train_batches)
+            dur_train += train_duration
 
             if success:
-                self.successful_train_episodes += 1
+                successful_train_episodes += 1
 
             self.n_episodes += 1
+            dur_ro += time.time() - ro_start
 
         success_rate = 0
         if n_train_rollouts > 0:
-            success_rate = self.successful_train_episodes / n_train_rollouts
+            success_rate = successful_train_episodes / n_train_rollouts
         self.success_history.append(success_rate)
+        return dur_train, dur_ro
 
     def generate_rollouts_update(self, n_train_rollouts, n_train_batches):
-        dur_ro = 0
-        dur_train = 0
         dur_start = time.time()
         self.policy.FLAGS.test = False
-        ro_start = time.time()
+
         # TODO
         #  episode = self.generate_rollouts()
         #  self.policy.store_episode(episode)
-        #  dur_ro += time.time() - ro_start
-        train_start = time.time()
-        self.train_policy(n_train_rollouts, n_train_batches)
-        dur_train += time.time() - train_start
+
+        dur_train, dur_ro = self.train_policy(n_train_rollouts, n_train_batches)
 
         dur_total = time.time() - dur_start
         time_durations = (dur_total, dur_ro, dur_train)
@@ -62,24 +61,11 @@ class RolloutWorker(Rollout):
         return updated_policy, time_durations
 
     def generate_rollouts(self, return_states=False):
-        #  self.reset_all_rollouts()
-        # called for n_test_rollouts
+        self.reset_all_rollouts()
         self.policy.FLAGS.test = True
-
-        for t in range(self.rollout_batch_size):
-            success, self.eval_data = self.policy.train(self.env, t, self.eval_data, 0)
-
-            if success:
-                self.successful_test_episodes += 1
-
-            self.n_episodes += 1
-
-        success_rate = 0
-
-        if self.T > 0:
-            success_rate = self.successful_test_episodes / self.T
-
-        self.success_history.append(success_rate)
+        success, self.eval_data, _ = self.policy.train(self.env, self.n_episodes, self.eval_data, 0)
+        self.success_history.append(1.0 if success else 0.0)
+        self.n_episodes += 1
 
         return self.eval_data
 

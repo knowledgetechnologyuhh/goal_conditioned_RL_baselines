@@ -1,16 +1,12 @@
 from baselines.util import (store_args)
 from baselines.template.policy import Policy
 from baselines.hac.options import parse_options
-import os
 import numpy as np
 from baselines.hac.layer import Layer
-import pickle as cpickle
 import tensorflow as tf
-from datetime import datetime
-import json
-from baselines.util import get_git_label
 from baselines.hac.utils import EnvWrapper
 from baselines import logger
+import time
 
 class HACPolicy(Policy):
     @store_args
@@ -52,8 +48,10 @@ class HACPolicy(Policy):
         max_lay_achieved = None
 
         # Project current state onto the subgoal and end goal spaces
-        proj_subgoal = env.project_state_to_sub_goal(env.sim, self.current_state)
-        proj_end_goal = env.project_state_to_end_goal(env.sim, self.current_state)
+        #  proj_subgoal = env.project_state_to_sub_goal(env.sim, self.current_state)
+        #  proj_end_goal = env.project_state_to_end_goal(env.sim, self.current_state)
+        proj_subgoal = env._obs2subgoal(self.current_state)
+        proj_end_goal = env._obs2goal(self.current_state)
 
         for i in range(self.FLAGS.layers):
 
@@ -138,23 +136,27 @@ class HACPolicy(Policy):
         goal_status, eval_data, max_lay_achieved = self.layers[self.FLAGS.layers-1].\
             train(self, env, episode_num=episode_num, eval_data=eval_data)
 
+        train_duration = 0
         # Update actor/critic networks if not testing
-        if not self.FLAGS.test and episode_num > 30: # TEST
+        if not self.FLAGS.test:
+            train_start = time.time()
             learn_summaries = self.learn(num_updates)
-            for l in range(self.FLAGS.layers):
-                learn_summary = learn_summaries[l]
-                for k,v in learn_summary.items():
-                    eval_data["train_{}/avg_{}".format(l,k)] = v
+            #  for l in range(self.FLAGS.layers):
+            #      learn_summary = learn_summaries[l]
+            #      for k,v in learn_summary.items():
+            #          eval_data["train_{}/avg_{}".format(l,k)] = v
+
+            train_duration += time.time() - train_start
 
         self.total_steps += self.steps_taken
         # Return whether end goal was achieved
-        return goal_status[self.FLAGS.layers-1], eval_data
+        return goal_status[self.FLAGS.layers-1], eval_data, train_duration
 
 
     def logs(self, prefix=''):
         #  eval_data = self.eval_data
         logs = []
-        logs += [('episodes', self.total_steps)]
+        logs += [('steps', self.total_steps)]
 
         if prefix != '' and not prefix.endswith('/'):
             logs = [(prefix + '/' + key, val) for key, val in logs]
