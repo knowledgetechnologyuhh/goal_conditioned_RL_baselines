@@ -406,9 +406,11 @@ class Layer():
                     print("\nEpisode %d, Layer %d, Attempt %d Goal Achieved" % (episode_num, self.layer_number, attempts_made))
                     print("Goal: ", self.goal)
                     if self.layer_number == agent.FLAGS.layers - 1:
-                        print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
+                        #  print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
+                        print("Hindsight Goal: ", env._obs2goal(agent.current_state))
                     else:
-                        print("Hindsight Goal: ", env.project_state_to_sub_goal(env.sim, agent.current_state))
+                        #  print("Hindsight Goal: ", env.project_state_to_sub_goal(env.sim, agent.current_state))
+                        print("Hindsight Goal: ", env._obs2subgoal(agent.current_state))
 
             # Perform hindsight learning using action actually executed (low-level action or hindsight subgoal)
             if self.layer_number == 0:
@@ -419,7 +421,8 @@ class Layer():
                     hindsight_action = action
                 # Otherwise, use subgoal that was achieved in hindsight
                 else:
-                    hindsight_action = env.project_state_to_sub_goal(env.sim, agent.current_state)
+                    #  hindsight_action = env.project_state_to_sub_goal(env.sim, agent.current_state)
+                    hindsight_action = env._obs2subgoal(agent.current_state)
 
 
             # Next, create hindsight transitions if not testing
@@ -453,9 +456,11 @@ class Layer():
                 print("Next State: ", agent.current_state)
                 print("Goal: ", self.goal)
                 if self.layer_number == agent.FLAGS.layers - 1:
-                    print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
+                    #  print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
+                    print("Hindsight Goal: ", env._obs2goal(agent.current_state))
                 else:
-                    print("Hindsight Goal: ", env.project_state_to_sub_goal(env.sim, agent.current_state))
+                    #  print("Hindsight Goal: ", env.project_state_to_sub_goal(env.sim, agent.current_state))
+                    print("Hindsight Goal: ", env._obs2subgoal(agent.current_state))
                 print("Goal Status: ", goal_status, "\n")
                 print("All Goals: ", agent.goal_array)
 
@@ -496,14 +501,16 @@ class Layer():
 
     # Update actor and critic networks
     def learn(self, num_updates):
+        # TODO: Check this comment
         # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
-        if self.layer_number == 0:
-            return {}
+        #  if self.layer_number == 0:
+        #      return {}
 
         learn_history = {}
         learn_history['reward'] = []
 
-        if self.replay_buffer.size > 0:
+        if self.replay_buffer.size > 250:
+        #  if self.replay_buffer.size > 0:
             for _ in range(num_updates):
                 old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
                 learn_history['reward'] += list(rewards)
@@ -515,14 +522,16 @@ class Layer():
                     learn_history[k].append(v)
 
                 action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
+                # TODO: Why was actor not updated
+                self.actor.update(old_states, goals, action_derivs, next_batch_size)
 
-        r_vals = [-0.0, -1.0]
+            r_vals = [-0.0, -1.0]
 
-        if self.layer_number != 0:
-            r_vals.append(float(-self.FLAGS.time_scale))
+            if self.layer_number != 0:
+                r_vals.append(float(-self.FLAGS.time_scale))
 
-        for reward_val in r_vals:
-            learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
+            for reward_val in r_vals:
+                learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
 
         learn_summary = {}
         for k,v in learn_history.items():

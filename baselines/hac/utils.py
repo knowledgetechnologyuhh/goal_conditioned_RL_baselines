@@ -125,12 +125,15 @@ class EnvWrapper(object):
 
     def execute_action(self, action):
         self._set_action(action)
-        self.sim.step()
-        self._step_callback()
+        for _ in range(10):         # TEST
+            self.sim.step()
+            self._step_callback()
 
-        if self.visualize:
-            self.render()
+            if self.visualize:
+                self.render()
 
+        # TODO: _get_state calls _obs2goal. For layers > 0 we need to call
+        #       _get_obs2subgoal to do it like Levy did it.
         return self._get_state()
 
     # TODO: Check if this version works

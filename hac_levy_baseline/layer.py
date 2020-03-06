@@ -506,7 +506,8 @@ class Layer():
         learn_history = {}
         learn_history['reward'] = []
         # if self.replay_buffer.size > self.replay_buffer.batch_size * 3:
-        if self.replay_buffer.size > 0:
+        #  if self.replay_buffer.size > 0:
+        if self.replay_buffer.size > 250:
             for _ in range(num_updates):
                 old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
                 learn_history['reward'] += list(rewards)
@@ -516,7 +517,8 @@ class Layer():
                     if k not in learn_history.keys(): learn_history[k] = []
                     learn_history[k].append(v)
                 action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
-                # self.actor.update(old_states, goals, action_derivs, next_batch_size)
+                # TODO: Why was actor not updated
+                self.actor.update(old_states, goals, action_derivs, next_batch_size)
 
         r_vals = [-0.0, -1.0]
         if self.layer_number != 0:

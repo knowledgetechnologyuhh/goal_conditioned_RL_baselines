@@ -90,12 +90,10 @@ def parse_options():
     #  parser.add_argument('--n_train_batches', type=int, default=40, help='The number of training batches after each epoch.')
     #  parser.add_argument('--batch_size', type=int, default=1024, help='The batch size for training.')
     #  parser.add_argument('--n_epochs', type=int, default=100, help='The number of epochs.')
-    parser.add_argument('--steps_per_layer', dest='time_scale', type=int, default=33, help='The steps per layer.')
-    parser.add_argument('--buffer_size', type=int, default=600, help='The number of rollouts to store per in each layers buffer.')
-    parser.add_argument('--timesteps_per_action', type=int, default=0,
-                        help='The number of simulation steps per executed action. Set to 0 to use environment default.')
-    parser.add_argument('--test_subgoal_perc', type=float, default=0.3,
-                        help='The percentage of subgoals to test.')
+    parser.add_argument('--steps_per_layer', dest='time_scale', type=int, default=30, help='The steps per layer.')
+    parser.add_argument('--buffer_size', type=int, default=500, help='The number of rollouts to store per in each layers buffer.')
+    parser.add_argument('--timesteps_per_action', type=int, default=0, help='The number of simulation steps per executed action. Set to 0 to use environment default.')
+    parser.add_argument('--test_subgoal_perc', type=float, default=0.3, help='The percentage of subgoals to test.')
 
 
     FLAGS, unparsed = parser.parse_known_args()
