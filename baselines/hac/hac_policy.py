@@ -117,7 +117,7 @@ class HACPolicy(Policy):
 
 
     # Train agent for an episode
-    def train(self,env, episode_num, eval_data, num_updates=0):
+    def train(self,env, episode_num, eval_data, num_updates):
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
         self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
         env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
@@ -139,7 +139,7 @@ class HACPolicy(Policy):
             train(self, env, episode_num=episode_num, eval_data=eval_data)
 
         # Update actor/critic networks if not testing
-        if not self.FLAGS.test:
+        if not self.FLAGS.test and episode_num > 30: # TEST
             learn_summaries = self.learn(num_updates)
             for l in range(self.FLAGS.layers):
                 learn_summary = learn_summaries[l]

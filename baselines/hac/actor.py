@@ -94,7 +94,8 @@ class Actor():
     #     return actions
 
     def update(self, state, goal, action_derivs, next_batch_size):
-        weights, policy_grad, _ = self.sess.run([self.weights, self.policy_gradient, self.train],
+        weights, policy_grad, _ = self.sess.run(
+                [self.weights, self.policy_gradient, self.train],
                 feed_dict={
                     self.state_ph: state,
                     self.goal_ph: goal,

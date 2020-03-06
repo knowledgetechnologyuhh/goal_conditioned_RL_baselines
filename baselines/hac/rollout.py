@@ -30,7 +30,7 @@ class RolloutWorker(Rollout):
     def train_policy(self, n_train_rollouts, n_train_batches):
         for episode in tqdm(range(n_train_rollouts), file=sys.__stdout__, desc='Train Rollout'):
 
-            success, self.eval_data = self.policy.train(self.env, episode, self.eval_data, num_updates=n_train_batches)
+            success, self.eval_data = self.policy.train(self.env, episode, self.eval_data, n_train_batches)
 
             if success:
                 self.successful_train_episodes += 1
@@ -67,7 +67,7 @@ class RolloutWorker(Rollout):
         self.policy.FLAGS.test = True
 
         for t in range(self.rollout_batch_size):
-            success, self.eval_data = self.policy.train(self.env, t, self.eval_data)
+            success, self.eval_data = self.policy.train(self.env, t, self.eval_data, 0)
 
             if success:
                 self.successful_test_episodes += 1
