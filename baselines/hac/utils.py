@@ -131,6 +131,8 @@ class EnvWrapper(object):
         if self.visualize:
             self.render()
 
+        # TODO: _get_state calls _obs2goal. For layers > 0 we need to call
+        #       _get_obs2subgoal to do it like Levy did it.
         return self._get_state()
 
     # TODO: Check if this version works
