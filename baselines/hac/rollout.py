@@ -25,24 +25,17 @@ class RolloutWorker(Rollout):
         self.eval_data = {}
 
     def train_policy(self, n_train_rollouts, n_train_batches):
-        successful_train_episodes = 0
         dur_train = 0
         dur_ro = 0
+
         for episode in tqdm(range(n_train_rollouts), file=sys.__stdout__, desc='Train Rollout'):
             ro_start = time.time()
             success, self.eval_data, train_duration = self.policy.train(self.env, episode, self.eval_data, n_train_batches)
             dur_train += train_duration
-
-            if success:
-                successful_train_episodes += 1
-
+            self.success_history.append(1.0 if success else 0.0)
             self.n_episodes += 1
             dur_ro += time.time() - ro_start
 
-        success_rate = 0
-        if n_train_rollouts > 0:
-            success_rate = successful_train_episodes / n_train_rollouts
-        self.success_history.append(success_rate)
         return dur_train, dur_ro
 
     def generate_rollouts_update(self, n_train_rollouts, n_train_batches):
@@ -81,20 +74,21 @@ class RolloutWorker(Rollout):
 
         for i in range(10):
             layer_prefix = '{}_{}/'.format(prefix, i)
+
             if "{}subgoal_succ".format(layer_prefix) in eval_data.keys():
-                subg_succ_rate = eval_data["{}subgoal_succ".format(layer_prefix)] / eval_data["{}n_subgoals".format(layer_prefix)]
-                eval_data['{}subgoal_succ_rate'.format(layer_prefix)] = subg_succ_rate
+                subg_rate_prefix = '{}subgoal_succ'.format(layer_prefix)
+                logs += [(subg_rate_prefix + '_rate', np.mean(eval_data[subg_rate_prefix]))]
+                del eval_data[subg_rate_prefix]
 
             if "{}Q".format(layer_prefix) in eval_data.keys():
+                n_subg_prefix = "{}n_subgoals".format(layer_prefix)
+                if n_subg_prefix in eval_data.keys():
+                    logs += [(n_subg_prefix, eval_data[n_subg_prefix])]
+                    del eval_data[n_subg_prefix]
 
-                if "{}n_subgoals".format(layer_prefix) in eval_data.keys():
-                    n_qvals = eval_data[
-                            "{}n_subgoals".format(layer_prefix)]
-                else:
-                    n_qvals = 1
-
-                avg_q = eval_data["{}Q".format(layer_prefix)] / n_qvals
-                eval_data["{}avg_Q".format(layer_prefix)] = avg_q
+                q_prefix = "{}Q".format(layer_prefix)
+                logs += [("{}avg_Q".format(layer_prefix), np.mean(eval_data[q_prefix]))]
+                del eval_data[q_prefix]
 
         for k,v in sorted(eval_data.items()):
             if k.startswith(prefix):
