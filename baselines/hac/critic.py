@@ -4,17 +4,17 @@ from baselines.hac.utils import layer, flatten_mixed_np_array
 import itertools
 class Critic():
 
-    def __init__(self, sess, env, layer_number, FLAGS, learning_rate=0.001, gamma=0.98, tau=0.05):
+    def __init__(self, sess, env, layer_number, n_layers, time_scale, learning_rate=0.001, gamma=0.98, tau=0.05):
         self.sess = sess
         self.critic_name = 'critic_' + str(layer_number)
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.tau = tau
 
-        self.q_limit = -FLAGS.time_scale
+        self.q_limit = -time_scale
 
         # Dimensions of goal placeholder will differ depending on layer level
-        if layer_number == FLAGS.layers - 1:
+        if layer_number == n_layers - 1:
             self.goal_dim = env.end_goal_dim
         else:
             self.goal_dim = env.subgoal_dim

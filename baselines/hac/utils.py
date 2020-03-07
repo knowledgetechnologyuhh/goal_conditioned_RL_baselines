@@ -73,17 +73,17 @@ def print_summary(FLAGS,env):
 
 
 class EnvWrapper(object):
-    def __init__(self, env, FLAGS, input_dims, max_u):
+    def __init__(self, env, n_layers, time_scale, input_dims, max_u):
         self.wrapped_env = env
 
         # TODO: get this from click options
-        FLAGS.layers = 2
+        self.n_layers = n_layers
+        self.time_scale = time_scale
 
-        if FLAGS.time_scale == 0:
+        if self.time_scale == 0:
             # Enter max sequence length in which each policy will specialize
-            FLAGS.time_scale = 30
+            self.time_scale = 30
 
-        self.FLAGS = FLAGS
         self.visualize = False
 
         # TODO: use wtm definitions
@@ -116,8 +116,7 @@ class EnvWrapper(object):
 
         print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
-        max_actions = 700
-        max_actions = FLAGS.time_scale**(FLAGS.layers)
+        max_actions = self.time_scale**(self.n_layers)
         self.max_actions = max_actions
 
     def __getattr__(self, attr):

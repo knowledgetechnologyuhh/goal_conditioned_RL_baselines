@@ -15,12 +15,11 @@ class RolloutWorker(Rollout):
 
         self.env = self.policy.env
         self.env.visualize = render
-        self.FLAGS = self.policy.FLAGS
         self.T = T
         self.graph = kwargs['graph']
 
-        if kwargs['print_summary']:
-            print_summary(self.FLAGS, self.env)
+        #  if kwargs['print_summary']:
+        #      print_summary(self.FLAGS, self.env)
 
         self.eval_data = {}
 
@@ -40,7 +39,7 @@ class RolloutWorker(Rollout):
 
     def generate_rollouts_update(self, n_train_rollouts, n_train_batches):
         dur_start = time.time()
-        self.policy.FLAGS.test = False
+        self.policy.test_mode = False
 
         # TODO
         #  episode = self.generate_rollouts()
@@ -55,7 +54,7 @@ class RolloutWorker(Rollout):
 
     def generate_rollouts(self, return_states=False):
         self.reset_all_rollouts()
-        self.policy.FLAGS.test = True
+        self.policy.test_mode = True
         success, self.eval_data, _ = self.policy.train(self.env, self.n_episodes, self.eval_data, 0)
         self.success_history.append(1.0 if success else 0.0)
         self.n_episodes += 1

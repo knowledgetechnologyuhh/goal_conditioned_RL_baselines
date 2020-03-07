@@ -10,7 +10,7 @@ class Actor():
             env,
             batch_size,
             layer_number,
-            FLAGS,
+            n_layers,
             learning_rate=0.001,
             tau=0.05):
 
@@ -34,7 +34,7 @@ class Actor():
         self.actor_name = 'actor_' + str(layer_number)
 
         # Dimensions of goal placeholder will differ depending on layer level
-        if layer_number == FLAGS.layers - 1:
+        if layer_number == n_layers - 1:
             self.goal_dim = env.end_goal_dim
         else:
             self.goal_dim = env.subgoal_dim

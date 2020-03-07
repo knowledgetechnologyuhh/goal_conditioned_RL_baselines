@@ -1,6 +1,5 @@
 from baselines.util import (store_args)
 from baselines.template.policy import Policy
-from baselines.hac.options import parse_options
 import numpy as np
 from baselines.hac.layer import Layer
 import tensorflow as tf
@@ -12,28 +11,40 @@ class HACPolicy(Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
             action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-            sample_transitions, gamma, reuse=False, **kwargs):
+            sample_transitions, gamma,time_scale, subgoal_test_perc, n_layers, reuse=False, **kwargs):
 
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
+        #  print(input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
+        #      action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
+        #      sample_transitions, gamma, reuse,time_scale, subgoal_test_perc, kwargs)
 
-        FLAGS = parse_options()
-        FLAGS.Q_values = True
-        FLAGS.batch_size = batch_size
-        self.FLAGS = FLAGS
+        self.verbose = False
+        self.Q_values = True
+        self.n_layers = n_layers
 
-        self.env = EnvWrapper(kwargs['make_env']().env, FLAGS, input_dims, max_u)
+        # TODO: Why we get tuples?
+        time_scale = time_scale[0]
+        subgoal_test_perc = subgoal_test_perc[0]
+        self.buffer_size = buffer_size[0]
+        self.batch_size = batch_size[0]
+
+        self.env = EnvWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u)
         agent_params = {
-            "subgoal_test_perc": 0.3, # FLAGS.test_subgoal_perc
-            "subgoal_penalty": -FLAGS.time_scale,
+            "subgoal_test_perc": subgoal_test_perc,
+            "subgoal_penalty": -time_scale,
             "atomic_noise": [0.1 for i in range(8)],
             "subgoal_noise": [0.1 for i in range(len(self.env.sub_goal_thresholds))],
+            "n_layers": n_layers,
+            "batch_size": self.batch_size,
+            "buffer_size": self.buffer_size,
+            "time_scale": time_scale,
         }
 
         with tf.variable_scope(self.scope):
-            self._create_networks(FLAGS, agent_params)
+            self._create_networks(agent_params)
 
         # goal_array will store goal for each layer of agent.
-        self.goal_array = [None for i in range(FLAGS.layers)]
+        self.goal_array = [None for i in range(n_layers)]
         self.current_state = None
         # Track number of low-level actions executed
         self.steps_taken = 0
@@ -43,7 +54,7 @@ class HACPolicy(Policy):
     def check_goals(self,env):
 
         # goal_status is vector showing status of whether a layer's goal has been achieved
-        goal_status = [False for i in range(self.FLAGS.layers)]
+        goal_status = [False for i in range(self.n_layers)]
 
         max_lay_achieved = None
 
@@ -53,12 +64,12 @@ class HACPolicy(Policy):
         proj_subgoal = env._obs2subgoal(self.current_state)
         proj_end_goal = env._obs2goal(self.current_state)
 
-        for i in range(self.FLAGS.layers):
+        for i in range(self.n_layers):
 
             goal_achieved = True
 
             # If at highest layer, compare to end goal thresholds
-            if i == self.FLAGS.layers - 1:
+            if i == self.n_layers - 1:
 
                 # Check dimensions are appropriate
                 assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
@@ -91,7 +102,7 @@ class HACPolicy(Policy):
         return goal_status, max_lay_achieved
 
 
-    def _create_networks(self, FLAGS, agent_params):
+    def _create_networks(self, agent_params):
         logger.info("Creating a HAC agent with action space %d x %s..." % (self.dimu, self.max_u))
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
@@ -99,7 +110,7 @@ class HACPolicy(Policy):
         # Set subgoal testing ratio each layer will use
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
-        self.layers = [Layer(i,FLAGS,self.env,self.sess, agent_params) for i in range(FLAGS.layers)]
+        self.layers = [Layer(i,self.env,self.sess, agent_params) for i in range(self.n_layers)]
         # Initialize actor/critic networks
         self.sess.run(tf.global_variables_initializer())
 
@@ -117,28 +128,28 @@ class HACPolicy(Policy):
     # Train agent for an episode
     def train(self,env, episode_num, eval_data, num_updates):
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
-        self.goal_array[self.FLAGS.layers - 1] = env.get_next_goal(self.FLAGS.test)
-        env.display_end_goal(self.goal_array[self.FLAGS.layers - 1])
+        self.goal_array[self.n_layers - 1] = env.get_next_goal(self.test_mode)
+        env.display_end_goal(self.goal_array[self.n_layers - 1])
 
-        if self.FLAGS.verbose:
-            print("Next End Goal: ", self.goal_array[self.FLAGS.layers - 1])
+        if self.verbose:
+            print("Next End Goal: ", self.goal_array[self.n_layers - 1])
 
         # Select initial state from in initial state space, defined in environment.py
-        self.current_state = env._reset_sim(self.goal_array[self.FLAGS.layers - 1])['observation']
+        self.current_state = env._reset_sim(self.goal_array[self.n_layers - 1])['observation']
 
-        if self.FLAGS.verbose:
+        if self.verbose:
             print("Initial State: ", self.current_state[:3])
 
         # Reset step counter
         self.steps_taken = 0
 
         # Train for an episode
-        goal_status, eval_data, max_lay_achieved = self.layers[self.FLAGS.layers-1].\
+        goal_status, eval_data, max_lay_achieved = self.layers[self.n_layers-1].\
             train(self, env, episode_num=episode_num, eval_data=eval_data)
 
         train_duration = 0
         # Update actor/critic networks if not testing
-        if not self.FLAGS.test:
+        if not self.test_mode:
             train_start = time.time()
             learn_summaries = self.learn(num_updates)
             #  for l in range(self.FLAGS.layers):
@@ -150,7 +161,7 @@ class HACPolicy(Policy):
 
         self.total_steps += self.steps_taken
         # Return whether end goal was achieved
-        return goal_status[self.FLAGS.layers-1], eval_data, train_duration
+        return goal_status[self.n_layers-1], eval_data, train_duration
 
 
     def logs(self, prefix=''):
