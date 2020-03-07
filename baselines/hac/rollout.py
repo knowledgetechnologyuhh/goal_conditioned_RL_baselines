@@ -25,24 +25,17 @@ class RolloutWorker(Rollout):
         self.eval_data = {}
 
     def train_policy(self, n_train_rollouts, n_train_batches):
-        successful_train_episodes = 0
         dur_train = 0
         dur_ro = 0
+
         for episode in tqdm(range(n_train_rollouts), file=sys.__stdout__, desc='Train Rollout'):
             ro_start = time.time()
             success, self.eval_data, train_duration = self.policy.train(self.env, episode, self.eval_data, n_train_batches)
             dur_train += train_duration
-
-            if success:
-                successful_train_episodes += 1
-
+            self.success_history.append(1.0 if success else 0.0)
             self.n_episodes += 1
             dur_ro += time.time() - ro_start
 
-        success_rate = 0
-        if n_train_rollouts > 0:
-            success_rate = successful_train_episodes / n_train_rollouts
-        self.success_history.append(success_rate)
         return dur_train, dur_ro
 
     def generate_rollouts_update(self, n_train_rollouts, n_train_batches):
