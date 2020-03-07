@@ -330,13 +330,13 @@ class Layer():
         train_test_prefix = 'test_{}/'.format(self.layer_number) if self.FLAGS.test else 'train_{}/'.format(self.layer_number)
         if self.layer_number > 0:
             if "{}subgoal_succ".format(train_test_prefix) not in eval_data:
-                eval_data["{}subgoal_succ".format(train_test_prefix)] = 0
+                eval_data["{}subgoal_succ".format(train_test_prefix)] = []
             if "{}n_subgoals".format(train_test_prefix) not in eval_data:
                 eval_data["{}n_subgoals".format(train_test_prefix)] = 0
 
         if self.FLAGS.Q_values:
             if "{}Q".format(train_test_prefix) not in eval_data:
-                eval_data["{}Q".format(train_test_prefix)] = 0
+                eval_data["{}Q".format(train_test_prefix)] = []
 
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.layer_number]
@@ -364,7 +364,7 @@ class Layer():
                 q_val = self.critic.get_Q_value(np.reshape(self.current_state, (1, len(self.current_state))),
                                                 np.reshape(self.goal, (1, len(self.goal))),
                                                 np.reshape(action, (1, len(action))))
-                eval_data["{}Q".format(train_test_prefix)] += q_val[0]
+                eval_data["{}Q".format(train_test_prefix)] += [q_val[0]]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
             # whether that subgoal should be tested
@@ -374,7 +374,7 @@ class Layer():
 
                 goal_status, eval_data, max_lay_achieved = agent.layers[self.layer_number - 1].\
                     train(agent, env, next_subgoal_test, episode_num, eval_data)
-                eval_data["{}subgoal_succ".format(train_test_prefix)] += goal_status[self.layer_number-1]
+                eval_data["{}subgoal_succ".format(train_test_prefix)] += [1.0 if goal_status[self.layer_number-1] else 0.0]
                 eval_data["{}n_subgoals".format(train_test_prefix)] += 1
 
             # If layer is bottom level, execute low-level action
