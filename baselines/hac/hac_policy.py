@@ -12,7 +12,6 @@ class HACPolicy(Policy):
     def __init__(self, input_dims, buffer_size, hidden_size, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
             action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
             sample_transitions, gamma,time_scale, subgoal_test_perc, n_layers, reuse=False, **kwargs):
-
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
         #  print(input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
         #      action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
@@ -32,7 +31,7 @@ class HACPolicy(Policy):
         agent_params = {
             "subgoal_test_perc": subgoal_test_perc,
             "subgoal_penalty": -time_scale,
-            "atomic_noise": [0.1 for i in range(8)],
+            "atomic_noise": [0.1 for i in range(input_dims['u'])],
             "subgoal_noise": [0.1 for i in range(len(self.env.sub_goal_thresholds))],
             "n_layers": n_layers,
             "batch_size": self.batch_size,
@@ -114,7 +113,6 @@ class HACPolicy(Policy):
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
         self.layers = [Layer(i,self.env,self.sess, agent_params) for i in range(self.n_layers)]
-        # Initialize actor/critic networks
         self.sess.run(tf.global_variables_initializer())
 
     # Update actor and critic networks for each layer
@@ -131,7 +129,7 @@ class HACPolicy(Policy):
     # Train agent for an episode
     def train(self,env, episode_num, eval_data, num_updates):
         # Select final goal from final goal space, defined in "design_agent_and_env.py"
-        self.goal_array[self.n_layers - 1] = env.get_next_goal(self.test_mode)
+        self.goal_array[self.n_layers - 1] = env._sample_goal()
         env.display_end_goal(self.goal_array[self.n_layers - 1])
 
         if self.verbose:
