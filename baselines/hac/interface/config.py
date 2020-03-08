@@ -7,7 +7,6 @@ from baselines.hac.hac_policy import HACPolicy
 from baselines.mbhac.her import make_sample_her_transitions
 
 DEFAULT_ENV_PARAMS = {
-    #  'AntFourRoomsEnv-v0': {
     'AntReacherEnv-v0':{
         'n_cycles': 20
     },
@@ -18,7 +17,8 @@ DEFAULT_PARAMS = {
     'max_u': 1.,  # max absolute value of actions on different coordinates
     # mbhac
     'layers': 3,  # number of layers in the critic/actor networks
-    'hidden': 256,  # number of neurons in each hidden layers
+    'hidden_size': 64,  # number of neurons in each hidden layers
+
     'network_class': 'baselines.mbhac.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
@@ -49,9 +49,7 @@ DEFAULT_PARAMS = {
     'norm_clip': 5,  # normalized observations are cropped to this values
 }
 
-POLICY_ACTION_PARAMS = {
-
-    }
+POLICY_ACTION_PARAMS = {}
 
 CACHED_ENVS = {}
 
@@ -62,8 +60,7 @@ ROLLOUT_PARAMS = {
                                  'compute_Q': False,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
-                                 'use_target_net': False},
-        'print_summary': True
+                                 'use_target_net': False}
     }
 
 EVAL_PARAMS = {
@@ -75,11 +72,10 @@ EVAL_PARAMS = {
                                  'random_eps': 0.3,
                                  'use_target_net': False
                                  # 'use_target_net': params['test_with_polyak'],
-                                 },
-        'print_summary': False
+                                 }
     }
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy', 'buffer_size']
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
 
@@ -116,7 +112,7 @@ def prepare_params(kwargs):
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr']
         del kwargs['lr']
-    for name in ['buffer_size', 'hidden', 'layers',
+    for name in ['buffer_size', 'hidden_size', 'layers',
                  'polyak',
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',
@@ -133,7 +129,7 @@ def log_params(params, logger=logger):
     for key in sorted(params.keys()):
         logger.info('{}: {}'.format(key, params[key]))
 
-def configure_her(params):
+def configure_hac(params):
     env = cached_make_env(params['make_env'])
     env.reset()
 
@@ -160,13 +156,18 @@ def simple_goal_subtract(a, b):
 
 def configure_policy(dims, params):
     # Extract relevant parameters.
-    sample_her_transitions = configure_her(params)
+    sample_her_transitions = configure_hac(params)
     gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
     hac_params = params['hac_params']
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
+    batch_size= params['train_batch_size'],
+    time_scale= params['time_scale'],
+    buffer_size= params['hac_params']['buffer_size'],
+    subgoal_test_perc= params['subgoal_test_perc'],
+    n_layers = params['n_layers']
 
     # HAC agent
     env = cached_make_env(params['make_env'])
@@ -184,6 +185,11 @@ def configure_policy(dims, params):
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
+                        'batch_size': batch_size,
+                        'time_scale': time_scale,
+                        'buffer_size': buffer_size,
+                        'subgoal_test_perc' : subgoal_test_perc,
+                        'n_layers': n_layers,
                         })
     hac_params['info'] = {
         'env_name': params['env_name'],
@@ -203,7 +209,7 @@ def load_policy(restore_policy_file, params):
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
-    policy.sample_transitions = configure_her(params)
+    policy.sample_transitions = configure_hac(params)
     policy.buffer.sample_transitions = policy.sample_transitions
     return policy
 
