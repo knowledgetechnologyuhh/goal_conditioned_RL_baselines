@@ -77,9 +77,13 @@ class RolloutWorker(Rollout):
                     logs += [("{}avg_Q".format(layer_prefix), 0.0)]
 
         if prefix != '' and not prefix.endswith('/'):
+            new_logs = []
             for key, val in logs:
                 if not key.startswith(prefix):
-                    logs +=[((prefix + '/' + key, val))]
+                    new_logs +=[((prefix + '/' + key, val))]
+                else:
+                    new_logs += [(key, val)]
+            logs = new_logs
 
         return logs
 
