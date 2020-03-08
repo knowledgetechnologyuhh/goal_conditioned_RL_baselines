@@ -58,20 +58,6 @@ def layer_goal_nn(input_layer, num_next_neurons, is_output=False):
     return relu
 
 
-# Below function prints out options and environment specified by user
-def print_summary(FLAGS,env):
-
-    print("\n- - - - - - - - - - -")
-    print("Task Summary: ","\n")
-    print("Environment: ", env.name)
-    print("Number of Layers: ", FLAGS.layers)
-    print("Time Limit per Layer: ", FLAGS.time_scale)
-    print("Max Episode Time Steps: ", env.max_actions)
-    print("Test: ", FLAGS.test)
-    print("Visualize: ", FLAGS.show)
-    print("- - - - - - - - - - -", "\n\n")
-
-
 class EnvWrapper(object):
     def __init__(self, env, n_layers, time_scale, input_dims, max_u):
         self.wrapped_env = env

@@ -12,9 +12,11 @@ class Actor():
             layer_number,
             n_layers,
             learning_rate=0.001,
-            tau=0.05):
+            tau=0.05,
+            hidden_size=64):
 
         self.sess = sess
+        self.hidden_size = hidden_size
 
         # Determine range of actor network outputs.  This will be used to configure outer layer of neural network
         if layer_number == 0:
@@ -114,11 +116,11 @@ class Actor():
             name = self.actor_name
 
         with tf.variable_scope(name + '_fc_1'):
-            fc1 = layer(features, 64)
+            fc1 = layer(features, self.hidden_size)
         with tf.variable_scope(name + '_fc_2'):
-            fc2 = layer(fc1, 64)
+            fc2 = layer(fc1, self.hidden_size)
         with tf.variable_scope(name + '_fc_3'):
-            fc3 = layer(fc2, 64)
+            fc3 = layer(fc2, self.hidden_size)
         with tf.variable_scope(name + '_fc_4'):
             fc4 = layer(fc3, self.action_space_size, is_output=True)
 

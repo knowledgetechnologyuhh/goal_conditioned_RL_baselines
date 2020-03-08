@@ -9,7 +9,7 @@ import time
 
 class HACPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
+    def __init__(self, input_dims, buffer_size, hidden_size, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
             action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
             sample_transitions, gamma,time_scale, subgoal_test_perc, n_layers, reuse=False, **kwargs):
 
@@ -38,15 +38,17 @@ class HACPolicy(Policy):
             "batch_size": self.batch_size,
             "buffer_size": self.buffer_size,
             "time_scale": time_scale,
+            "hidden_size": hidden_size,
+            "Q_lr": Q_lr,
+            "pi_lr": pi_lr,
         }
 
         with tf.variable_scope(self.scope):
             self._create_networks(agent_params)
 
-        # goal_array will store goal for each layer of agent.
+        # goal_array stores goal for each layer of agent.
         self.goal_array = [None for i in range(n_layers)]
         self.current_state = None
-        # Track number of low-level actions executed
         self.steps_taken = 0
         self.total_steps = 0
 
@@ -55,12 +57,8 @@ class HACPolicy(Policy):
 
         # goal_status is vector showing status of whether a layer's goal has been achieved
         goal_status = [False for i in range(self.n_layers)]
-
         max_lay_achieved = None
-
         # Project current state onto the subgoal and end goal spaces
-        #  proj_subgoal = env.project_state_to_sub_goal(env.sim, self.current_state)
-        #  proj_end_goal = env.project_state_to_end_goal(env.sim, self.current_state)
         proj_subgoal = env._obs2subgoal(self.current_state)
         proj_end_goal = env._obs2goal(self.current_state)
 
@@ -101,6 +99,11 @@ class HACPolicy(Policy):
 
         return goal_status, max_lay_achieved
 
+    def set_train_mode(self):
+        self.test_mode = False
+
+    def set_test_mode(self):
+        self.test_mode = True
 
     def _create_networks(self, agent_params):
         logger.info("Creating a HAC agent with action space %d x %s..." % (self.dimu, self.max_u))
@@ -165,7 +168,6 @@ class HACPolicy(Policy):
 
 
     def logs(self, prefix=''):
-        #  eval_data = self.eval_data
         logs = []
         logs += [('steps', self.total_steps)]
 

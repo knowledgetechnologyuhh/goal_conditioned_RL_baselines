@@ -17,7 +17,8 @@ DEFAULT_PARAMS = {
     'max_u': 1.,  # max absolute value of actions on different coordinates
     # mbhac
     'layers': 3,  # number of layers in the critic/actor networks
-    'hidden': 256,  # number of neurons in each hidden layers
+    'hidden_size': 64,  # number of neurons in each hidden layers
+
     'network_class': 'baselines.mbhac.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
@@ -48,9 +49,7 @@ DEFAULT_PARAMS = {
     'norm_clip': 5,  # normalized observations are cropped to this values
 }
 
-POLICY_ACTION_PARAMS = {
-
-    }
+POLICY_ACTION_PARAMS = {}
 
 CACHED_ENVS = {}
 
@@ -61,8 +60,7 @@ ROLLOUT_PARAMS = {
                                  'compute_Q': False,
                                  'noise_eps': 0.2,
                                  'random_eps': 0.3,
-                                 'use_target_net': False},
-        'print_summary': True
+                                 'use_target_net': False}
     }
 
 EVAL_PARAMS = {
@@ -74,8 +72,7 @@ EVAL_PARAMS = {
                                  'random_eps': 0.3,
                                  'use_target_net': False
                                  # 'use_target_net': params['test_with_polyak'],
-                                 },
-        'print_summary': False
+                                 }
     }
 
 OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy', 'buffer_size']
@@ -115,7 +112,7 @@ def prepare_params(kwargs):
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr']
         del kwargs['lr']
-    for name in ['buffer_size', 'hidden', 'layers',
+    for name in ['buffer_size', 'hidden_size', 'layers',
                  'polyak',
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',

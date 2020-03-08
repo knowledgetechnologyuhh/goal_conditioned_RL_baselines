@@ -48,8 +48,10 @@ class Layer():
         self.temp_goal_replay_storage = []
 
         # Initialize actor and critic networks
-        self.actor = Actor(sess, env, self.batch_size, self.layer_number, self.n_layers)
-        self.critic = Critic(sess, env, self.layer_number, self.n_layers, self.time_scale)
+        self.actor = Actor(sess, env, self.batch_size, self.layer_number, self.n_layers,
+                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr'])
+        self.critic = Critic(sess, env, self.layer_number, self.n_layers, self.time_scale,
+                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['Q_lr'])
 
         # Parameter determines degree of noise added to actions during training
         # self.noise_perc = noise_perc
@@ -299,6 +301,7 @@ class Layer():
     # Determine whether layer is finished training
     def return_to_higher_level(self, max_lay_achieved, agent, env, attempts_made):
 
+        # TODO: Remove
         assert env.step_ctr == agent.steps_taken
         # Return to higher level if
         # (i) a higher level goal has been reached,
@@ -386,6 +389,7 @@ class Layer():
                 # sleep(1)
                 agent.steps_taken += 1
 
+                # TODO: Remove
                 assert env.step_ctr == agent.steps_taken
                 if env.step_ctr >= env.max_actions:
                     if agent.verbose:
@@ -402,10 +406,13 @@ class Layer():
             # Print if goal from current layer has been achieved
             if agent.verbose:
                 if goal_status[self.layer_number]:
+
                     if self.layer_number < agent.n_layers - 1:
                         print("SUBGOAL ACHIEVED")
+
                     print("\nEpisode %d, Layer %d, Attempt %d Goal Achieved" % (episode_num, self.layer_number, attempts_made))
                     print("Goal: ", self.goal)
+
                     if self.layer_number == agent.n_layers - 1:
                         #  print("Hindsight Goal: ", env.project_state_to_end_goal(env.sim, agent.current_state))
                         print("Hindsight Goal: ", env._obs2goal(agent.current_state))
@@ -471,6 +478,7 @@ class Layer():
             # Return to previous level to receive next subgoal if applicable
             # if self.return_to_higher_level(max_lay_achieved, agent, env, attempts_made):
 
+            # TODO: Remove
             assert env.step_ctr == agent.steps_taken
             if (max_lay_achieved is not None and max_lay_achieved >= self.layer_number) or \
                     env.step_ctr >= env.max_actions or attempts_made >= self.time_limit:
@@ -523,7 +531,7 @@ class Layer():
                     learn_history[k].append(v)
 
                 action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
-                # TODO: Why was actor not updated
+                # TODO: Why was actor not updated?
                 self.actor.update(old_states, goals, action_derivs, next_batch_size)
 
             r_vals = [-0.0, -1.0]
