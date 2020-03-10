@@ -2,6 +2,8 @@ import numpy as np
 from baselines.hac.experience_buffer import ExperienceBuffer
 from baselines.hac.actor import Actor
 from baselines.hac.critic import Critic
+from baselines.hac.model import ForwardModel
+import tensorflow as tf
 
 class Layer():
     def __init__(self, layer_number, env, sess, agent_params):
@@ -10,6 +12,7 @@ class Layer():
         self.n_layers = agent_params['n_layers']
         self.time_scale = agent_params['time_scale']
         self.subgoal_test_perc = agent_params['subgoal_test_perc']
+        self.model_based = agent_params['model_based']
 
         # Set time limit for each layer.  If agent uses only 1 layer, time limit is the max number of low-level actions allowed in the episode (i.e, env.max_actions).
         if self.n_layers > 1:
@@ -51,6 +54,11 @@ class Layer():
         self.critic = Critic(sess, env, self.layer_number, self.n_layers, self.time_scale,
                 hidden_size=agent_params['hidden_size'], learning_rate=agent_params['Q_lr'])
 
+        if self.model_based:
+            print('Layer {} uses forward model'.format(self.layer_number))
+            with tf.variable_scope("predictor_{}".format(self.layer_number)):
+                self.state_predictor = ForwardModel(sess, env, self.layer_number, agent_params['mb_params'])
+
         # Parameter determines degree of noise added to actions during training
         # self.noise_perc = noise_perc
         if self.layer_number == 0:
@@ -60,8 +68,8 @@ class Layer():
 
         # Create flag to indicate when layer has ran out of attempts to achieve goal.  This will be important for subgoal testing
         self.maxed_out = False
-
         self.subgoal_penalty = agent_params["subgoal_penalty"]
+        self.curiosity = []
 
 
 
@@ -303,6 +311,9 @@ class Layer():
             if "{}Q".format(train_test_prefix) not in eval_data:
                 eval_data["{}Q".format(train_test_prefix)] = []
 
+        # Currently only for training
+        if not agent.test_mode and "{}curiosity".format(self.layer_number) not in eval_data:
+            eval_data["{}curiosity".format(train_test_prefix)] = []
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.layer_number]
         self.current_state = agent.current_state
@@ -361,6 +372,12 @@ class Layer():
                 goal_status, max_lay_achieved = agent.check_goals(env)
 
             attempts_made += 1
+
+            # Currently only for training
+            if not agent.test_mode and self.model_based:
+                curi = self.state_predictor.pred_bonus([action], [self.current_state], [agent.current_state])
+                eval_data["{}curiosity".format(train_test_prefix)] += [curi]
+                self.curiosity += [curi]
 
             # Print if goal from current layer has been achieved
             if agent.verbose:
@@ -462,17 +479,28 @@ class Layer():
     def learn(self, num_updates):
         # TODO: Check this comment
         # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
-        #  if self.layer_number == 0:
-        #      return {}
+        if self.layer_number == 0:
+            return {}
 
         learn_history = {}
         learn_history['reward'] = []
+        learn_history['reward'] = []
 
-        if self.replay_buffer.size > 250:
+        if self.replay_buffer.size >= 250:
+
+            mb_loss = 0.0
+
             for _ in range(num_updates):
                 old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
                 learn_history['reward'] += list(rewards)
                 next_batch_size = min(self.replay_buffer.size, self.replay_buffer.batch_size)
+
+                 # update the rewards with curiosity bonus
+                if self.model_based:
+                    bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
+                    rewards = np.array(rewards) + np.array(bonus)
+                    rewards = rewards.tolist()
+
                 q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor.get_action(new_states,goals), is_terminals)
 
                 for k,v in q_update.items():
@@ -482,6 +510,9 @@ class Layer():
                 action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
                 self.actor.update(old_states, goals, action_derivs, next_batch_size)
 
+                if self.model_based and self.state_predictor:
+                    mb_loss += self.state_predictor.update(old_states, actions, new_states)
+
             r_vals = [-0.0, -1.0]
 
             if self.layer_number != 0:
@@ -489,6 +520,10 @@ class Layer():
 
             for reward_val in r_vals:
                 learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
+
+            if self.model_based:
+                total_mb_loss = mb_loss / num_updates
+                learn_history["mb_loss"] = total_mb_loss
 
         learn_summary = {}
         for k,v in learn_history.items():

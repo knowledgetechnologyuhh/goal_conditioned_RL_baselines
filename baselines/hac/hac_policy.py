@@ -11,7 +11,7 @@ class HACPolicy(Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden_size, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
             action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-            sample_transitions, gamma,time_scale, subgoal_test_perc, n_layers, reuse=False, **kwargs):
+            sample_transitions, gamma,time_scale, subgoal_test_perc, n_layers, model_based, mb_hidden_size, mb_lr, eta,reuse=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
         #  print(input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
         #      action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
@@ -26,8 +26,9 @@ class HACPolicy(Policy):
         subgoal_test_perc = subgoal_test_perc[0]
         self.buffer_size = buffer_size[0]
         self.batch_size = batch_size[0]
+        self.model_based = model_based
 
-        self.env = EnvWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u)
+        self.env = EnvWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
         agent_params = {
             "subgoal_test_perc": subgoal_test_perc,
             "subgoal_penalty": -time_scale,
@@ -40,6 +41,12 @@ class HACPolicy(Policy):
             "hidden_size": hidden_size,
             "Q_lr": Q_lr,
             "pi_lr": pi_lr,
+            "model_based": self.model_based,
+            "mb_params": {
+                "hidden_size": mb_hidden_size,
+                "lr": mb_lr,
+                "eta": eta,
+                }
         }
 
         with tf.variable_scope(self.scope):
@@ -153,10 +160,11 @@ class HACPolicy(Policy):
         if not self.test_mode:
             train_start = time.time()
             learn_summaries = self.learn(num_updates)
-            #  for l in range(self.FLAGS.layers):
-            #      learn_summary = learn_summaries[l]
-            #      for k,v in learn_summary.items():
-            #          eval_data["train_{}/avg_{}".format(l,k)] = v
+
+            for l in range(self.n_layers):
+                learn_summary = learn_summaries[l]
+                for k,v in learn_summary.items():
+                    eval_data["train_{}/{}".format(l,k)] = v
 
             train_duration += time.time() - train_start
 

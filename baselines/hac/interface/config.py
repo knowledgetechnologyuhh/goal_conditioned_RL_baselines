@@ -169,6 +169,11 @@ def configure_policy(dims, params):
     subgoal_test_perc= params['subgoal_test_perc'],
     n_layers = params['n_layers']
 
+    model_based = params['model_based']
+    mb_lr = params['mb_lr']
+    mb_hidden_size = params['mb_hidden_size']
+    eta = params['eta']
+
     # HAC agent
     env = cached_make_env(params['make_env'])
     env.reset()
@@ -190,6 +195,10 @@ def configure_policy(dims, params):
                         'buffer_size': buffer_size,
                         'subgoal_test_perc' : subgoal_test_perc,
                         'n_layers': n_layers,
+                        'eta': eta,
+                        'model_based': model_based,
+                        'mb_hidden_size': mb_hidden_size,
+                        'mb_lr': mb_lr,
                         })
     hac_params['info'] = {
         'env_name': params['env_name'],
