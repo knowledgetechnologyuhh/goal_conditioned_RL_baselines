@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cmd="python experiment/train.py --algorithm baselines.hac --num_cpu 1 --render 0 --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50"
+cmd="python experiment/train.py --algorithm baselines.hac --num_cpu 1 --render 0 --n_epochs 100 --n_train_rollouts 100 --n_test_rollouts 50 --env AntFourRoomsEnv-v0 "
 
 max_active_procs=16
 n_runs=8
