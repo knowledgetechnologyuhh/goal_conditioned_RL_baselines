@@ -13,7 +13,7 @@ class RolloutWorker(Rollout):
 
         self.env = self.policy.env
         self.env.visualize = render
-        self.graph = kwargs['graph']
+        self.env.graph = kwargs['graph']
         self.eval_data = {}
 
     def train_policy(self, n_train_rollouts, n_train_batches):
@@ -69,6 +69,14 @@ class RolloutWorker(Rollout):
             if n_subg_prefix in eval_data.keys():
                 logs += [(n_subg_prefix, eval_data[n_subg_prefix])]
 
+            curi_prefix = "{}curiosity".format(layer_prefix)
+            if curi_prefix in eval_data.keys():
+                logs += [(curi_prefix, np.nanmean(eval_data[curi_prefix]))]
+
+            mb_loss_prefix = "{}mb_loss".format(layer_prefix)
+            if mb_loss_prefix in eval_data.keys():
+                logs += [(mb_loss_prefix, eval_data[mb_loss_prefix])]
+
             q_prefix = "{}Q".format(layer_prefix)
             if q_prefix in eval_data.keys():
                 if len(eval_data[q_prefix]) > 0:
@@ -76,6 +84,7 @@ class RolloutWorker(Rollout):
                 else:
                     logs += [("{}avg_Q".format(layer_prefix), 0.0)]
 
+        print(eval_data.keys())
         if prefix != '' and not prefix.endswith('/'):
             new_logs = []
             for key, val in logs:

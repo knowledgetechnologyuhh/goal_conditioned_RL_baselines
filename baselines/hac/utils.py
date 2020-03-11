@@ -38,11 +38,13 @@ def layer(input_layer, num_next_neurons, is_output=False):
     return relu
 
 class EnvWrapper(object):
-    def __init__(self, env, n_layers, time_scale, input_dims, max_u):
+    def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
         self.wrapped_env = env
         self.n_layers = n_layers
         self.time_scale = time_scale
         self.visualize = False
+        self.graph = self.visualize
+        self.agent = agent
 
         # TODO: use wtm definitions
         self.state_dim = input_dims['o']
@@ -87,6 +89,13 @@ class EnvWrapper(object):
 
         if self.visualize:
             self.render()
+            if self.graph:
+                reset = self.step_ctr == 0
+                for l in self.agent.layers:
+                    if self.agent.model_based:
+                        curi = np.mean(l.curiosity) if l.curiosity else 0.0
+                        self.add_graph_values('curiosity_layer_{}'.format(l.layer_number), np.array([curi]) ,self.step_ctr, reset=reset)
+                    #  TODO: Show other metric #
 
         # TODO: _get_state calls _obs2goal. For layers > 0 we need to call
         #       _get_obs2subgoal to do it like Levy did it.
