@@ -312,7 +312,7 @@ class Layer():
                 eval_data["{}Q".format(train_test_prefix)] = []
 
         # Currently only for training
-        if not agent.test_mode and "{}curiosity".format(self.layer_number) not in eval_data:
+        if self.model_based and not agent.test_mode and "{}curiosity".format(self.layer_number) not in eval_data:
             eval_data["{}curiosity".format(train_test_prefix)] = []
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.layer_number]
