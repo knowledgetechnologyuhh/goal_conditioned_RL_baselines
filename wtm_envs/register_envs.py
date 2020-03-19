@@ -121,3 +121,8 @@ register(id='AntReacherEnv-v0',
          entry_point='wtm_envs.mujoco.ant_reacher.reach:AntReacherEnv',
          max_episode_steps=max_ep_steps)
 
+# ReacherEnv using coppelia sim
+register(id='CopReacherEnv',
+         entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
+         max_ep_steps=200)
+
