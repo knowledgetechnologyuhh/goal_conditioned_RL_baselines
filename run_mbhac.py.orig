@@ -1,6 +1,10 @@
 #!/bin/bash
 
+<<<<<<< HEAD:run_hac.py
 cmd="python experiment/train.py --algorithm baselines.hac --num_cpu 1 --render 0 --n_epochs 100 --n_train_rollouts 100 --n_test_rollouts 50 --env AntFourRoomsEnv-v0 "
+=======
+cmd="python experiment/train.py --algorithm baselines.mbhac --num_cpu 1 --render 0 --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50 --model_based 1"
+>>>>>>> 764b54ba81461ab51d549c41455ce35c84862db3:run_mbhac.py
 
 max_active_procs=16
 n_runs=8

@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from baselines.hac.utils import layer
+from baselines.mbhac.utils import layer
 
 
 class Actor():

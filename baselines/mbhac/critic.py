@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from baselines.hac.utils import layer, flatten_mixed_np_array
+from baselines.mbhac.utils import layer, flatten_mixed_np_array
 import itertools
 class Critic():
 

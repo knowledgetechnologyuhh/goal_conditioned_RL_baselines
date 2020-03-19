@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from baselines.hac.utils import layer
+from baselines.mbhac.utils import layer
 
 
 class ForwardModel():

@@ -4,21 +4,22 @@ import pickle
 
 from baselines import logger
 from baselines.mbhac.mbhac_policy import MBHACPolicy
-from baselines.mbhac.her import make_sample_her_transitions
+#  TODO: REMOVE this #
+from baselines.her.her import make_sample_her_transitions
 
 DEFAULT_ENV_PARAMS = {
-    'FetchReach-v1': {
+    'AntReacherEnv-v0':{
         'n_cycles': 20
     },
 }
-
 
 DEFAULT_PARAMS = {
     # env
     'max_u': 1.,  # max absolute value of actions on different coordinates
     # mbhac
     'layers': 3,  # number of layers in the critic/actor networks
-    'hidden': 256,  # number of neurons in each hidden layers
+    'hidden_size': 64,  # number of neurons in each hidden layers
+
     'network_class': 'baselines.mbhac.actor_critic:ActorCritic',
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
@@ -26,7 +27,7 @@ DEFAULT_PARAMS = {
     'polyak': 0.95,  # polyak averaging coefficient
     'action_l2': 1.0,  # quadratic penalty on actions (before rescaling by max_u)
     'clip_obs': 200.,
-    'scope': 'ddpg',  # can be tweaked for testing
+    'scope': 'mbhac',  # can be tweaked for testing
     'relative_goals': False,
     # ddpg get actions
     'reuse': False,
@@ -35,7 +36,7 @@ DEFAULT_PARAMS = {
     'n_cycles': 50,  # per epoch
     'rollout_batch_size': 1,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
-    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    'batch_size': 1024,
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
     'test_with_polyak': False,  # run test episodes with the target network
     # exploration
@@ -49,9 +50,7 @@ DEFAULT_PARAMS = {
     'norm_clip': 5,  # normalized observations are cropped to this values
 }
 
-POLICY_ACTION_PARAMS = {
-
-    }
+POLICY_ACTION_PARAMS = {}
 
 CACHED_ENVS = {}
 
@@ -77,7 +76,7 @@ EVAL_PARAMS = {
                                  }
     }
 
-OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy']
+OVERRIDE_PARAMS_LIST = ['network_class', 'rollout_batch_size', 'n_batches', 'batch_size', 'replay_k','replay_strategy', 'buffer_size']
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'gamma', 'noise_eps', 'random_eps', '_replay_strategy', 'env_name']
 
@@ -96,12 +95,13 @@ def cached_make_env(make_env):
 
 def prepare_params(kwargs):
     # DDPG params
-    ddpg_params = dict()
+    mbhac_params = dict()
 
     env_name = kwargs['env_name']
 
     def make_env():
         return gym.make(env_name)
+
     kwargs['make_env'] = make_env
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
@@ -113,16 +113,15 @@ def prepare_params(kwargs):
         kwargs['pi_lr'] = kwargs['lr']
         kwargs['Q_lr'] = kwargs['lr']
         del kwargs['lr']
-    for name in ['buffer_size', 'hidden', 'layers',
-                 'network_class',
+    for name in ['buffer_size', 'hidden_size', 'layers',
                  'polyak',
                  'batch_size', 'Q_lr', 'pi_lr',
                  'norm_eps', 'norm_clip', 'max_u',
                  'action_l2', 'clip_obs', 'scope', 'relative_goals']:
-        ddpg_params[name] = kwargs[name]
+        mbhac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
-    kwargs['ddpg_params'] = ddpg_params
+    kwargs['mbhac_params'] = mbhac_params
 
     return kwargs
 
@@ -131,8 +130,7 @@ def log_params(params, logger=logger):
     for key in sorted(params.keys()):
         logger.info('{}: {}'.format(key, params[key]))
 
-
-def configure_her(params):
+def configure_mbhac(params):
     env = cached_make_env(params['make_env'])
     env.reset()
 
@@ -158,37 +156,61 @@ def simple_goal_subtract(a, b):
 
 
 def configure_policy(dims, params):
-    sample_her_transitions = configure_her(params)
     # Extract relevant parameters.
+    sample_her_transitions = configure_mbhac(params)
     gamma = params['gamma']
     rollout_batch_size = params['rollout_batch_size']
-    ddpg_params = params['ddpg_params']
+    mbhac_params = params['mbhac_params']
     reuse = params['reuse']
     use_mpi = params['use_mpi']
     input_dims = dims.copy()
+    batch_size= params['train_batch_size'],
+    time_scale= params['time_scale'],
+    buffer_size= params['mbhac_params']['buffer_size'],
+    subgoal_test_perc= params['subgoal_test_perc'],
+    n_layers = params['n_layers']
 
-    # DDPG agent
+    model_based = params['model_based']
+    mb_lr = params['mb_lr']
+    mb_hidden_size = params['mb_hidden_size']
+    eta = params['eta']
+
+    # MBHAC agent
     env = cached_make_env(params['make_env'])
     env.reset()
-    ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
+    subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
+    mbhac_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns
                         'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
                         'sample_transitions': sample_her_transitions,
+                        'subgoal_scale': subgoal_scale,
+                        'subgoal_offset': subgoal_offset,
                         'gamma': gamma,
                         'reuse': reuse,
                         'use_mpi': use_mpi,
-                        # 'n_preds' : 0,
-                        # 'h_level' : 0,
-                        # 'subgoal_scale': [1,1,1,1],
-                        # 'subgoal_offset': [0, 0, 0, 0],
+                        'batch_size': batch_size,
+                        'time_scale': time_scale,
+                        'buffer_size': buffer_size,
+                        'subgoal_test_perc' : subgoal_test_perc,
+                        'n_layers': n_layers,
+                        'eta': eta,
+                        'model_based': model_based,
+                        'mb_hidden_size': mb_hidden_size,
+                        'mb_lr': mb_lr,
                         })
-    ddpg_params['info'] = {
+    mbhac_params['info'] = {
         'env_name': params['env_name'],
     }
-    policy = MBHACPolicy(**ddpg_params)
+
+    def make_env():
+        return gym.make(params['env_name'])
+
+    mbhac_params['make_env'] = make_env
+
+    policy = MBHACPolicy(**mbhac_params)
 
     return policy
 
@@ -197,7 +219,7 @@ def load_policy(restore_policy_file, params):
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     # Set sample transitions (required for loading a policy only).
-    policy.sample_transitions = configure_her(params)
+    policy.sample_transitions = configure_mbhac(params)
     policy.buffer.sample_transitions = policy.sample_transitions
     return policy
 
