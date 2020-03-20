@@ -2,7 +2,7 @@ import numpy as np
 from baselines.mbhac.experience_buffer import ExperienceBuffer
 from baselines.mbhac.actor import Actor
 from baselines.mbhac.critic import Critic
-from baselines.mbhac.model import ForwardModel
+from baselines.mbhac.forward_model import ForwardModel
 import tensorflow as tf
 
 class Layer():
@@ -479,8 +479,8 @@ class Layer():
     def learn(self, num_updates):
         # TODO: Check this comment
         # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
-        if self.layer_number == 0:
-            return {}
+        #  if self.layer_number == 0:
+        #      return {}
 
         learn_history = {}
         learn_history['reward'] = []

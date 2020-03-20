@@ -13,9 +13,6 @@ class MBHACPolicy(Policy):
             action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
             gamma,time_scale, subgoal_test_perc, n_layers, model_based, mb_hidden_size, mb_lr, eta,reuse=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
-        #  print(input_dims, buffer_size, hidden, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
-        #      action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-        #      sample_transitions, gamma, reuse,time_scale, subgoal_test_perc, kwargs)
 
         self.verbose = False
         self.Q_values = True
@@ -76,7 +73,8 @@ class MBHACPolicy(Policy):
             if i == self.n_layers - 1:
 
                 # Check dimensions are appropriate
-                assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
+                assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), \
+                        "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
 
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
                 for j in range(len(proj_end_goal)):
@@ -88,7 +86,8 @@ class MBHACPolicy(Policy):
             else:
 
                 # Check that dimensions are appropriate
-                assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
+                assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), \
+                        "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
 
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
                 for j in range(len(proj_subgoal)):

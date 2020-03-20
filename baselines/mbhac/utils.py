@@ -93,7 +93,8 @@ class EnvWrapper(object):
                 reset = self.step_ctr == 0
                 for l in self.agent.layers:
                     if self.agent.model_based:
-                        curi = np.mean(l.curiosity) if l.curiosity else 0.0
+                        #  curi = np.mean(l.curiosity) if l.curiosity else 0.0
+                        curi = l.curiosity[-1] if l.curiosity else 0.0
                         self.add_graph_values('curiosity_layer_{}'.format(l.layer_number), np.array([curi]) ,self.step_ctr, reset=reset)
                     #  TODO: Show other metric #
 
