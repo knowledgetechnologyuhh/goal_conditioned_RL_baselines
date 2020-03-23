@@ -5,6 +5,7 @@ import pickle
 from baselines import logger
 from baselines.her.ddpg import DDPG
 from baselines.her.her import make_sample_her_transitions
+from gym.envs.registration import registry
 
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
@@ -109,10 +110,12 @@ def prepare_params(kwargs):
     def make_env():
         return gym.make(env_name)
     kwargs['make_env'] = make_env
+    registry.env_specs[env_name]._kwargs['tmp'] = 4
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
+    registry.env_specs[env_name]._kwargs['tmp'] = 1
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
     if 'lr' in kwargs:
