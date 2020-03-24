@@ -44,6 +44,7 @@ class ReacherEnv(gym.GoalEnv):
 
         # define goal
         self.goal = self._sample_goal()
+        self.goal_hierarchy = {}  # for herhrl
 
         # set action space
         if self.ik:
@@ -68,7 +69,8 @@ class ReacherEnv(gym.GoalEnv):
         if self.ik:
             obs = achieved_goal
         else:
-            obs = np.concatenate([self.agent.get_joint_positions(),
+            obs = np.concatenate([achieved_goal,
+                                  self.agent.get_joint_positions(),
                                   self.agent.get_joint_velocities()])
 
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(),
@@ -132,6 +134,31 @@ class ReacherEnv(gym.GoalEnv):
 
         r = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], {})
         return obs, r, done, info
+
+    def get_scale_and_offset_for_normalized_subgoal(self):  # for herhrl
+        # let a = {-1, ..., 1}
+        # then: offset + a * scale = all possible target positions
+        scale = (np.array(POS_MAX) - np.array(POS_MIN)) / 2
+        offset = (np.array(POS_MAX) + np.array(POS_MIN)) / 2
+        return scale, offset
+
+    def add_graph_values(self, axis_name, val, x, reset=False):  # for herhrl
+        pass  # not implemented yet
+
+    def _obs2goal(self, obs):
+        if len(obs.shape) == 1:
+            obs_arr = np.array([obs])
+        else:
+            obs_arr = obs
+        assert len(obs_arr.shape) == 2
+        goals = []
+        for o in obs_arr:
+            goals.append(o[:3])
+        goals = np.array(goals)
+        if len(obs.shape) == 1:
+            return goals[0]
+        else:
+            return goals
 
     def close(self):
         print('\033[91m' + 'Closing Env' + '\033[0m')
