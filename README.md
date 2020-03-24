@@ -71,7 +71,9 @@ If you work on this repository and add a new feature, please proceed as follows:
     * merge the devel branch to your branch and 
     * run the testing script `run_testing.sh`. The script will create a folder testing_logs where all test results are stored.
     * Go through all logs and see if there are errors. If there are errors, fix them.
-3. If all errors are fixed, merge your branch to devel. Done.   
+3. If all errors are fixed, check if there are new updates on devel. 
+    * If there are, goto 2. 
+    * Else: merge your branch to devel. Done.   
      
   
 
