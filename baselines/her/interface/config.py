@@ -110,7 +110,7 @@ def prepare_params(kwargs):
     def make_env():
         return gym.make(env_name)
     kwargs['make_env'] = make_env
-    registry.env_specs[env_name]._kwargs['tmp'] = 4
+    registry.env_specs[env_name]._kwargs['tmp'] = 3
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
@@ -178,7 +178,7 @@ def configure_policy(dims, params):
 
     # DDPG agent
     env = cached_make_env(params['make_env'])
-    env.reset()
+    # env.reset()
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns

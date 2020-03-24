@@ -123,8 +123,9 @@ register(id='AntReacherEnv-v0',
 
 # ReacherEnv using coppelia sim
 for headless in [0, 1]:
-    kwargs = {'headless': headless}
-    register(id='CopReacherEnv-h{}-v0'.format(kwargs['headless']),
+    for IK in [0, 1]:
+        kwargs = {'headless': headless, 'ik': IK}
+        register(id='CopReacherEnv-h{}-ik{}-v0'.format(kwargs['headless'], kwargs['ik']),
              entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
              kwargs=kwargs,
              max_episode_steps=200)

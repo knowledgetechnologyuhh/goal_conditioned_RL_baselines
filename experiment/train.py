@@ -211,7 +211,8 @@ def launch(
     else:
         policy = config.load_policy(restore_policy_file=restore_policy,  params=params)
         loaded_env_name = policy.info['env_name']
-        assert loaded_env_name == env
+        if loaded_env_name[:3] != 'Cop':
+            assert loaded_env_name == env
 
     # Rollout and evaluation parameters
     rollout_params = config.ROLLOUT_PARAMS

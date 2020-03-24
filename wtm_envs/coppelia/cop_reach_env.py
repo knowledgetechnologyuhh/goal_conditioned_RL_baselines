@@ -6,18 +6,20 @@ from os.path import dirname, join, abspath
 import gym
 from gym import spaces
 from gym.utils import seeding
+import pyrep
 
 SCENE_FILE = join(dirname(abspath(__file__)),
-                  'scene_reinforcement_learning_env.ttt')
+                  'CopReacherEnv.ttt')
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
 EPISODES = 5
 EPISODE_LENGTH = 200
 
 class ReacherEnv(gym.GoalEnv):
 
-    def __init__(self, headless=0, tmp=False):
+    def __init__(self, headless=0, tmp=False, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
         headless = bool(headless)
+        self.ik = bool(ik)
 
         # PyRep initialization
         self.pr = PyRep()
@@ -26,8 +28,9 @@ class ReacherEnv(gym.GoalEnv):
 
         # Load robot and set position
         self.agent = Panda()
-        self.agent.set_control_loop_enabled(False)
-        self.agent.set_motor_locked_at_zero_velocity(True)
+        if not self.ik:
+            self.agent.set_control_loop_enabled(False)
+            self.agent.set_motor_locked_at_zero_velocity(True)
         self.target = Shape('target')
         self.agent_ee_tip = self.agent.get_tip()
         self.initial_joint_positions = self.agent.get_joint_positions()
@@ -36,7 +39,10 @@ class ReacherEnv(gym.GoalEnv):
         self.goal = self._sample_goal()
 
         # set action space
-        self.action_space = spaces.Box(-1., 1., shape=(7,), dtype='float32')
+        if self.ik:
+            self.action_space = spaces.Box(-1., 1., shape=(3,), dtype='float32')
+        else:
+            self.action_space = spaces.Box(-1., 1., shape=(7,), dtype='float32')
         obs = self._get_obs()
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
@@ -51,10 +57,13 @@ class ReacherEnv(gym.GoalEnv):
         return [seed]
 
     def _get_obs(self):
-        # Return state containing arm joint angles/velocities & target position
-        obs = np.concatenate([self.agent.get_joint_positions(),
-                              self.agent.get_joint_velocities()])
         achieved_goal = self.agent_ee_tip.get_position()
+        if self.ik:
+            obs = achieved_goal
+        else:
+            obs = np.concatenate([self.agent.get_joint_positions(),
+                                  self.agent.get_joint_velocities()])
+
         obs = {'observation': obs.copy(), 'achieved_goal': achieved_goal.copy(),
                'desired_goal': np.array(self.goal.copy()),
                'non_noisy_obs': obs.copy()}
@@ -75,7 +84,6 @@ class ReacherEnv(gym.GoalEnv):
             print('\033[91m' + 'This Env will shut down after ' + str(self.tmp) + ' resets' + '\033[0m')
             if self.tmp == 0:
                 self.close()
-                print('!'*200)
         return obs
 
     def compute_reward(self, achieved_goal, goal, info):
@@ -85,14 +93,28 @@ class ReacherEnv(gym.GoalEnv):
             ax, ay, az = achieved_goal  # self.agent_ee_tip.get_position()
             tx, ty, tz = goal  # self.target.get_position()
             # Reward is negative distance to target
-            reward = -np.sqrt((ax - tx) ** 2 + (ay - ty) ** 2 + (az - tz) ** 2)
+            dist = np.sqrt((ax - tx) ** 2 + (ay - ty) ** 2 + (az - tz) ** 2)
+            if dist < 0.05:
+                reward = 0
+            else:
+                reward = -1
         return np.array(reward)
 
     def _set_action(self, action):
-        self.agent.set_joint_target_velocities(action)  # Execute action on arm
+        if self.ik:
+            pos = self.agent_ee_tip.get_position().copy()
+            quat = self.agent_ee_tip.get_quaternion().copy()
+            pos[:2] += (action * 0.01)[:2]
+            try:
+                new_joint_angles = self.agent.solve_ik(pos, quaternion=quat)
+                self.agent.set_joint_target_positions(new_joint_angles)
+            except pyrep.errors.IKError:
+                pass  # print('Attempting to reach out of reach')
+        else:
+            self.agent.set_joint_target_velocities(action)
 
     def _is_success(self, achieved_goal, desired_goal):
-        return self.compute_reward(achieved_goal, desired_goal, {}) > -0.05
+        return self.compute_reward(achieved_goal, desired_goal, {}) == 0
 
     def step(self, action):
         self._set_action(action)
