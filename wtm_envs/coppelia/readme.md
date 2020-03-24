@@ -1,0 +1,20 @@
+**Installation of CoppeliaSim and PyRep**
+
+You need CoppeliaSim and PyRep. 
+Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
+Then `git clone https://github.com/stepjam/PyRep.git`. I put both in /data/*username*/, you are free to put them
+somewhere else, but you'll have to adjust the paths. 
+
+Run `set_paths.sh` and, if you want to use run or debug, set the full paths for 
+COPPELIASIM_ROOT, LD_LIBRARY_PATH and QT_QPA_PLATFORM_PLUGIN_PATH
+in your run/debug configuration.
+
+`cd` into the PyRep folder and 
+```
+pip3 install -r requirements.txt
+python3 setup.py install
+```
+You can find some troubleshooting on the PyRep git-page.
+
+Now you can test the installation by running
+`--env CopReacherEnv-h0-ik1-v0 --algorithm baselines.her --render 0`.
