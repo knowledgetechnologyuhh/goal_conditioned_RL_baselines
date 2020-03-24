@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
 logs_dir=testing_logs
-rm -rf ${logs_dir}
+#rm -rf ${logs_dir}
+#rm ${cmd_file}
 mkdir ${logs_dir}
 python3 experiment/generate_testing_commands.py
 sleep 2
@@ -15,7 +16,7 @@ do
     cmd_arr+=("${cmd[@]}")
 done < $cmd_file
 
-rm ${cmd_file}
+
 
 for ((i = 0; i < ${#cmd_arr[@]}; i++))
 do
@@ -41,3 +42,5 @@ do
 done
 echo "All commands have been executed"
 
+
+python3 experiment/check_error_logs.py

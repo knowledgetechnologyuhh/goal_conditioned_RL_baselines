@@ -10,9 +10,10 @@ If you want to merge your development branch with the overall devel branch, plea
 class TestingConfig:
     algorithms = ['herhrl', 'her']
     environments = ['BlockStackMujocoEnv-gripper_random-o2-v1',
-                    'BlockStackMujocoEnv-gripper_above-o1-v1',
-                    'AntFourRoomsEnv-v0',
-                    'HookMujocoEnv-gripper_above-e1-v1']
+                    # 'BlockStackMujocoEnv-gripper_above-o1-v1',
+                    # 'AntFourRoomsEnv-v0', 'AntReacherEnv-v0',
+                    # 'HookMujocoEnv-gripper_above-e1-v1',
+                    'CausalDependenciesMujocoEnv-o1-v0']
 
 
 def get_her_cmds(base_cmd):
@@ -27,8 +28,7 @@ def get_herhrl_cmds(base_cmd):
     ll_policies = ['DDPG_HER_HRL_POLICY']
     policy_acs = {}
     policy_acs["PDDL_POLICY"] = ["None"]
-    policy_acs["DDPG_HER_HRL_POLICY"] = ['actor_critic:ActorCritic', 'actor_critic:ActorCriticSharedPreproc',
-                                         'actor_critic:ActorCriticProbSamplingAttn']
+    policy_acs["DDPG_HER_HRL_POLICY"] = ['actor_critic:ActorCritic']
     policy_combinations = []
     ac_combinations = []
     for hlp in hl_policies:
