@@ -10,9 +10,9 @@ If you want to merge your development branch with the overall devel branch, plea
 class TestingConfig:
     algorithms = ['herhrl', 'her']
     environments = ['BlockStackMujocoEnv-gripper_random-o2-v1',
-                    # 'BlockStackMujocoEnv-gripper_above-o1-v1',
-                    # 'AntFourRoomsEnv-v0', 'AntReacherEnv-v0',
-                    # 'HookMujocoEnv-gripper_above-e1-v1',
+                    'BlockStackMujocoEnv-gripper_above-o1-v1',
+                    'AntFourRoomsEnv-v0', 'AntReacherEnv-v0',
+                    'HookMujocoEnv-gripper_above-e1-v1',
                     'CausalDependenciesMujocoEnv-o1-v0',
                     'CopReacherEnv-h1-ik1-v0']
 

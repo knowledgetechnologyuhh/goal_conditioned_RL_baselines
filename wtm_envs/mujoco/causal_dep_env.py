@@ -178,6 +178,9 @@ class CausalDependenciesEnv(WTMEnv):
             goal = obs['observation'].copy()[3:5]
         return goal
 
+    def _obs2goal(self, obs):
+        g = obs[:2].copy()
+        return g
 
     def _env_setup(self, initial_qpos):
         for name, value in initial_qpos.items():
@@ -195,3 +198,9 @@ class CausalDependenciesEnv(WTMEnv):
 
         # Extract information for sampling goals.
         self.initial_gripper_xpos = self.sim.data.get_geom_xpos('robot0:rod').copy()
+
+    def get_scale_and_offset_for_normalized_subgoal(self):
+        offset = self.sim.data.get_geom_xpos('table0')[:2].copy()
+        scale_xy = self.obj_range
+        scale = np.array([scale_xy, scale_xy])
+        return scale, offset

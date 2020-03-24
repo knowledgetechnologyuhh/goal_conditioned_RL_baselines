@@ -64,11 +64,15 @@ class PDDL_POLICY(HRL_Policy):
     def get_actions(self, o, ag, g, **kwargs):
         u = []
         # for i in range(self.rollout_batch_size):
-        plan, world_states = self.envs[0].env.get_plan(return_states=True)
-        if len(plan) > 0:
-            this_u = self.envs[0].env.preds2subgoal(world_states[1])
-        else:
-            this_u = g.copy()
+        try:
+            plan, world_states = self.envs[0].env.get_plan(return_states=True)
+            if len(plan) > 0:
+                this_u = self.envs[0].env.preds2subgoal(world_states[1])
+            else:
+                this_u = g.copy()
+        except Exception as e:
+            print("WARNING! The environment has no get_plan function. Cannot generate high-level action.")
+            this_u = np.zeros_like(g)
         u.append(this_u)
         u = np.array(u)
         u = u.copy()

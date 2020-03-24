@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
-logs_dir=testing_logs
-#rm -rf ${logs_dir}
-#rm ${cmd_file}
+logs_dir="testing_logs"
+cmd_file="test_cmds.txt"
+
+rm -rf ${logs_dir}
+rm ${cmd_file}
 mkdir ${logs_dir}
 python3 experiment/generate_testing_commands.py
 sleep 2
-cmd_file="test_cmds.txt"
 max_active_procs=4
 cmd_ctr=0
 n_cmds=$(cat $cmd_file | wc -l)
