@@ -15,7 +15,14 @@ EPISODES = 5
 EPISODE_LENGTH = 200
 
 class ReacherEnv(gym.GoalEnv):
-
+    """
+    Environment with Reacher tasks that uses CoppeliaSim and the Franka Emika Panda robot.
+    Args:
+        headless: whether to run in headless mode. If headless=0, you will see the rendered env
+        tmp: whether the environment is only used temporarily to acquire e.g. the shape of the observation space
+        ik: whether to use inverse kinematics. If not, the actuators will be controlled directly.
+            Note, that also the observation changes, when ik is set.
+    """
     def __init__(self, headless=0, tmp=False, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
         headless = bool(headless)
@@ -26,7 +33,7 @@ class ReacherEnv(gym.GoalEnv):
         self.pr.launch(SCENE_FILE, headless=headless)
         self.pr.start()
 
-        # Load robot and set position
+        # load robot and set position
         self.agent = Panda()
         if not self.ik:
             self.agent.set_control_loop_enabled(False)
@@ -92,13 +99,15 @@ class ReacherEnv(gym.GoalEnv):
         else:
             ax, ay, az = achieved_goal  # self.agent_ee_tip.get_position()
             tx, ty, tz = goal  # self.target.get_position()
-            # Reward is negative distance to target
             dist = np.sqrt((ax - tx) ** 2 + (ay - ty) ** 2 + (az - tz) ** 2)
             if dist < 0.05:
                 reward = 0
             else:
                 reward = -1
         return np.array(reward)
+
+    def _is_success(self, achieved_goal, desired_goal):
+        return self.compute_reward(achieved_goal, desired_goal, {}) == 0
 
     def _set_action(self, action):
         if self.ik:
@@ -112,9 +121,6 @@ class ReacherEnv(gym.GoalEnv):
                 pass  # print('Attempting to reach out of reach')
         else:
             self.agent.set_joint_target_velocities(action)
-
-    def _is_success(self, achieved_goal, desired_goal):
-        return self.compute_reward(achieved_goal, desired_goal, {}) == 0
 
     def step(self, action):
         self._set_action(action)
