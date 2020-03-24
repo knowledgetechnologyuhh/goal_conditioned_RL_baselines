@@ -54,4 +54,26 @@ This is adapted from the implementation by Levy et al. 2018. We extended it with
     As in HER, but instead of generating actions in `policy.get_actions`, generate multiple candidate-actions (e.g. by adding noise to observations) and use the model to select the most promising one.
 
 
+# Adding new features to this repository
+If you work on this repository and add a new feature, please proceed as follows:
+1. Start a new branch with the devel branch as base and add your feature
+    * If you develop a new algorithm, you should have added a respective subdir with the algorithm's name 
+    (referred to here as <alg_name>) in the baselines folder. Proceed as follows: 
+        * Add the <alg_name> to TestingConfig.algorithms, and 
+        * add a function get_<alg_name>_cmds to this script. This function should generate a list commandline-strings that call all important 
+    configurations for your algorithm.
+    
+    * If you add a feature to an existing algorithm, only change the get_<alg_name>_cmds function appropriately.
+    
+    * If you add a new environment, add the environment name to the TestingConfig.environments list.
+
+2. After you have finished working on your feature:
+    * merge the devel branch to your branch and 
+    * run the testing script `run_testing.sh`. The script will create a folder testing_logs where all test results are stored.
+    * Go through all logs and see if there are errors. If there are errors, fix them.
+3. If all errors are fixed, check if there are new updates on devel. 
+    * If there are, goto 2. 
+    * Else: merge your branch to devel. Done.   
+     
+  
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 source ./set_paths.sh
-logs_dir=debug_logs
-rm -rf ${logs_dir}
+logs_dir=testing_logs
+#rm -rf ${logs_dir}
+#rm ${cmd_file}
 mkdir ${logs_dir}
-python3 experiment/generate_debug_commands.py
+python3 experiment/generate_testing_commands.py
 sleep 2
-cmd_file="debug_cmds.txt"
+cmd_file="test_cmds.txt"
 max_active_procs=4
 cmd_ctr=0
 n_cmds=$(cat $cmd_file | wc -l)
@@ -14,6 +15,8 @@ while IFS= read -r cmd
 do
     cmd_arr+=("${cmd[@]}")
 done < $cmd_file
+
+
 
 for ((i = 0; i < ${#cmd_arr[@]}; i++))
 do
@@ -33,8 +36,11 @@ do
     done
     echo "Now executing cmd ${cmd_ctr} / ${n_cmds}: "
     echo ${cmd}
+#    ${cmd}
     $cmd 1> ${logs_dir}/${cmd_ctr}.log 2> ${logs_dir}/${cmd_ctr}_err.log || true & # Execute in background
-##    $cmd 1> logs/${cmd_ctr}.log 2> logs/${cmd_ctr}_err.log # Execute in background
     sleep 3
 done
 echo "All commands have been executed"
+
+
+python3 experiment/check_error_logs.py

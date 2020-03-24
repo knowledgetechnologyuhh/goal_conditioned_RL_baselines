@@ -38,3 +38,5 @@ MUJOCO_LOG.TXT
 data/
 
 emb_metadata.tsv
+test_cmds.txt
+testing_logs
