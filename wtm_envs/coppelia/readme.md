@@ -7,7 +7,12 @@ somewhere else, but you'll have to adjust the paths.
 
 Run `set_paths.sh` and, if you want to use run or debug, set the full paths for 
 COPPELIASIM_ROOT, LD_LIBRARY_PATH and QT_QPA_PLATFORM_PLUGIN_PATH
-in your run/debug configuration.
+in your run/debug configuration, e.g.:
+```
+export COPPELIASIM_ROOT=EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$COPPELIASIM_ROOT
+export QT_QPA_PLATFORM_PLUGIN_PATH=$COPPELIASIM_ROOT
+```
 
 `cd` into the PyRep folder and 
 ```
