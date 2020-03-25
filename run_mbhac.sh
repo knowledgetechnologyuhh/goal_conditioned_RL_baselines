@@ -6,8 +6,8 @@ cmd+=" --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50"
 cmd+=" --policy_save_interval 0"
 cmd+=" --model_based 1 --mb_hidden_size 512 --eta 0.1"
 
-max_active_procs=16
-n_runs=8
+max_active_procs=8
+n_runs=16
 
 cmd_ctr=0
 until [ $cmd_ctr -gt $n_runs ]
