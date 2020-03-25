@@ -1,13 +1,16 @@
 #!/bin/bash
 
-cmd="python experiment/train.py --algorithm baselines.mbhac --num_cpu 1 --render 0 --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50 --model_based 1"
+cmd="python experiment/train.py --algorithm baselines.mbhac --num_cpu 1 --render 0"
+cmd+=" --env AntReacherEnv-v0"
+cmd+=" --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50"
+cmd+=" --policy_save_interval 0"
+cmd+=" --model_based 1 --mb_hidden_size 512 --eta 0.1"
 
 max_active_procs=16
 n_runs=8
 
-# declare -a repeated_cmd_array=()
 cmd_ctr=0
-for (( j=0; j<n_runs; ++j))
+until [ $cmd_ctr -gt $n_runs ]
 do
   ((cmd_ctr++))
   echo "Next cmd in queue is:"
