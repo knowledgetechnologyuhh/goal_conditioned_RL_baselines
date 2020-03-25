@@ -5,13 +5,13 @@ Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and
 Then `git clone https://github.com/stepjam/PyRep.git`. I put both in /data/*username*/, you are free to put them
 somewhere else, but you'll have to adjust the paths. 
 
-Run `set_paths.sh` and, if you want to use run or debug, set the full paths for 
+Run `set_paths.sh` and, if you want to use run or debug in PyCharm, set the full paths for 
 COPPELIASIM_ROOT, LD_LIBRARY_PATH and QT_QPA_PLATFORM_PLUGIN_PATH
 in your run/debug configuration, e.g.:
 ```
-export COPPELIASIM_ROOT=EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$COPPELIASIM_ROOT
-export QT_QPA_PLATFORM_PLUGIN_PATH=$COPPELIASIM_ROOT
+COPPELIASIM_ROOT=EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
+QT_QPA_PLATFORM_PLUGIN_PATH=EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
 ```
 
 `cd` into the PyRep folder and 
