@@ -44,7 +44,8 @@ class Rollout:
         self.envs = [make_env() for _ in range(rollout_batch_size)]
         self.first_env = self.envs[0]
         env_name = kwargs['env_name']
-        registry.env_specs[env_name]._kwargs['tmp'] = 0
+        if env_name[:3] == 'Cop':
+            registry.env_specs[env_name]._kwargs['tmp'] = 0
         assert self.T > 0
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
