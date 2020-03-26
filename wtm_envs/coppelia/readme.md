@@ -17,11 +17,10 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
 QT_QPA_PLATFORM_PLUGIN_PATH=EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
 ```
 
-`cd` into the PyRep folder and 
-```
-pip3 install -r requirements.txt
-python3 setup.py install
-```
+Pip install PyRep by activating you virtual environment and running: 
+
+`pip install git+https://github.com/stepjam/PyRep.git`
+
 You can find some troubleshooting on the PyRep git-page.
 
 Now you can test the installation by running
