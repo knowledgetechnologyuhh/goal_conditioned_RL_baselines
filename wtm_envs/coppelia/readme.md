@@ -1,3 +1,6 @@
+All CoppeliaSim environment-names have to start with 'Cop'. 
+They do not implement a render function, because you can look at the simulation when you don't run in headless mode.
+
 **Installation of CoppeliaSim and PyRep**
 
 You need CoppeliaSim and PyRep. 
@@ -22,4 +25,4 @@ python3 setup.py install
 You can find some troubleshooting on the PyRep git-page.
 
 Now you can test the installation by running
-`--env CopReacherEnv-h0-ik1-v0 --algorithm baselines.her --render 0`.
+`--env CopReacherEnv-h0-ik1-v0 --algorithm baselines.her`
