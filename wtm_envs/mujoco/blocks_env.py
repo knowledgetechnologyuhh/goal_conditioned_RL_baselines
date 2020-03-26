@@ -272,7 +272,7 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
                     too_close = True
-                    while too_close:
+                    while too_close and target_goal is not None:
                         gripper_goal_pos = self.initial_gripper_xpos[:3] + \
                                            self.np_random.uniform(-self.target_range,
                                                                   self.target_range, size=3)
