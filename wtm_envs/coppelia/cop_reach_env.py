@@ -22,7 +22,7 @@ class ReacherEnv(gym.GoalEnv):
         tmp: whether the environment is only used temporarily to acquire e.g. the shape of the observation space
         ik: whether to use inverse kinematics. If not, the actuators will be controlled directly.
             Note, that also the observation changes, when ik is set.
-            !!!So far the ik are not working properly and the task can't be learned!!!
+            !!!The IK can not always be computed. In that case, the action is not carried out!!!
     """
     def __init__(self, headless=0, tmp=False, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
@@ -116,7 +116,7 @@ class ReacherEnv(gym.GoalEnv):
         if self.ik:
             pos = self.agent_ee_tip.get_position().copy()
             quat = self.agent_ee_tip.get_quaternion().copy()
-            pos += (action * 0.01)
+            pos += (action * 0.05)
             try:
                 new_joint_angles = self.agent.solve_ik(pos, quaternion=quat)
                 self.agent.set_joint_target_positions(new_joint_angles)
@@ -164,8 +164,8 @@ class ReacherEnv(gym.GoalEnv):
     def close(self):
         print('\033[91m' + 'Closing Env' + '\033[0m')
         if self.ik:
-            print('\033[91m' + 'You are running with inverse kinematics. IK are not working properly and the task has '
-                               'not been learned yet. When the inverse kinematics fail because the new position can\'t '
-                               'be reached, \'Attempting to reach out of reach\' is printed.' + '\033[0m')
+            print('\033[91m' + 'You are running with inverse kinematics. Sometimes the IK are not working and the '
+                               'action can not be carried out. In that case, \'Attempting to reach out of reach\' is '
+                               'printed.' + '\033[0m')
         self.pr.stop()
         self.pr.shutdown()
