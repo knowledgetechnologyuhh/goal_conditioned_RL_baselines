@@ -1,5 +1,9 @@
 All CoppeliaSim environment-names have to start with 'Cop'. 
-They do not implement a render function, because you can look at the simulation when you don't run in headless mode.
+They do not implement a render function, because you can look at the simulation when you don't run in headless mode,
+so you can still choose whether to see the environment with the `--render` argument.
+The `CopReacherEnv` receives an argument ik (0 or 1), with which you can choose to use inverse
+kinematics. Note that sometimes, the inverse kinematics cannot be computed and the action is
+not carried out.
 
 **Installation of CoppeliaSim and PyRep**
 
@@ -24,4 +28,4 @@ Pip install PyRep by activating you virtual environment and running:
 You can find some troubleshooting on the PyRep git-page.
 
 Now you can test the installation by running
-`--env CopReacherEnv-h0-ik1-v0 --algorithm baselines.her`
+`--env CopReacherEnv-ik1-v0 --algorithm baselines.her`
