@@ -1,12 +1,14 @@
 from pyrep.pyrep import PyRep
 from pyrep.robots.arms.panda import Panda
 from pyrep.objects.shape import Shape
+from pyrep.const import PrimitiveShape
+from pyrep.errors import IKError
 import numpy as np
 from os.path import dirname, join, abspath
 import gym
 from gym import spaces
 from gym.utils import seeding
-import pyrep
+
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'CopReacherEnv.ttt')
@@ -40,6 +42,7 @@ class ReacherEnv(gym.GoalEnv):
             self.agent.set_control_loop_enabled(False)
             self.agent.set_motor_locked_at_zero_velocity(True)
         self.target = Shape('target')
+        self.vis = {}
         self.agent_ee_tip = self.agent.get_tip()
         self.initial_joint_positions = self.agent.get_joint_positions()
 
@@ -120,7 +123,7 @@ class ReacherEnv(gym.GoalEnv):
             try:
                 new_joint_angles = self.agent.solve_ik(pos, quaternion=quat)
                 self.agent.set_joint_target_positions(new_joint_angles)
-            except pyrep.errors.IKError:
+            except IKError:
                 print('Attempting to reach out of reach')
         else:
             self.agent.set_joint_target_velocities(action)
@@ -160,6 +163,20 @@ class ReacherEnv(gym.GoalEnv):
             return goals[0]
         else:
             return goals
+
+    def visualize(self, names_pos_col={}):
+        """
+        Takes a dictionary with names, positions and colors that is structured as follows:
+        {'name': {'pos': [0.8, -0.1, 1.1], 'col': [.0, .9, .0]}, 'name2': {'pos': [1.0, 0.1, 1.3], 'col': [.0, .0, .9]}}
+        Then cubes with the name are created in the specified color and moved to the position.
+        """
+        for name in names_pos_col:
+            if name not in self.vis:
+                self.vis[name] = Shape.create(PrimitiveShape.CUBOID, [0.04]*3, mass=0, respondable=False, static=True,
+                                              position=names_pos_col[name]['pos'], color=names_pos_col[name]['col'])
+            else:
+                self.vis[name].set_position(names_pos_col[name]['pos'])
+                self.vis[name].set_color(names_pos_col[name]['col'])
 
     def close(self):
         print('\033[91m' + 'Closing Env' + '\033[0m')
