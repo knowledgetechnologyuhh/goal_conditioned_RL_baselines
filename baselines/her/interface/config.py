@@ -112,6 +112,7 @@ def prepare_params(kwargs):
     kwargs['make_env'] = make_env
     if env_name[:3] == 'Cop':
         registry.env_specs[env_name]._kwargs['tmp'] = 3
+        registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps

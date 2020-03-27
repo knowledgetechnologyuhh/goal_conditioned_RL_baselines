@@ -20,20 +20,20 @@ class ReacherEnv(gym.GoalEnv):
     """
     Environment with Reacher tasks that uses CoppeliaSim and the Franka Emika Panda robot.
     Args:
-        headless: whether to run in headless mode. If headless=0, you will see the rendered env
-        tmp: whether the environment is only used temporarily to acquire e.g. the shape of the observation space
+        render: If render=0, CoppeliaSim will run in headless mode.
+        tmp: whether the environment is only used temporarily to acquire e.g. the shape of the observation space.
         ik: whether to use inverse kinematics. If not, the actuators will be controlled directly.
             Note, that also the observation changes, when ik is set.
             !!!The IK can not always be computed. In that case, the action is not carried out!!!
     """
-    def __init__(self, headless=0, tmp=False, ik=1):
+    def __init__(self, render=1, tmp=False, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
-        headless = bool(headless)
+        render = bool(render)
         self.ik = bool(ik)
 
         # PyRep initialization
         self.pr = PyRep()
-        self.pr.launch(SCENE_FILE, headless=headless)
+        self.pr.launch(SCENE_FILE, headless=not render)
         self.pr.start()
 
         # load robot and set position

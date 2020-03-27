@@ -127,6 +127,7 @@ def prepare_params(kwargs):
     kwargs['make_env'] = make_env
     if env_name[:3] == 'Cop':
         registry.env_specs[env_name]._kwargs['tmp'] = 4
+        registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
     tmp_env = cached_make_env(kwargs['make_env'])
     action_steps = [int(n_s) for n_s in kwargs['action_steps'][1:-1].split(",") if n_s != '']
     kwargs['action_steps'] = action_steps
