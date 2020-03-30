@@ -82,10 +82,8 @@ class EnvWrapper(object):
 
     def execute_action(self, action):
         self._set_action(action)
-        #  TODO: Find FrameSkipping inside of wtm_envs #
-        for _ in range(10):
-            self.sim.step()
-            self._step_callback()
+        self.sim.step()
+        self._step_callback()
 
         if self.visualize:
             self.render()

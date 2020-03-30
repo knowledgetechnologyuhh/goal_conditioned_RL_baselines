@@ -4,7 +4,7 @@ cmd="python experiment/train.py --algorithm baselines.mbhac --num_cpu 1 --render
 cmd+=" --env AntReacherEnv-v0"
 cmd+=" --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50"
 cmd+=" --policy_save_interval 0"
-cmd+=" --model_based 1 --mb_hidden_size 512 --eta 0.1"
+cmd+=" --model_based 1 --mb_hidden_size '2048,1024' --eta 0.1"
 
 max_active_procs=8
 n_runs=16

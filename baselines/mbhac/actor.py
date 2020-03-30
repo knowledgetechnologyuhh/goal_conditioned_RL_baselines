@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 from baselines.mbhac.utils import layer
 
 
@@ -44,9 +43,7 @@ class Actor():
         self.state_dim = env.state_dim
 
         self.learning_rate = learning_rate
-        # self.exploration_policies = exploration_policies
         self.tau = tau
-        # self.batch_size = batch_size
         self.batch_size = tf.placeholder(tf.float32)
 
         self.state_ph = tf.placeholder(tf.float32, shape=(None, self.state_dim))
@@ -58,16 +55,6 @@ class Actor():
 
         # Target network code "repurposed" from Patrick Emani :^)
         self.weights = [v for v in tf.trainable_variables() if self.actor_name in v.op.name]
-        # self.num_weights = len(self.weights)
-
-        # Create target actor network
-        # self.target = self.create_nn(self.features_ph, name = self.actor_name + '_target')
-        # self.target_weights = [v for v in tf.trainable_variables() if self.actor_name in v.op.name][len(self.weights):]
-        #
-        # self.update_target_weights = \
-	    # [self.target_weights[i].assign(tf.multiply(self.weights[i], self.tau) +
-        #                                           tf.multiply(self.target_weights[i], 1. - self.tau))
-        #             for i in range(len(self.target_weights))]
 
         self.action_derivs = tf.placeholder(tf.float32, shape=(None, self.action_space_size))
         self.unnormalized_actor_gradients = tf.gradients(self.infer, self.weights, -self.action_derivs)
@@ -86,15 +73,6 @@ class Actor():
 
         return actions
 
-    # def get_target_action(self, state, goal):
-    #     actions = self.sess.run(self.target,
-    #             feed_dict={
-    #                 self.state_ph: state,
-    #                 self.goal_ph: goal
-    #             })
-    #
-    #     return actions
-
     def update(self, state, goal, action_derivs, next_batch_size):
         weights, policy_grad, _ = self.sess.run(
                 [self.weights, self.policy_gradient, self.train],
@@ -107,9 +85,6 @@ class Actor():
 
         return len(weights)
 
-        # self.sess.run(self.update_target_weights)
-
-    # def create_nn(self, state, goal, name='actor'):
     def create_nn(self, features, name=None):
 
         if name is None:

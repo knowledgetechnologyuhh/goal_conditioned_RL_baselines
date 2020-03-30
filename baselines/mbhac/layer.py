@@ -270,8 +270,6 @@ class Layer():
     # Determine whether layer is finished training
     def return_to_higher_level(self, max_lay_achieved, agent, env, attempts_made):
 
-        # TODO: Remove
-        assert env.step_ctr == agent.steps_taken
         # Return to higher level if
         # (i) a higher level goal has been reached,
         # (ii) maxed out episode time steps (env.max_actions)
@@ -359,8 +357,6 @@ class Layer():
 
                 agent.steps_taken += 1
 
-                # TODO: Remove
-                assert env.step_ctr == agent.steps_taken
                 if env.step_ctr >= env.max_actions:
                     if agent.verbose:
                         print("Out of actions (Steps: %d)" % env.step_ctr)
@@ -446,8 +442,6 @@ class Layer():
             # Update state of current layer
             self.current_state = agent.current_state
 
-            # TODO: Remove
-            assert env.step_ctr == agent.steps_taken
             if (max_lay_achieved is not None and max_lay_achieved >= self.layer_number) or \
                     env.step_ctr >= env.max_actions or attempts_made >= self.time_limit:
 
@@ -477,13 +471,11 @@ class Layer():
 
     # Update actor and critic networks
     def learn(self, num_updates):
-        # TODO: Check this comment
         # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
         #  if self.layer_number == 0:
         #      return {}
 
         learn_history = {}
-        learn_history['reward'] = []
         learn_history['reward'] = []
 
         if self.replay_buffer.size >= 250:

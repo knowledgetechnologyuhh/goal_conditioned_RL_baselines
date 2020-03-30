@@ -1,6 +1,7 @@
 import numpy as np
-import time, sys
-from baselines.template.util import convert_episode_to_batch_major, store_args
+import time
+import sys
+from baselines.template.util import store_args
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 
@@ -84,7 +85,6 @@ class RolloutWorker(Rollout):
                 else:
                     logs += [("{}avg_Q".format(layer_prefix), 0.0)]
 
-        print(eval_data.keys())
         if prefix != '' and not prefix.endswith('/'):
             new_logs = []
             for key, val in logs:

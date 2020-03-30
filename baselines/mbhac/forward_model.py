@@ -22,8 +22,7 @@ class ForwardModel():
         else:
             self.action_space_size = env.subgoal_dim
 
-        #  TODO: Should be string of values -> "256,128" #
-        self.hidden_layers = [mb_params['hidden_size']] * 3
+        self.hidden_sizes = [int(size) for size in mb_params['hidden_size'].split(',')]
         self.eta = mb_params['eta']
         self.state_dim = env.state_dim
         self.learning_rate = mb_params['lr']
@@ -42,14 +41,17 @@ class ForwardModel():
             action_state_ph = tf.concat([action_ph, state_ph], axis=1)
         with tf.variable_scope(name + 'target_state_ph'):
             y = tf.placeholder(tf.float32, shape=[None, self.state_dim])
-        with tf.variable_scope(name + 'fc_1'):
-            fc1 = layer(action_state_ph, self.hidden_layers[0])
-        with tf.variable_scope(name + 'fc_2'):
-            fc2 = layer(fc1, self.hidden_layers[1])
-        with tf.variable_scope(name + 'fc_3'):
-            fc3 = layer(fc2, self.hidden_layers[2])
+
+        hidden_layers = []
+        for idx, layer_size in enumerate(self.hidden_sizes, start=1):
+            with tf.variable_scope(name + 'fc_{}'.format(idx)):
+                if idx <= 1:
+                    hidden_layers.append(layer(action_state_ph, layer_size))
+                else:
+                    hidden_layers.append(layer(hidden_layers[-1], layer_size))
+
         with tf.variable_scope(name + 'fc_4'):
-            pred = layer(fc3, self.state_dim, is_output=True)
+            pred = layer(hidden_layers[-1], self.state_dim, is_output=True)
         with tf.variable_scope(name + 'loss'):
             loss = tf.losses.mean_squared_error(y, pred)
         with tf.variable_scope(name + 'optimizer'):
