@@ -6,5 +6,8 @@ nv_version_long=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader)
 nv_version=${nv_version_long:0:3}
 echo "Nvidia version: ${nv_version}."
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia-$nv_version
-export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libGLEW.so:/usr/lib/nvidia-$nv_version/libGL.so
+export LD_PRELOAD=$LD_PRELOAD:/usr/lib/x86_64-linux-gnu/libGLEW.so
 
+export COPPELIASIM_ROOT=/data/$(whoami)/CoppeliaSim_Edu_V4_0_0_Ubuntu18_04
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$COPPELIASIM_ROOT
+export QT_QPA_PLATFORM_PLUGIN_PATH=$COPPELIASIM_ROOT

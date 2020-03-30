@@ -10,6 +10,7 @@ from baselines.herhrl.her import make_sample_her_transitions as make_sample_her_
 # from baselines.her.her import make_sample_her_transitions
 # from baselines.her_pddl.pddl.pddl_util import obs_to_preds_single
 import importlib
+from gym.envs.registration import registry
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
         'n_cycles': 20
@@ -124,10 +125,15 @@ def prepare_params(kwargs):
     def make_env():
         return gym.make(env_name)
     kwargs['make_env'] = make_env
+    if env_name[:3] == 'Cop':
+        registry.env_specs[env_name]._kwargs['tmp'] = 4
+        registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
     tmp_env = cached_make_env(kwargs['make_env'])
     action_steps = [int(n_s) for n_s in kwargs['action_steps'][1:-1].split(",") if n_s != '']
     kwargs['action_steps'] = action_steps
     tmp_env.reset()
+    if env_name[:3] == 'Cop':
+        registry.env_specs[env_name]._kwargs['tmp'] = 1
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     if 'lr' in kwargs:
         kwargs['pi_lr'] = kwargs['lr']
@@ -186,7 +192,8 @@ def configure_policy(dims, params):
     p_steepness = params['mix_p_steepness']
     # DDPG agent
     env = cached_make_env(params['make_env'])
-    env.reset()
+    if params['env_name'][:3] != 'Cop':
+        env.reset()
     subgoal_scale, subgoal_offset = env.env.get_scale_and_offset_for_normalized_subgoal()
     units_per_obs_len = 12
     n_obs = len(env.env._get_obs()['observation'])

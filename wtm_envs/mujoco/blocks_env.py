@@ -89,27 +89,6 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
         else:
             return goals
 
-    # def _goal2obs(self, goal):
-    #     if len(goal.shape) == 1:
-    #         goal_arr = np.array([goal])
-    #     else:
-    #         goal_arr = goal
-    #     assert len(goal_arr.shape) == 2
-    #     obs = []
-    #     o_dims = self.observation_space.spaces['observation'].shape[0]
-    #     o = np.zeros(o_dims, np.float32)
-    #     for g in goal_arr:
-    #         if self.gripper_goal != 'gripper_none':
-    #             o[:self.goal_size] = g
-    #         else:
-    #             o[3:self.goal_size + 3] = g
-    #         obs.append(o.copy())
-    #     obs = np.array(obs)
-    #     if len(goal.shape) == 1:
-    #         return obs[0]
-    #     else:
-    #         return obs
-
     def _get_obs(self, grip_pos=None, grip_velp=None):
         # If the grip position and grip velp are provided externally, the external values will be used.
         # This can later be extended to provide the properties of all elements in the scene.
@@ -293,7 +272,7 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
                     too_close = True
-                    while too_close:
+                    while too_close and target_goal is not None:
                         gripper_goal_pos = self.initial_gripper_xpos[:3] + \
                                            self.np_random.uniform(-self.target_range,
                                                                   self.target_range, size=3)

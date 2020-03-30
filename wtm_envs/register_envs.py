@@ -4,11 +4,14 @@ from gym.envs.registration import register
 # blockstack environment using the Fetch robot
 IDsAndEPs = [['BlockStackMujocoEnv', 'stack_blocks:'], ['BlockPickAndPlaceMujocoEnv', 'pick_and_place:'],
              ['BlockSlideMujocoEnv', 'slide:'], ['BlockReachMujocoEnv', 'reach:'], ['BlockPushMujocoEnv', 'push:']]
-for n_objects in range(-1, 5):
+for n_objects in range(0, 5):
     for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-        kwargs = {'n_objects': n_objects + 1,
+        kwargs = {'n_objects': n_objects,
                   'gripper_goal': gripper_goal}
-        max_ep_steps = 50 * (n_objects +1)
+        if gripper_goal == 'gripper_none' and n_objects == 0: # Disallow 0 objects and no gripper in goal, because this would zero the goal space size.
+            continue
+        max_ep_steps = 50 * (n_objects)
+        max_ep_steps = max(50, max_ep_steps)
         for idep in IDsAndEPs:
             register(
                 id=idep[0]+'-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
@@ -18,10 +21,10 @@ for n_objects in range(-1, 5):
         )
 
 # causal dependencies environment using the Fetch robot
-for n_objects in range(-1, 5):
-    kwargs = {'n_objects': n_objects + 1}
-    max_ep_steps = 50 * (n_objects +1)
-
+for n_objects in range(0, 5):
+    kwargs = {'n_objects': n_objects}
+    max_ep_steps = 50 * (n_objects)
+    max_ep_steps = max(50, max_ep_steps)
     register(
         id='CausalDependenciesMujocoEnv-o{}-v0'.format(kwargs['n_objects']),
         entry_point='wtm_envs.mujoco.causal_dep.unlock_goal:CausalDependenciesMujocoEnv',
@@ -29,12 +32,12 @@ for n_objects in range(-1, 5):
         max_episode_steps=max_ep_steps)
 
 # blockstack environment using the Key robot
-for n_objects in range(-1, 5):
+for n_objects in range(0, 5):
     for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-        kwargs = {'n_objects': n_objects + 1,
+        kwargs = {'n_objects': n_objects,
                   'gripper_goal': gripper_goal}
-        max_ep_steps = 50 * (n_objects +1)
-
+        max_ep_steps = 50 * (n_objects)
+        max_ep_steps = max(50, max_ep_steps)
         register(
             id='KeybotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects'],),
             entry_point='wtm_envs.mujoco.keybot.stack_blocks:KeybotBlockStackMujocoEnv',
@@ -57,10 +60,11 @@ for n_objects in range(0, 5):
         )
 
 # blockstack environment using the Nico robot
-for n_objects in range(-1, 5):
+for n_objects in range(0, 5):
     for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-        kwargs = {'n_objects': n_objects + 1, 'gripper_goal': gripper_goal}
-        max_ep_steps = 50 * (n_objects + 1)
+        kwargs = {'n_objects': n_objects, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects)
+        max_ep_steps = max(50, max_ep_steps)
 
         register(
             id='NicobotBlockStackMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
@@ -70,10 +74,11 @@ for n_objects in range(-1, 5):
         )
 
 # Physical blockstack environment using the Key robot
-for n_objects in range(-1, 5):
+for n_objects in range(0, 5):
     for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-        kwargs = {'n_objects': n_objects + 1, 'gripper_goal': gripper_goal}
-        max_ep_steps = 50 * (n_objects +1)
+        kwargs = {'n_objects': n_objects, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects)
+        max_ep_steps = max(50, max_ep_steps)
 
         register(
             id='KeybotBlockStackPhysicalEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
@@ -83,10 +88,11 @@ for n_objects in range(-1, 5):
         )
 
 # Rocker environment using the Fetch robot
-for n_objects in range(-1, 5):
+for n_objects in range(0, 5):
     for gripper_goal in ['gripper_random', 'gripper_above', 'gripper_none']:
-        kwargs = {'n_objects': n_objects + 1, 'gripper_goal': gripper_goal}
-        max_ep_steps = 50 * (n_objects +1)
+        kwargs = {'n_objects': n_objects, 'gripper_goal': gripper_goal}
+        max_ep_steps = 50 * (n_objects)
+        max_ep_steps = max(50, max_ep_steps)
 
         register(
             id='RockerMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
@@ -121,3 +127,10 @@ register(id='AntReacherEnv-v0',
          entry_point='wtm_envs.mujoco.ant_reacher.reach:AntReacherEnv',
          max_episode_steps=max_ep_steps)
 
+# ReacherEnv using coppelia sim
+for IK in [0, 1]:  # whether to use inverse kinematics
+    kwargs = {'ik': IK}
+    register(id='CopReacherEnv-ik{}-v0'.format(kwargs['ik']),
+         entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
+         kwargs=kwargs,
+         max_episode_steps=200)
