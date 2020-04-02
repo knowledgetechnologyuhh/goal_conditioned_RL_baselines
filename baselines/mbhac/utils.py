@@ -46,36 +46,37 @@ class EnvWrapper(object):
         self.graph = self.visualize
         self.agent = agent
 
-        # TODO: use wtm definitions
+
         self.state_dim = input_dims['o']
-        assert len(env.sim.data.qpos) + len(env.sim.data.qvel) == self.state_dim
-
         self.action_dim = input_dims['u']
-        assert len(self.sim.model.actuator_ctrlrange) == self.action_dim
-
-        self.action_bounds =  np.array([max_u] * self.action_dim)
-        assert (self.sim.model.actuator_ctrlrange[:,1] == self.action_bounds).all()
-
-        # n_actions in wtm env
-        self.action_offset = np.zeros((len(self.action_bounds)))
-        #  print('action offset', self.action_offset)
-
         self.end_goal_dim = input_dims['g']
-        assert len(self.goal_space_test) == self.end_goal_dim
+        self.action_bounds =  np.array([max_u] * self.action_dim)
+        self.action_offset = np.zeros((len(self.action_bounds)))
 
-        self.subgoal_dim = len(self.subgoal_bounds)
-        #  print('sub goal dim', self.subgoal_dim)
-
-        print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
-
-        self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
-        self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
-        for i in range(len(self.subgoal_bounds)):
-            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
-            self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
-
-        print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
         self.max_actions = self.time_scale**(self.n_layers)
+
+        if hasattr(env, 'name') and 'ant' in env.name:
+            assert len(env.sim.data.qpos) + len(env.sim.data.qvel) == self.state_dim
+            assert len(self.sim.model.actuator_ctrlrange) == self.action_dim
+            assert (self.sim.model.actuator_ctrlrange[:,1] == self.action_bounds).all()
+            assert len(self.goal_space_test) == self.end_goal_dim
+
+            self.subgoal_dim = len(self.subgoal_bounds)
+            #  print('sub goal dim', self.subgoal_dim)
+
+            print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
+
+            self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
+            self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
+            for i in range(len(self.subgoal_bounds)):
+                self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
+                self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
+
+            print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
+
+        else:
+            pass
+
 
     def __getattr__(self, attr):
         return self.wrapped_env.__getattribute__(attr)
