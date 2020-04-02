@@ -3,7 +3,7 @@ from baselines.template.policy import Policy
 import numpy as np
 from baselines.mbhac.layer import Layer
 import tensorflow as tf
-from baselines.mbhac.utils import EnvWrapper
+from baselines.mbhac.utils import AntWrapper, BlockWrapper
 from baselines import logger
 import time
 
@@ -25,7 +25,11 @@ class MBHACPolicy(Policy):
         self.batch_size = batch_size[0]
         self.model_based = model_based
 
-        self.env = EnvWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
+        if 'Ant' in kwargs['info']['env_name']:
+            self.env = AntWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
+        elif 'Block' in kwargs['info']['env_name']:
+            self.env = BlockWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
+
         agent_params = {
             "subgoal_test_perc": subgoal_test_perc,
             "subgoal_penalty": -time_scale,
@@ -68,8 +72,7 @@ class MBHACPolicy(Policy):
 
             # If at highest layer, compare to end goal thresholds
             if i == self.n_layers - 1:
-                # Project current state onto end goal space
-                proj_end_goal = env._obs2goal(self.current_state)
+                proj_end_goal = env.project_state_to_end_goal(self.current_state)
                 # Check dimensions are appropriate
                 assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), \
                         "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
@@ -81,11 +84,7 @@ class MBHACPolicy(Policy):
 
             # If not highest layer, compare to subgoal thresholds
             else:
-                # Project current state onto subgoal space
-                if hasattr(env, '_obs2subgoal'):
-                    proj_subgoal = env._obs2subgoal(self.current_state)
-                else:
-                    proj_subgoal = env._obs2goal(self.current_state)
+                proj_subgoal = env.project_state_to_sub_goal(self.current_state)
                 # Check that dimensions are appropriate
                 assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), \
                         "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"

@@ -91,7 +91,6 @@ class Layer():
         # Add noise to action and ensure remains within bounds
         for i in range(len(action)):
             action[i] += np.random.normal(0,self.noise_perc[i] * action_bounds[i])
-
             action[i] = max(min(action[i], action_bounds[i]+action_offset[i]), -action_bounds[i]+action_offset[i])
 
         return action
@@ -152,7 +151,7 @@ class Layer():
                 action = np.zeros_like(action)
         if enforce_random:
             if self.layer_number != 0:
-                subg = env.project_state_to_sub_goal(env.sim, agent.current_state)
+                subg = env.project_state_to_sub_goal(agent.current_state)
                 low = np.array(env.subgoal_bounds)[:,0]
                 high = np.array(env.subgoal_bounds)[:, 1]
                 rnd_factor = (high - low) / 12
@@ -187,9 +186,9 @@ class Layer():
     def create_prelim_goal_replay_trans(self, hindsight_action, next_state, env, total_layers):
         # Create transition evaluating hindsight action for some goal to be determined in future.  Goal will be ultimately be selected from states layer has traversed through.  Transition will be in the form [old state, hindsight action, reward = None, next state, goal = None, finished = None, next state projeted to subgoal/end goal space]
         if self.layer_number == total_layers - 1:
-            hindsight_goal = env.project_state_to_end_goal(env.sim, next_state)
+            hindsight_goal = env.project_state_to_end_goal(next_state)
         else:
-            hindsight_goal = env.project_state_to_sub_goal(env.sim, next_state)
+            hindsight_goal = env.project_state_to_sub_goal(next_state)
 
         transition = [self.current_state, hindsight_action, None, next_state, None, None, hindsight_goal]
         self.temp_goal_replay_storage.append(np.copy(transition))
@@ -396,13 +395,9 @@ class Layer():
                     print("Goal: ", self.goal)
 
                     if self.layer_number == agent.n_layers - 1:
-                        print("Hindsight Goal: ", env._obs2goal(agent.current_state))
+                        print("Hindsight Goal: ", env.project_state_to_end_goal(agent.current_state))
                     else:
-                        if hasattr(env, '_obs2subgoal'):
-                            hind_goal = env._obs2subgoal(agent.current_state)
-                        else:
-                            hind_goal = env._obs2goal(agent.current_state)
-                        print("Hindsight Goal: ", hind_goal)
+                        print("Hindsight Goal: ", env.project_state_to_sub_goal(agent.current_state))
 
             # Perform hindsight learning using action actually executed (low-level action or hindsight subgoal)
             if self.layer_number == 0:
@@ -413,17 +408,13 @@ class Layer():
                     hindsight_action = action
                 # Otherwise, use subgoal that was achieved in hindsight
                 else:
-                    if hasattr(env, '_obs2subgoal'):
-                        hindsight_action = env._obs2subgoal(agent.current_state)
-                    else:
-                        hindsight_action = env._obs2goal(agent.current_state)
+                    hindsight_action = env.project_state_to_sub_goal(agent.current_state)
 
             # Next, create hindsight transitions if not testing
             if not agent.test_mode:
 
                 # Create action replay transition by evaluating hindsight action given current goal
                 self.perform_action_replay(hindsight_action, agent.current_state, goal_status)
-
 
                 # Create preliminary goal replay transitions.  The goal and reward in these transitions will be
                 # finalized when this layer has run out of attempts or the goal has been achieved.
@@ -447,13 +438,9 @@ class Layer():
                 print("Goal: ", self.goal)
 
                 if self.layer_number == agent.n_layers - 1:
-                    print("Hindsight Goal: ", env._obs2goal(agent.current_state))
+                    print("Hindsight Goal: ", env.project_state_to_end_goal(agent.current_state))
                 else:
-                    if hasattr(env, '_obs2subgoal'):
-                        hind_goal = env._obs2subgoal(agent.current_state)
-                    else:
-                        hind_goal = env._obs2goal(agent.current_state)
-                    print("Hindsight Goal: ", hind_goal)
+                    print("Hindsight Goal: ", env.project_state_to_sub_goal(agent.current_state))
 
                 print("Goal Status: ", goal_status, "\n")
                 print("All Goals: ", agent.goal_array)

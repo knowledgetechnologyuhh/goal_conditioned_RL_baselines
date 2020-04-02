@@ -37,7 +37,8 @@ def layer(input_layer, num_next_neurons, is_output=False):
     relu = tf.nn.relu(dot)
     return relu
 
-class EnvWrapper(object):
+class BasicEnvWrapper(object):
+
     def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
         self.wrapped_env = env
         self.n_layers = n_layers
@@ -46,36 +47,21 @@ class EnvWrapper(object):
         self.graph = self.visualize
         self.agent = agent
 
-
         self.state_dim = input_dims['o']
         self.action_dim = input_dims['u']
         self.end_goal_dim = input_dims['g']
         self.action_bounds =  np.array([max_u] * self.action_dim)
         self.action_offset = np.zeros((len(self.action_bounds)))
-
         self.max_actions = self.time_scale**(self.n_layers)
 
-        if hasattr(env, 'name') and 'ant' in env.name:
-            assert len(env.sim.data.qpos) + len(env.sim.data.qvel) == self.state_dim
-            assert len(self.sim.model.actuator_ctrlrange) == self.action_dim
-            assert (self.sim.model.actuator_ctrlrange[:,1] == self.action_bounds).all()
-            assert len(self.goal_space_test) == self.end_goal_dim
-
-            self.subgoal_dim = len(self.subgoal_bounds)
-            #  print('sub goal dim', self.subgoal_dim)
-
-            print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
-
-            self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
-            self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
-            for i in range(len(self.subgoal_bounds)):
-                self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
-                self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
-
-            print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
-
-        else:
-            pass
+    def set_sym_bounds(self):
+        print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
+        self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
+        self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
+        for i in range(len(self.subgoal_bounds)):
+            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
+            self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
+        print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
 
     def __getattr__(self, attr):
@@ -100,3 +86,63 @@ class EnvWrapper(object):
         # TODO: _get_state calls _obs2goal. For layers > 0 we need to call
         #       _get_obs2subgoal to do it like Levy did it.
         return self._get_state()
+
+
+class AntWrapper(BasicEnvWrapper):
+
+    def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
+        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims, max_u, agent)
+
+        assert len(env.sim.data.qpos) + len(env.sim.data.qvel) == self.state_dim
+        assert len(self.sim.model.actuator_ctrlrange) == self.action_dim
+        assert (self.sim.model.actuator_ctrlrange[:,1] == self.action_bounds).all()
+        assert len(self.goal_space_test) == self.end_goal_dim
+        # If you like the subgoal space to be equal to the actual space
+        #  self.subgoal_bounds = env.initial_state_space[:5]
+        self.subgoal_dim = len(self.subgoal_bounds)
+        self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
+        self.project_state_to_sub_goal = lambda state : self.wrapped_env._obs2subgoal(state)
+
+        self.set_sym_bounds()
+
+    def __getattr__(self, attr):
+        return self.wrapped_env.__getattribute__(attr)
+
+
+class BlockWrapper(BasicEnvWrapper):
+    def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
+        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims, max_u, agent)
+        # subgoals should contain x,y,z and velocities (maybe optional)
+        self.subgoal_bounds = np.array([
+            [-self.target_range,self.target_range],
+            [-self.target_range,self.target_range],
+            [env.table_height, env.table_height + env.n_objects * self.obj_height]])
+
+        if self.end_goal_dim == 6:
+            #  TODO: Find real max_velo
+            max_velo = 3
+            self.subgoal_bounds = np.concatenate((self.subgoal_bounds,
+                [[-max_velo, max_velo], [-max_velo, max_velo], [-max_velo, max_velo]]))
+
+        self.subgoal_dim = self.end_goal_dim
+
+        self.sub_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
+        self.end_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
+
+        self.project_state_to_sub_goal = lambda state : self.wrapped_env._obs2goal(state)
+        self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
+
+        self.set_sym_bounds()
+
+    def display_end_goal(self, end_goal):
+        pass
+
+    def display_subgoals(self, subgoals):
+        pass
+
+    def _get_state(self):
+        return self._get_obs()['observation']
+
+    def _reset_sim(self, next_goal):
+        self.wrapped_env._reset_sim()
+        return self._get_obs()
