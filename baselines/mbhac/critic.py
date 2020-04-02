@@ -98,7 +98,14 @@ class Critic():
         flat_q_grads = flatten_mixed_np_array(q_gradients)
         q_gradient_mean = np.mean(flat_q_grads)
         q_gradient_std = np.std(flat_q_grads)
-        return {"critic_loss" : self.loss_val, 'wanted_qs': wanted_q_mean, 'next_state_qs': next_state_q_mean, 'this_qs': this_qs_mean, 'q_grads': q_gradient_mean, 'q_grads_std': q_gradient_std}
+        return {
+                "critic_loss" : self.loss_val,
+                'wanted_qs': wanted_q_mean,
+                'next_state_qs': next_state_q_mean,
+                'this_qs': this_qs_mean,
+                'q_grads': q_gradient_mean,
+                'q_grads_std': q_gradient_std
+                }
 
     def get_gradients(self, state, goal, action):
         grads = self.sess.run(self.gradient,

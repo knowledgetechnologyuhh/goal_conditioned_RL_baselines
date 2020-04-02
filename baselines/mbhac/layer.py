@@ -14,7 +14,8 @@ class Layer():
         self.subgoal_test_perc = agent_params['subgoal_test_perc']
         self.model_based = agent_params['model_based']
 
-        # Set time limit for each layer.  If agent uses only 1 layer, time limit is the max number of low-level actions allowed in the episode (i.e, env.max_actions).
+        # Set time limit for each layer. If agent uses only 1 layer, time limit
+        # is the max number of low-level actions allowed in the episode (i.e, env.max_actions).
         if self.n_layers > 1:
             self.time_limit = self.time_scale
         else:
@@ -127,7 +128,9 @@ class Layer():
 
             if np.random.random_sample() > 0.2:
                 # Choose noisy action
-                action = self.add_noise(self.actor.get_action(np.reshape(self.current_state,(1,len(self.current_state))), np.reshape(self.goal,(1,len(self.goal))))[0],env)
+                action = self.add_noise(self.actor.get_action(
+                    np.reshape(self.current_state,(1,len(self.current_state))),
+                    np.reshape(self.goal,(1,len(self.goal))))[0], env)
 
                 action_type = "Noisy Policy"
 
@@ -253,10 +256,10 @@ class Layer():
         self.temp_goal_replay_storage = []
 
 
-    # Create transition penalizing subgoal if necessary.  The target Q-value when this transition is used will ignore
-    # next state as the finished boolena = True.  Change the finished boolean to False, if you would like the subgoal
-    # penalty to depend on the next state.
     def penalize_subgoal(self, subgoal, next_state, test_fail=True):
+        """Create transition penalizing subgoal if necessary.  The target Q-value when this transition is used will ignore
+        next state as the finished boolena = True.  Change the finished boolean to False, if you would like the subgoal
+        penalty to depend on the next state."""
 
         if test_fail:
             transition = [self.current_state, subgoal, self.subgoal_penalty, next_state, self.goal, True, None]
@@ -269,14 +272,21 @@ class Layer():
 
     # Determine whether layer is finished training
     def return_to_higher_level(self, max_lay_achieved, agent, env, attempts_made):
+        """
+        Return to higher level if
+        (i) a higher level goal has been reached,
+        (ii) maxed out episode time steps (env.max_actions)
+        (iii) not testing and layer is out of attempts, and
+        (iv) testing, layer is not the highest level, and layer is out of attempts.
+        -----------------------------------------------------------------------------------
+        NOTE: during testing, highest level will continue to ouput subgoals until either
+        (i) the maximum number of episdoe time steps or (ii) the end goal has been achieved.
+        """
 
-        # Return to higher level if
-        # (i) a higher level goal has been reached,
-        # (ii) maxed out episode time steps (env.max_actions)
-        # (iii) not testing and layer is out of attempts, and (iv) testing, layer is not the highest level, and layer is out of attempts.
-        # NOTE: during testing, highest level will continue to ouput subgoals until either (i) the maximum number of episdoe time steps or (ii) the end goal has been achieved.
-
-        # Return to previous level when any higher level goal achieved.  NOTE: if not testing and agent achieves end goal, training will continue until out of time (i.e., out of time steps or highest level runs out of attempts).  This will allow agent to experience being around the end goal.
+        # Return to previous level when any higher level goal achieved.
+        # NOTE: if not testing and agent achieves end goal, training will continue until
+        # out of time (i.e., out of time steps or highest level runs out of attempts).
+        # This will allow agent to experience being around the end goal.
         if max_lay_achieved is not None and max_lay_achieved >= self.layer_number:
             return True
 
@@ -295,9 +305,9 @@ class Layer():
         else:
             return False
 
-    # Learn to achieve goals with actions belonging to appropriate time scale.  "goal_array" contains the goal states
-    # for the current layer and all higher layers
     def train(self, agent, env, subgoal_test=False, episode_num=None, eval_data={}):
+        """Learn to achieve goals with actions belonging to appropriate time scale.
+        "goal_array" contains the goal states for the current layer and all higher layers"""
         train_test_prefix = 'test_{}/'.format(self.layer_number) if agent.test_mode else 'train_{}/'.format(self.layer_number)
         if self.layer_number > 0:
             if "{}subgoal_succ".format(train_test_prefix) not in eval_data:
@@ -388,7 +398,11 @@ class Layer():
                     if self.layer_number == agent.n_layers - 1:
                         print("Hindsight Goal: ", env._obs2goal(agent.current_state))
                     else:
-                        print("Hindsight Goal: ", env._obs2subgoal(agent.current_state))
+                        if hasattr(env, '_obs2subgoal'):
+                            hind_goal = env._obs2subgoal(agent.current_state)
+                        else:
+                            hind_goal = env._obs2goal(agent.current_state)
+                        print("Hindsight Goal: ", hind_goal)
 
             # Perform hindsight learning using action actually executed (low-level action or hindsight subgoal)
             if self.layer_number == 0:
@@ -399,9 +413,10 @@ class Layer():
                     hindsight_action = action
                 # Otherwise, use subgoal that was achieved in hindsight
                 else:
-                    #  hindsight_action = env.project_state_to_sub_goal(env.sim, agent.current_state)
-                    hindsight_action = env._obs2subgoal(agent.current_state)
-
+                    if hasattr(env, '_obs2subgoal'):
+                        hindsight_action = env._obs2subgoal(agent.current_state)
+                    else:
+                        hindsight_action = env._obs2goal(agent.current_state)
 
             # Next, create hindsight transitions if not testing
             if not agent.test_mode:
@@ -434,7 +449,11 @@ class Layer():
                 if self.layer_number == agent.n_layers - 1:
                     print("Hindsight Goal: ", env._obs2goal(agent.current_state))
                 else:
-                    print("Hindsight Goal: ", env._obs2subgoal(agent.current_state))
+                    if hasattr(env, '_obs2subgoal'):
+                        hind_goal = env._obs2subgoal(agent.current_state)
+                    else:
+                        hind_goal = env._obs2goal(agent.current_state)
+                    print("Hindsight Goal: ", hind_goal)
 
                 print("Goal Status: ", goal_status, "\n")
                 print("All Goals: ", agent.goal_array)
@@ -469,8 +488,8 @@ class Layer():
 
 
 
-    # Update actor and critic networks
     def learn(self, num_updates):
+        """Update actor and critic networks"""
         # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
         #  if self.layer_number == 0:
         #      return {}

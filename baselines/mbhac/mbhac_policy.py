@@ -61,9 +61,6 @@ class MBHACPolicy(Policy):
         # goal_status is vector showing status of whether a layer's goal has been achieved
         goal_status = [False for i in range(self.n_layers)]
         max_lay_achieved = None
-        # Project current state onto the subgoal and end goal spaces
-        proj_subgoal = env._obs2subgoal(self.current_state)
-        proj_end_goal = env._obs2goal(self.current_state)
 
         for i in range(self.n_layers):
 
@@ -71,11 +68,11 @@ class MBHACPolicy(Policy):
 
             # If at highest layer, compare to end goal thresholds
             if i == self.n_layers - 1:
-
+                # Project current state onto end goal space
+                proj_end_goal = env._obs2goal(self.current_state)
                 # Check dimensions are appropriate
                 assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), \
                         "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
-
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
                 for j in range(len(proj_end_goal)):
                     if np.absolute(self.goal_array[i][j] - proj_end_goal[j]) > env.end_goal_thresholds[j]:
@@ -84,11 +81,14 @@ class MBHACPolicy(Policy):
 
             # If not highest layer, compare to subgoal thresholds
             else:
-
+                # Project current state onto subgoal space
+                if hasattr(env, '_obs2subgoal'):
+                    proj_subgoal = env._obs2subgoal(self.current_state)
+                else:
+                    proj_subgoal = env._obs2goal(self.current_state)
                 # Check that dimensions are appropriate
                 assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), \
                         "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
-
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
                 for j in range(len(proj_subgoal)):
                     if np.absolute(self.goal_array[i][j] - proj_subgoal[j]) > env.sub_goal_thresholds[j]:
