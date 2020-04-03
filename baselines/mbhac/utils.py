@@ -112,11 +112,11 @@ class AntWrapper(BasicEnvWrapper):
 class BlockWrapper(BasicEnvWrapper):
     def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
         BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims, max_u, agent)
-        # subgoals should contain x,y,z and velocities (maybe optional)
-        self.subgoal_bounds = np.array([
-            [-self.target_range,self.target_range],
-            [-self.target_range,self.target_range],
-            [env.table_height, env.table_height + env.n_objects * self.obj_height]])
+
+        self.subgoal_bounds = np.array([[-self.obj_range,self.obj_range],[-self.obj_range,self.obj_range]])
+        if self.end_goal_dim == 3:
+            self.subgoal_bounds = np.concatenate((self.subgoal_bounds,
+            [[env.table_height, env.table_height + self.obj_height * self.n_objects]]))
 
         if self.end_goal_dim == 6:
             #  TODO: Find real max_velo

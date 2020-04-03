@@ -61,7 +61,6 @@ class Layer():
                 self.state_predictor = ForwardModel(sess, env, self.layer_number, agent_params['mb_params'])
 
         # Parameter determines degree of noise added to actions during training
-        # self.noise_perc = noise_perc
         if self.layer_number == 0:
             self.noise_perc = agent_params["atomic_noise"]
         else:
@@ -96,7 +95,6 @@ class Layer():
         return action
 
 
-    # Select random action
     def get_random_action(self, env):
 
         if self.layer_number == 0:
@@ -161,9 +159,9 @@ class Layer():
 
         return action, action_type, next_subgoal_test
 
-    # Create action replay transition by evaluating hindsight action given original goal
     def perform_action_replay(self, hindsight_action, next_state, goal_status):
-        # Determine reward (0 if goal achieved, -1 otherwise) and finished boolean.
+        """Create action replay transition by evaluating hindsight action given original goal
+           Determine reward (0 if goal achieved, -1 otherwise) and finished boolean """
         # The finished boolean is used for determining the target for Q-value updates
         if goal_status[self.layer_number]:
             reward = 0
@@ -174,17 +172,16 @@ class Layer():
 
         # Transition will take the form [old state, hindsight_action, reward, next_state, goal, terminate boolean, None]
         transition = [self.current_state, hindsight_action, reward, next_state, self.goal, finished, None]
-
-        #  if self.FLAGS.all_trans or self.FLAGS.hind_action:
-        #      print("\nLevel %d Hindsight Action: " % self.layer_number, transition)
-
-        # Add action replay transition to layer's replay buffer
         self.replay_buffer.add(np.copy(transition))
 
 
-    # Create initial goal replay transitions
     def create_prelim_goal_replay_trans(self, hindsight_action, next_state, env, total_layers):
-        # Create transition evaluating hindsight action for some goal to be determined in future.  Goal will be ultimately be selected from states layer has traversed through.  Transition will be in the form [old state, hindsight action, reward = None, next state, goal = None, finished = None, next state projeted to subgoal/end goal space]
+        """Create initial goal replay transitions
+        Create transition evaluating hindsight action for some goal to be determined in future.
+        Goal will be ultimately be selected from states layer has traversed through.
+        Transition will be in the form [old state, hindsight action, reward = None, next state,
+            goal = None, finished = None, next state projeted to subgoal/end goal space]"""
+
         if self.layer_number == total_layers - 1:
             hindsight_goal = env.project_state_to_end_goal(next_state)
         else:
@@ -196,7 +193,8 @@ class Layer():
     # Return reward given provided goal and goal achieved in hindsight
     def get_reward(self,new_goal, hindsight_goal, goal_thresholds):
 
-        assert len(new_goal) == len(hindsight_goal) == len(goal_thresholds), "Goal, hindsight goal, and goal thresholds do not have same dimensions"
+        assert len(new_goal) == len(hindsight_goal) == len(goal_thresholds),\
+                "Goal, hindsight goal, and goal thresholds do not have same dimensions"
 
         # If the difference in any dimension is greater than threshold, goal not achieved
         for i in range(len(new_goal)):
@@ -208,9 +206,9 @@ class Layer():
 
 
 
-    # Finalize goal replay by filling in goal, reward, and finished boolean for the preliminary goal replay transitions
-    # created before
     def finalize_goal_replay(self,goal_thresholds):
+        """Finalize goal replay by filling in goal, reward, and finished boolean
+        for the preliminary goal replay transitions created before"""
         # Choose transitions to serve as goals during goal replay.  The last transition will always be used
         num_trans = len(self.temp_goal_replay_storage)
 
@@ -235,7 +233,6 @@ class Layer():
             trans_copy = np.copy(self.temp_goal_replay_storage)
 
             new_goal = trans_copy[int(indices[i])][6]
-            # for index in range(int(indices[i])+1):
             for index in range(num_trans):
                 # Update goal to new goal
                 trans_copy[index][4] = new_goal
@@ -256,7 +253,7 @@ class Layer():
 
 
     def penalize_subgoal(self, subgoal, next_state, test_fail=True):
-        """Create transition penalizing subgoal if necessary.  The target Q-value when this transition is used will ignore
+        """Create transition penalizing subgoal if necessary. The target Q-value when this transition is used will ignore
         next state as the finished boolena = True.  Change the finished boolean to False, if you would like the subgoal
         penalty to depend on the next state."""
 
@@ -321,10 +318,10 @@ class Layer():
         # Currently only for training
         if self.model_based and not agent.test_mode and "{}curiosity".format(self.layer_number) not in eval_data:
             eval_data["{}curiosity".format(train_test_prefix)] = []
+
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.layer_number]
         self.current_state = agent.current_state
-        #  print('GOAL ARR', self.goal, agent.goal_array)
 
         # Reset flag indicating whether layer has ran out of attempts.  This will be used for subgoal testing.
         self.maxed_out = False
@@ -422,7 +419,6 @@ class Layer():
                 #
                 # # Penalize subgoals if subgoal testing and subgoal was missed by lower layers after maximum number of attempts
                 test_fail = agent.layers[self.layer_number - 1].maxed_out
-                # test_success = goal_status[self.layer_number]  # TODO: This may work better than test_fail. Let's test sometime...
                 if self.layer_number > 0 and next_subgoal_test and test_fail:
                     self.penalize_subgoal(action, agent.current_state, test_fail)
 
@@ -430,7 +426,6 @@ class Layer():
             if agent.verbose:
 
                 print("\nEpisode %d, Level %d, Attempt %d" % (episode_num, self.layer_number,attempts_made))
-                # print("Goal Array: ", agent.goal_array, "Max Lay Achieved: ", max_lay_achieved)
                 print("Old State: ", self.current_state)
                 print("Hindsight Action: ", hindsight_action)
                 print("Original Action: ", action)

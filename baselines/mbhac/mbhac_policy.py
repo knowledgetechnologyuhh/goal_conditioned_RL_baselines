@@ -25,10 +25,14 @@ class MBHACPolicy(Policy):
         self.batch_size = batch_size[0]
         self.model_based = model_based
 
+        wrapper_args = (kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
+        print('Wrapper Args', *wrapper_args)
         if 'Ant' in kwargs['info']['env_name']:
-            self.env = AntWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
+            self.env = AntWrapper(*wrapper_args)
         elif 'Block' in kwargs['info']['env_name']:
-            self.env = BlockWrapper(kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
+            self.env = BlockWrapper(*wrapper_args)
+        elif 'Causal' in kwargs['info']['env_name']:
+            self.env = BlockWrapper(*wrapper_args)
 
         agent_params = {
             "subgoal_test_perc": subgoal_test_perc,
@@ -59,9 +63,8 @@ class MBHACPolicy(Policy):
         self.steps_taken = 0
         self.total_steps = 0
 
-    # Determine whether or not each layer's goal was achieved.  Also, if applicable, return the highest level whose goal was achieved.
     def check_goals(self,env):
-
+        """Determine whether or not each layer's goal was achieved. Also, if applicable, return the highest level whose goal was achieved."""
         # goal_status is vector showing status of whether a layer's goal has been achieved
         goal_status = [False for i in range(self.n_layers)]
         max_lay_achieved = None
@@ -73,7 +76,6 @@ class MBHACPolicy(Policy):
             # If at highest layer, compare to end goal thresholds
             if i == self.n_layers - 1:
                 proj_end_goal = env.project_state_to_end_goal(self.current_state)
-                # Check dimensions are appropriate
                 assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), \
                         "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
@@ -85,7 +87,6 @@ class MBHACPolicy(Policy):
             # If not highest layer, compare to subgoal thresholds
             else:
                 proj_subgoal = env.project_state_to_sub_goal(self.current_state)
-                # Check that dimensions are appropriate
                 assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), \
                         "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
@@ -117,30 +118,21 @@ class MBHACPolicy(Policy):
         # Set subgoal testing ratio each layer will use
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
-        self.layers = [Layer(i,self.env,self.sess, agent_params) for i in range(self.n_layers)]
+        self.layers = [Layer(i, self.env, self.sess, agent_params) for i in range(self.n_layers)]
         self.sess.run(tf.global_variables_initializer())
 
     # Update actor and critic networks for each layer
     def learn(self, num_updates):
-        learn_summaries = []
+        return [self.layers[i].learn(num_updates) for i in range(len(self.layers))]
 
-        for i in range(len(self.layers)):
-            learn_summay = self.layers[i].learn(num_updates)
-            learn_summaries.append(learn_summay)
-
-        return learn_summaries
-
-
-    # Train agent for an episode
     def train(self,env, episode_num, eval_data, num_updates):
-        # Select final goal from final goal space, defined in "design_agent_and_env.py"
+        """Train agent for an episode"""
         self.goal_array[self.n_layers - 1] = env._sample_goal()
         env.display_end_goal(self.goal_array[self.n_layers - 1])
 
         if self.verbose:
             print("Next End Goal: ", self.goal_array[self.n_layers - 1])
 
-        # Select initial state from in initial state space, defined in environment.py
         self.current_state = env._reset_sim(self.goal_array[self.n_layers - 1])['observation']
 
         if self.verbose:
