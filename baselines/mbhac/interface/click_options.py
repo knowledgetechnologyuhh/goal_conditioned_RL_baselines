@@ -6,7 +6,7 @@ click.option('--network_class', type=str, default='baselines.mbhac.actor_critic:
 click.option('--replay_k', type=int, default=4, help='The ratio between HER replays and regular replays.'),
 click.option('--train_batch_size', type=int, default=1024, help='The number of state transitions processed during network training.'),
 click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
-click.option('--steps_per_layer', 'time_scale', type=int, default=33, help='The steps per layer.'),
+click.option('--steps_per_layer', 'time_scale', type=int, default=3, help='The steps per layer.'),
 click.option('--buffer_size', type=int, default=500, help='The number of rollouts to store per in each layers buffer.'),
 click.option('--timesteps_per_action', type=int, default=0, help='The number of simulation steps per executed action. Set to 0 to use environment default.'),
 click.option('--subgoal_test_perc', type=float, default=0.3, help='The percentage of subgoals to test.'),
