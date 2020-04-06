@@ -140,9 +140,16 @@ class BlockWrapper(BasicEnvWrapper):
         self.subgoal_bounds_offset = offset
 
     def display_end_goal(self, end_goal):
+        self.wrapped_env.final_goal = end_goal
+        # self.final_goal = end_goal
         pass
 
     def display_subgoals(self, subgoals):
+        # TODO: fix for multiple layers
+        # self.wrapped_env.goal = subgoals[0]
+        # self.goal = subgoals[1]
+        self.wrapped_env.goal_hierarchy = reversed(subgoals)
+        # TODO: This is how it is done in herhrl: self.first_env.env.goal_hierarchy[self.h_level] = self.g.copy()
         pass
 
     def _get_state(self):
