@@ -23,6 +23,7 @@ class Layer():
 
         self.current_state = None
         self.goal = None
+        env.wrapped_env.goal_hierarchy[self.layer_number] = self.goal
 
         # Ceiling on buffer size
         self.buffer_size_ceiling = 10**7
@@ -70,7 +71,7 @@ class Layer():
         self.maxed_out = False
         self.subgoal_penalty = agent_params["subgoal_penalty"]
         self.curiosity = []
-
+        self.q_values = []
 
 
     # Add noise to provided action
@@ -345,6 +346,7 @@ class Layer():
                                                 np.reshape(self.goal, (1, len(self.goal))),
                                                 np.reshape(action, (1, len(action))))
                 eval_data["{}Q".format(train_test_prefix)] += [q_val[0]]
+                self.q_values += [q_val[0]]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
             # whether that subgoal should be tested
@@ -369,8 +371,8 @@ class Layer():
 
                 agent.current_state = next_state
 
-                # Determine whether any of the goals from any layer was achieved and, if applicable, the highest layer
-                # whose goal was achieved
+                # Determine whether any of the goals from any layer was achieved
+                # and, if applicable, the highest layer whose goal was achieved
                 goal_status, max_lay_achieved = agent.check_goals(env)
 
             attempts_made += 1

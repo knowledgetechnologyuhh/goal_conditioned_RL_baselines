@@ -125,18 +125,19 @@ class MBHACPolicy(Policy):
     def learn(self, num_updates):
         return [self.layers[i].learn(num_updates) for i in range(len(self.layers))]
 
-    def train(self,env, episode_num, eval_data, num_updates):
+    def train(self, env, episode_num, eval_data, num_updates):
         """Train agent for an episode"""
-        self.goal_array[self.n_layers - 1] = env._sample_goal()
-        env.display_end_goal(self.goal_array[self.n_layers - 1])
-
-        if self.verbose:
-            print("Next End Goal: ", self.goal_array[self.n_layers - 1])
-
-        self.current_state = env._reset_sim(self.goal_array[self.n_layers - 1])['observation']
+        obs = env.reset()
+        self.current_state = obs['observation']
 
         if self.verbose:
             print("Initial State: ", self.current_state[:3])
+
+        self.goal_array[self.n_layers - 1] = obs['desired_goal']
+        env.wrapped_env.final_goal = obs['desired_goal']
+
+        if self.verbose:
+            print("Next End Goal: ", env.wrapped_env.final_goal, env.wrapped_env.goal)
 
         # Reset step counter
         self.steps_taken = 0
