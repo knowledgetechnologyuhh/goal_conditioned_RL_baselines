@@ -11,13 +11,6 @@ class ForwardModel():
         self.model_name = 'model_' + str(layer_number)
 
         if layer_number == 0:
-            self.action_space_bounds = env.action_bounds
-            self.action_offset = env.action_offset
-        else:
-            self.action_space_bounds = env.subgoal_bounds_symmetric
-            self.action_offset = env.subgoal_bounds_offset
-
-        if layer_number == 0:
             self.action_space_size = env.action_dim
         else:
             self.action_space_size = env.subgoal_dim

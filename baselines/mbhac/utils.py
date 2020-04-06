@@ -113,10 +113,14 @@ class BlockWrapper(BasicEnvWrapper):
     def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
         BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims, max_u, agent)
 
-        self.subgoal_bounds = np.array([[-self.obj_range,self.obj_range],[-self.obj_range,self.obj_range]])
-        if self.end_goal_dim == 3:
-            self.subgoal_bounds = np.concatenate((self.subgoal_bounds,
-            [[env.table_height, env.table_height + self.obj_height * self.n_objects]]))
+        scale, offset = self.get_scale_and_offset_for_normalized_subgoal()
+        self.subgoal_bounds = np.stack((scale, scale), axis=1)
+        self.subgoal_bounds[:2, 0] *= -1.0
+
+        #  self.subgoal_bounds = np.array([[-self.obj_range,self.obj_range],[-self.obj_range,self.obj_range]])
+        #  if self.end_goal_dim == 3:
+            #  self.subgoal_bounds = np.concatenate((self.subgoal_bounds,
+            #  [[env.table_height, env.table_height + self.obj_height * self.n_objects]]))
 
         if self.end_goal_dim == 6:
             #  TODO: Find real max_velo
@@ -133,6 +137,7 @@ class BlockWrapper(BasicEnvWrapper):
         self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
 
         self.set_sym_bounds()
+        self.subgoal_bounds_offset = offset
 
     def display_end_goal(self, end_goal):
         pass
