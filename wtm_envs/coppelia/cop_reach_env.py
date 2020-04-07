@@ -18,8 +18,6 @@ class ManipulatorPro (Arm):
         super().__init__(count, 'mp', num_joints=6)
 
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
-EPISODES = 5
-EPISODE_LENGTH = 200
 
 class ReacherEnv(gym.GoalEnv):
     """
