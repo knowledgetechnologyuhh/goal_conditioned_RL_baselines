@@ -129,3 +129,4 @@ class BlockWrapper(BasicEnvWrapper):
     def display_subgoals(self, subgoals):
         # TODO: Block environments only works for one subgoal
         self.wrapped_env.goal = subgoals[0]
+
