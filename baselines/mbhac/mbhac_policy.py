@@ -3,56 +3,21 @@ from baselines.template.policy import Policy
 import numpy as np
 from baselines.mbhac.layer import Layer
 import tensorflow as tf
-from baselines.mbhac.utils import AntWrapper, BlockWrapper
 from baselines import logger
 import time
 
 class MBHACPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, buffer_size, hidden_size, layers, polyak, batch_size, Q_lr, pi_lr, norm_eps, norm_clip, max_u,
-            action_l2, clip_obs, scope, T, rollout_batch_size, subtract_goals, relative_goals, clip_pos_returns, clip_return,
-            gamma,time_scale, subgoal_test_perc, n_layers, model_based, mb_hidden_size, mb_lr, eta,reuse=False, **kwargs):
+    def __init__(self, input_dims, buffer_size, hidden_size, layers, batch_size, Q_lr, pi_lr, max_u,
+            scope, T, rollout_batch_size, clip_pos_returns, clip_return,
+            gamma, agent_params, n_layers, env, reuse=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
         self.verbose = False
         self.Q_values = True
         self.n_layers = n_layers
-
-        # TODO: Why we get tuples?
-        time_scale = time_scale[0]
-        subgoal_test_perc = subgoal_test_perc[0]
-        self.buffer_size = buffer_size[0]
-        self.batch_size = batch_size[0]
-        self.model_based = model_based
-
-        wrapper_args = (kwargs['make_env']().env, n_layers, time_scale, input_dims, max_u, self)
-        print('Wrapper Args', *wrapper_args)
-        if 'Ant' in kwargs['info']['env_name']:
-            self.env = AntWrapper(*wrapper_args)
-        elif 'Block' in kwargs['info']['env_name']:
-            self.env = BlockWrapper(*wrapper_args)
-        elif 'Causal' in kwargs['info']['env_name']:
-            self.env = BlockWrapper(*wrapper_args)
-
-        agent_params = {
-            "subgoal_test_perc": subgoal_test_perc,
-            "subgoal_penalty": -time_scale,
-            "atomic_noise": [0.1 for i in range(input_dims['u'])],
-            "subgoal_noise": [0.1 for i in range(len(self.env.sub_goal_thresholds))],
-            "n_layers": n_layers,
-            "batch_size": self.batch_size,
-            "buffer_size": self.buffer_size,
-            "time_scale": time_scale,
-            "hidden_size": hidden_size,
-            "Q_lr": Q_lr,
-            "pi_lr": pi_lr,
-            "model_based": self.model_based,
-            "mb_params": {
-                "hidden_size": mb_hidden_size,
-                "lr": mb_lr,
-                "eta": eta,
-                }
-        }
+        self.env = env
+        self.model_based = agent_params['model_based']
 
         with tf.variable_scope(self.scope):
             self._create_networks(agent_params)

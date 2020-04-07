@@ -39,13 +39,14 @@ def layer(input_layer, num_next_neurons, is_output=False):
 
 class BasicEnvWrapper(object):
 
-    def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
+    def __init__(self, env, n_layers, time_scale, input_dims ):
         self.wrapped_env = env
         self.n_layers = n_layers
         self.time_scale = time_scale
         self.visualize = False
         self.graph = self.visualize
-        self.agent = agent
+        # set in config
+        self.agent = None
         self.state_dim = input_dims['o']
         self.action_dim = input_dims['u']
         self.end_goal_dim = input_dims['g']
@@ -96,8 +97,8 @@ class BasicEnvWrapper(object):
 
 class AntWrapper(BasicEnvWrapper):
 
-    def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
-        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims, max_u, agent)
+    def __init__(self, env, n_layers, time_scale, input_dims):
+        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
 
         self.subgoal_dim = len(self.subgoal_bounds)
         self.subgoal_bounds_symmetric = np.zeros(self.subgoal_dim)
@@ -114,8 +115,8 @@ class AntWrapper(BasicEnvWrapper):
 
 
 class BlockWrapper(BasicEnvWrapper):
-    def __init__(self, env, n_layers, time_scale, input_dims, max_u, agent):
-        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims, max_u, agent)
+    def __init__(self, env, n_layers, time_scale, input_dims):
+        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
 
         self.set_subgoal_props()
         self.project_state_to_sub_goal = lambda state : self.wrapped_env._obs2goal(state)
