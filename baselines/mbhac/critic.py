@@ -4,14 +4,14 @@ from baselines.mbhac.utils import layer, flatten_mixed_np_array
 
 class Critic():
 
-    def __init__(self, sess, env, layer_number, n_layers, time_scale, learning_rate=0.001, gamma=0.98, tau=0.05, hidden_size=64):
+    def __init__(self, sess, env, layer_number, n_layers, time_scale,
+            learning_rate=0.001, gamma=0.98, tau=0.05, hidden_size=64):
         self.sess = sess
         self.critic_name = 'critic_' + str(layer_number)
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.tau = tau
         self.hidden_size = hidden_size
-
         self.q_limit = -time_scale
 
         # Dimensions of goal placeholder will differ depending on layer level
@@ -32,7 +32,6 @@ class Critic():
             action_dim = env.subgoal_dim
 
         self.action_ph = tf.placeholder(tf.float32, shape=(None, action_dim), name='action_ph')
-
         self.features_ph = tf.concat([self.state_ph, self.goal_ph, self.action_ph], axis=1)
 
         # Set parameters to give critic optimistic initialization near q_init
@@ -63,7 +62,10 @@ class Critic():
 
     def update(self, old_states, old_actions, rewards, new_states, goals, new_actions, is_terminals):
 
-        # Be default, repo does not use target networks.  To use target networks, comment out "wanted_qs_tf" line directly below and uncomment next "wanted_qs_tf" line.  This will let the Bellman update use Q(next state, action) from target Q network instead of the regular Q network.  Make sure you also make the updates specified in the "learn" method in the "layer.py" file.
+        # Be default, repo does not use target networks.  To use target networks, comment
+        # out "wanted_qs_tf" line directly below and uncomment next "wanted_qs_tf" line.
+        # This will let the Bellman update use Q(next state, action) from target Q network instead of the regular Q network.
+        # Make sure you also make the updates specified in the "learn" method in the "layer.py" file.
         next_state_qs = self.sess.run(self.infer,
                 feed_dict={
                     self.state_ph: new_states,
@@ -85,14 +87,14 @@ class Critic():
         wanted_q_mean = np.mean(wanted_qs)
         next_state_q_mean = np.mean(next_state_qs)
 
-        self.loss_val, this_qs, q_gradients,_ = self.sess.run([self.loss, self.infer, self.q_gradients, self.apply_gradients],
-        # self.loss_val, this_qs = self.sess.run([self.loss, self.infer],
-                  feed_dict={
-                      self.state_ph: old_states,
-                      self.goal_ph: goals,
-                      self.action_ph: old_actions,
-                      self.wanted_qs: wanted_qs
-                  })
+        self.loss_val, this_qs, q_gradients,_ = self.sess.run(
+                [self.loss, self.infer, self.q_gradients, self.apply_gradients],
+                feed_dict={
+                    self.state_ph: old_states,
+                    self.goal_ph: goals,
+                    self.action_ph: old_actions,
+                    self.wanted_qs: wanted_qs
+                    })
 
         this_qs_mean = np.mean(this_qs)
         flat_q_grads = flatten_mixed_np_array(q_gradients)
@@ -122,7 +124,6 @@ class Critic():
 
         if name is None:
             name = self.critic_name
-
         with tf.variable_scope(name + '_fc_1'):
             fc1 = layer(features, self.hidden_size)
         with tf.variable_scope(name + '_fc_2'):
@@ -131,7 +132,6 @@ class Critic():
             fc3 = layer(fc2, self.hidden_size)
         with tf.variable_scope(name + '_fc_4'):
             fc4 = layer(fc3, 1, is_output=True)
-
             # A q_offset is used to give the critic function an optimistic initialization near 0
             output = tf.sigmoid(fc4 + self.q_offset) * self.q_limit
 

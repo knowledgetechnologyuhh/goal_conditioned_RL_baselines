@@ -9,13 +9,11 @@ import time
 class MBHACPolicy(Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden_size, layers, batch_size, Q_lr, pi_lr, max_u,
-            scope, T, rollout_batch_size, clip_pos_returns, clip_return,
-            gamma, agent_params, n_layers, env, reuse=False, **kwargs):
+            scope, T, rollout_batch_size, gamma, agent_params, env, reuse=False, verbose=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
-        self.verbose = False
-        self.Q_values = True
-        self.n_layers = n_layers
+        self.verbose = verbose
+        self.n_layers = agent_params['n_layers']
         self.env = env
         self.model_based = agent_params['model_based']
 
@@ -23,7 +21,7 @@ class MBHACPolicy(Policy):
             self._create_networks(agent_params)
 
         # goal_array stores goal for each layer of agent.
-        self.goal_array = [None for i in range(n_layers)]
+        self.goal_array = [None for i in range(self.n_layers)]
         self.current_state = None
         self.steps_taken = 0
         self.total_steps = 0
@@ -34,13 +32,15 @@ class MBHACPolicy(Policy):
         goal_status = [False for i in range(self.n_layers)]
         max_lay_achieved = None
 
-        for i in range(self.n_layers):
+        # Project current state onto relevant goal spaces
+        proj_end_goal = env.project_state_to_end_goal(self.current_state)
+        proj_subgoal = env.project_state_to_sub_goal(self.current_state)
 
+        for i in range(self.n_layers):
             goal_achieved = True
 
             # If at highest layer, compare to end goal thresholds
             if i == self.n_layers - 1:
-                proj_end_goal = env.project_state_to_end_goal(self.current_state)
                 assert len(proj_end_goal) == len(self.goal_array[i]) == len(env.end_goal_thresholds), \
                         "Projected end goal, actual end goal, and end goal thresholds should have same dimensions"
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
@@ -51,7 +51,6 @@ class MBHACPolicy(Policy):
 
             # If not highest layer, compare to subgoal thresholds
             else:
-                proj_subgoal = env.project_state_to_sub_goal(self.current_state)
                 assert len(proj_subgoal) == len(self.goal_array[i]) == len(env.sub_goal_thresholds), \
                         "Projected subgoal, actual subgoal, and subgoal thresholds should have same dimensions"
                 # Check whether layer i's goal was achieved by checking whether projected state is within the goal achievement threshold
@@ -86,8 +85,8 @@ class MBHACPolicy(Policy):
         self.layers = [Layer(i, self.env, self.sess, agent_params) for i in range(self.n_layers)]
         self.sess.run(tf.global_variables_initializer())
 
-    # Update actor and critic networks for each layer
     def learn(self, num_updates):
+        """Update actor and critic networks for each layer"""
         return [self.layers[i].learn(num_updates) for i in range(len(self.layers))]
 
     def train(self, env, episode_num, eval_data, num_updates):

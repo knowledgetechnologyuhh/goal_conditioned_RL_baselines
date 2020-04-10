@@ -4,15 +4,8 @@ from baselines.mbhac.utils import layer
 
 class Actor():
 
-    def __init__(self,
-            sess,
-            env,
-            batch_size,
-            layer_number,
-            n_layers,
-            learning_rate=0.001,
-            tau=0.05,
-            hidden_size=64):
+    def __init__(self, sess, env, batch_size, layer_number, n_layers,
+            learning_rate=0.001, tau=0.05, hidden_size=64):
 
         self.sess = sess
         self.hidden_size = hidden_size
@@ -41,11 +34,10 @@ class Actor():
             self.goal_dim = env.subgoal_dim
 
         self.state_dim = env.state_dim
-
         self.learning_rate = learning_rate
         self.tau = tau
-        self.batch_size = tf.placeholder(tf.float32)
 
+        self.batch_size = tf.placeholder(tf.float32)
         self.state_ph = tf.placeholder(tf.float32, shape=(None, self.state_dim))
         self.goal_ph = tf.placeholder(tf.float32, shape=(None, self.goal_dim))
         self.features_ph = tf.concat([self.state_ph, self.goal_ph], axis=1)
@@ -63,15 +55,12 @@ class Actor():
         # self.policy_gradient = tf.gradients(self.infer, self.weights, -self.action_derivs)
         self.train = tf.train.AdamOptimizer(learning_rate).apply_gradients(zip(self.policy_gradient, self.weights))
 
-
     def get_action(self, state, goal):
-        actions = self.sess.run(self.infer,
+        return self.sess.run(self.infer,
                 feed_dict={
                     self.state_ph: state,
                     self.goal_ph: goal
-                })
-
-        return actions
+                    })
 
     def update(self, state, goal, action_derivs, next_batch_size):
         weights, policy_grad, _ = self.sess.run(

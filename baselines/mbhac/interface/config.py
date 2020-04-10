@@ -40,7 +40,7 @@ CACHED_ENVS = {}
 ROLLOUT_PARAMS = { 'T': 50, 'policy_action_params': {} }
 EVAL_PARAMS = { 'policy_action_params': { } }
 
-OVERRIDE_PARAMS_LIST = ['rollout_batch_size']
+OVERRIDE_PARAMS_LIST = list(DEFAULT_PARAMS.keys())
 
 ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name']
 
@@ -80,7 +80,7 @@ def prepare_params(kwargs):
         del kwargs['lr']
 
     for name in ['buffer_size', 'hidden_size', 'layers',
-                 'batch_size', 'Q_lr', 'pi_lr', 'max_u', 'scope']:
+                 'batch_size', 'Q_lr', 'pi_lr', 'max_u', 'scope', 'verbose']:
         mbhac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
@@ -96,42 +96,11 @@ def log_params(params, logger=logger):
 
 def configure_policy(dims, params):
     # Extract relevant parameters.
-    gamma = params['gamma']
-    rollout_batch_size = params['rollout_batch_size']
     mbhac_params = params['mbhac_params']
-
-    reuse = params['reuse']
-    use_mpi = params['use_mpi']
     input_dims = dims.copy()
-    batch_size= params['train_batch_size'],
-    time_scale= params['time_scale'],
-    buffer_size= mbhac_params['buffer_size'],
-    subgoal_test_perc= params['subgoal_test_perc'],
-    atomic_noise = params['atomic_noise']
-    subgoal_noise = params['subgoal_noise']
-
-    # actor-critic
-    n_layers = params['n_layers']
-    hidden_size = mbhac_params['hidden_size']
-    Q_lr = mbhac_params['Q_lr']
-    pi_lr = mbhac_params['pi_lr']
-
-    # forward model
-    model_based = params['model_based']
-    mb_lr = params['mb_lr']
-    mb_hidden_size = params['mb_hidden_size']
-    eta = params['eta']
 
     # MBHAC agent
-
-    # TODO: Why we get tuples?
-    time_scale = time_scale[0]
-    subgoal_test_perc = subgoal_test_perc[0]
-    buffer_size = buffer_size[0]
-    batch_size = batch_size[0]
-    model_based = model_based
-
-    wrapper_args = (gym.make(params['env_name']).env, n_layers, time_scale, input_dims)
+    wrapper_args = (gym.make(params['env_name']).env, params['n_layers'], params['time_scale'], input_dims)
     print('Wrapper Args', *wrapper_args)
     if 'Ant' in params['env_name']:
         env = AntWrapper(*wrapper_args)
@@ -143,39 +112,39 @@ def configure_policy(dims, params):
         env = BlockWrapper(*wrapper_args)
 
     agent_params = {
-            "subgoal_test_perc": subgoal_test_perc,
-            "subgoal_penalty": -time_scale,
-            "atomic_noise": [atomic_noise for i in range(input_dims['u'])],
-            "subgoal_noise": [subgoal_noise for i in range(len(env.sub_goal_thresholds))],
-            "n_layers": n_layers,
-            "batch_size": batch_size,
-            "buffer_size": buffer_size,
-            "time_scale": time_scale,
-            "hidden_size": hidden_size,
-            "Q_lr": Q_lr,
-            "pi_lr": pi_lr,
-            "model_based": model_based,
+            "subgoal_test_perc": params['subgoal_test_perc'],
+            "subgoal_penalty": -params['time_scale'],
+            "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
+            "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
+            "n_layers": params['n_layers'],
+            "batch_size": mbhac_params['batch_size'],
+            "buffer_size": mbhac_params['buffer_size'],
+            "time_scale": params['time_scale'],
+            "hidden_size": mbhac_params['hidden_size'],
+            "Q_lr": mbhac_params['Q_lr'],
+            "pi_lr": mbhac_params['pi_lr'],
+            # forward model
+            "model_based": params['model_based'],
             "mb_params": {
-                "hidden_size": mb_hidden_size,
-                "lr": mb_lr,
-                "eta": eta,
+                "hidden_size": params['mb_hidden_size'],
+                "lr": params['mb_lr'],
+                "eta": params['eta'],
                 }
             }
 
-    mbhac_params.update({'input_dims': input_dims,  # agent takes an input observations
-                        'T': params['T'],
-                        'clip_pos_returns': True,  # clip positive returns
-                        'clip_return': (1. / (1. - gamma)) if params['clip_return'] else np.inf,  # max abs of return
-                        'rollout_batch_size': rollout_batch_size,
-                        'gamma': gamma,
-                        'reuse': reuse,
-                        'use_mpi': use_mpi,
-                        'batch_size': batch_size,
-                        'buffer_size': buffer_size,
-                        'n_layers': n_layers,
-                        'agent_params': agent_params,
-                        'env': env
-                        })
+    mbhac_params.update({
+        'input_dims': input_dims,  # agent takes an input observations
+        'T': params['T'],
+        'rollout_batch_size': params['rollout_batch_size'],
+        'gamma': params['gamma'],
+        'reuse': params['reuse'],
+        'use_mpi': params['use_mpi'],
+        'batch_size': params['train_batch_size'],
+        'buffer_size': mbhac_params['buffer_size'],
+        'n_layers': params['n_layers'],
+        'agent_params': agent_params,
+        'env': env
+        })
     mbhac_params['info'] = {
         'env_name': params['env_name'],
     }
@@ -189,9 +158,6 @@ def load_policy(restore_policy_file, params):
     # Load policy.
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
-    # Set sample transitions (required for loading a policy only).
-    policy.sample_transitions = None
-    policy.buffer.sample_transitions = policy.sample_transitions
     return policy
 
 def configure_dims(params):
