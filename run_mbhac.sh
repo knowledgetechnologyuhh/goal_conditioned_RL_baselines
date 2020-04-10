@@ -1,10 +1,19 @@
 #!/bin/bash
 
-cmd="python experiment/train.py --algorithm baselines.mbhac --num_cpu 1 --render 0"
+cmd="python experiment/train.py --algorithm baselines.mbhac"
+cmd+=" --policy_save_interval 0 --graph 0 --render 0"
+# cmd+=" --base_logdir data/ant_reacher --buffer_size 500"
+
 cmd+=" --env AntReacherEnv-v0"
-cmd+=" --n_epochs 50 --n_train_rollouts 100 --n_test_rollouts 50"
-cmd+=" --policy_save_interval 0"
-cmd+=" --model_based 1 --mb_hidden_size '2048,1024' --eta 0.1"
+# cmd+=" --env AntFourRoomsEnv-v0"
+# cmd+=" --env BlockStackMujocoEnv-gripper_random-o0-v1"
+# cmd+=" --env CausalDependenciesMujocoEnv-o0-v0"
+# cmd+=" --env BlockStackMujocoEnv-gripper_random-o1-v1"
+# cmd+=" --env HookMujocoEnv-gripper_random-e1-v1"
+# cmd+=" --env BlockStackMujocoEnv-gripper_random-o2-v1"
+
+cmd+=" --n_epochs 100 --n_train_rollouts 50"
+cmd+=" --model_based 1 --mb_hidden_size '2048,2048' --eta 0.1"
 
 max_active_procs=8
 n_runs=16
