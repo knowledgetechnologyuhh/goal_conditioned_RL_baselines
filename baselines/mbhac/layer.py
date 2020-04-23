@@ -280,6 +280,7 @@ class Layer():
         (i) the maximum number of episdoe time steps or (ii) the end goal has been achieved.
         """
 
+        assert env.step_ctr == agent.steps_taken, "Step counter of env and agent should be equal"
         # Return to previous level when any higher level goal achieved.
         # NOTE: if not testing and agent achieves end goal, training will continue until
         # out of time (i.e., out of time steps or highest level runs out of attempts).
@@ -312,9 +313,8 @@ class Layer():
             if "{}n_subgoals".format(train_test_prefix) not in eval_data:
                 eval_data["{}n_subgoals".format(train_test_prefix)] = 0
 
-        if agent.Q_values:
-            if "{}Q".format(train_test_prefix) not in eval_data:
-                eval_data["{}Q".format(train_test_prefix)] = []
+        if "{}Q".format(train_test_prefix) not in eval_data:
+            eval_data["{}Q".format(train_test_prefix)] = []
 
         # Currently only for training
         if self.model_based and not agent.test_mode and "{}curiosity".format(self.layer_number) not in eval_data:
@@ -341,33 +341,30 @@ class Layer():
             enforce_zero_ll = False
             action, action_type, next_subgoal_test = self.choose_action(agent, env, subgoal_test, enforce_random=enforce_random, enforce_zero_ll=enforce_zero_ll)
 
-            if agent.Q_values:
-                q_val = self.critic.get_Q_value(np.reshape(self.current_state, (1, len(self.current_state))),
-                                                np.reshape(self.goal, (1, len(self.goal))),
-                                                np.reshape(action, (1, len(action))))
-                eval_data["{}Q".format(train_test_prefix)] += [q_val[0]]
-                self.q_values += [q_val[0]]
+            q_val = self.critic.get_Q_value(np.reshape(self.current_state, (1, len(self.current_state))),
+                                            np.reshape(self.goal, (1, len(self.goal))),
+                                            np.reshape(action, (1, len(action))))
+            eval_data["{}Q".format(train_test_prefix)] += [q_val[0]]
+            self.q_values += [q_val[0]]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
             # whether that subgoal should be tested
             if self.layer_number > 0:
-
                 agent.goal_array[self.layer_number - 1] = action
 
                 goal_status, eval_data, max_lay_achieved = agent.layers[self.layer_number - 1].\
                     train(agent, env, next_subgoal_test, episode_num, eval_data)
+
                 eval_data["{}subgoal_succ".format(train_test_prefix)] += [1.0 if goal_status[self.layer_number-1] else 0.0]
                 eval_data["{}n_subgoals".format(train_test_prefix)] += 1
 
             # If layer is bottom level, execute low-level action
             else:
                 next_state = env.execute_action(action)
-
                 agent.steps_taken += 1
 
-                if env.step_ctr >= env.max_actions:
-                    if agent.verbose:
-                        print("Out of actions (Steps: %d)" % env.step_ctr)
+                if agent.verbose and env.step_ctr >= env.max_actions:
+                    print("Out of actions (Steps: %d)" % env.step_ctr)
 
                 agent.current_state = next_state
 
@@ -384,19 +381,18 @@ class Layer():
                 self.curiosity += [curi]
 
             # Print if goal from current layer has been achieved
-            if agent.verbose:
-                if goal_status[self.layer_number]:
+            if agent.verbose and goal_status[self.layer_number]:
 
-                    if self.layer_number < agent.n_layers - 1:
-                        print("SUBGOAL ACHIEVED")
+                if self.layer_number < agent.n_layers - 1:
+                    print("SUBGOAL ACHIEVED")
 
-                    print("\nEpisode %d, Layer %d, Attempt %d Goal Achieved" % (episode_num, self.layer_number, attempts_made))
-                    print("Goal: ", self.goal)
+                print("\nEpisode %d, Layer %d, Attempt %d Goal Achieved" % (episode_num, self.layer_number, attempts_made))
+                print("Goal: ", self.goal)
 
-                    if self.layer_number == agent.n_layers - 1:
-                        print("Hindsight Goal: ", env.project_state_to_end_goal(agent.current_state))
-                    else:
-                        print("Hindsight Goal: ", env.project_state_to_sub_goal(agent.current_state))
+                if self.layer_number == agent.n_layers - 1:
+                    print("Hindsight Goal: ", env.project_state_to_end_goal(agent.current_state))
+                else:
+                    print("Hindsight Goal: ", env.project_state_to_sub_goal(agent.current_state))
 
             # Perform hindsight learning using action actually executed (low-level action or hindsight subgoal)
             if self.layer_number == 0:
@@ -411,7 +407,6 @@ class Layer():
 
             # Next, create hindsight transitions if not testing
             if not agent.test_mode:
-
                 # Create action replay transition by evaluating hindsight action given current goal
                 self.perform_action_replay(hindsight_action, agent.current_state, goal_status)
 
@@ -448,9 +443,8 @@ class Layer():
             if (max_lay_achieved is not None and max_lay_achieved >= self.layer_number) or \
                     env.step_ctr >= env.max_actions or attempts_made >= self.time_limit:
 
-                if self.layer_number == agent.n_layers-1:
-                    if agent.verbose:
-                        print("HL Attempts Made: ", attempts_made)
+                if agent.verbose and self.layer_number == agent.n_layers-1:
+                    print("HL Attempts Made: ", attempts_made)
 
                 # If goal was not achieved after max number of attempts, set maxed out flag to true
                 if attempts_made >= self.time_limit and not goal_status[self.layer_number]:
@@ -480,47 +474,47 @@ class Layer():
 
         learn_history = {}
         learn_history['reward'] = []
-
-        if self.replay_buffer.size >= 250:
-
-            mb_loss = 0.0
-
-            for _ in range(num_updates):
-                old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
-                learn_history['reward'] += list(rewards)
-                next_batch_size = min(self.replay_buffer.size, self.replay_buffer.batch_size)
-
-                 # update the rewards with curiosity bonus
-                if self.model_based:
-                    bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
-                    rewards = np.array(rewards) + np.array(bonus)
-                    rewards = rewards.tolist()
-
-                q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor.get_action(new_states,goals), is_terminals)
-
-                for k,v in q_update.items():
-                    if k not in learn_history.keys(): learn_history[k] = []
-                    learn_history[k].append(v)
-
-                action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
-                self.actor.update(old_states, goals, action_derivs, next_batch_size)
-
-                if self.model_based and self.state_predictor:
-                    mb_loss += self.state_predictor.update(old_states, actions, new_states)
-
-            r_vals = [-0.0, -1.0]
-
-            if self.layer_number != 0:
-                r_vals.append(float(-self.time_scale))
-
-            for reward_val in r_vals:
-                learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
-
-            if self.model_based:
-                total_mb_loss = mb_loss / num_updates
-                learn_history["mb_loss"] = total_mb_loss
-
         learn_summary = {}
+        mb_loss = 0.0
+
+        if self.replay_buffer.size <= 250:
+            return learn_summary
+
+        for _ in range(num_updates):
+            old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
+            next_batch_size = min(self.replay_buffer.size, self.replay_buffer.batch_size)
+
+            # update the rewards with curiosity bonus
+            if self.model_based:
+                bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
+                rewards = np.array(rewards) + np.array(bonus)
+                rewards = rewards.tolist()
+
+            learn_history['reward'] += list(rewards)
+
+            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor.get_action(new_states,goals), is_terminals)
+
+            for k,v in q_update.items():
+                if k not in learn_history.keys(): learn_history[k] = []
+                learn_history[k].append(v)
+
+            action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
+            self.actor.update(old_states, goals, action_derivs, next_batch_size)
+
+            if self.model_based and self.state_predictor:
+                mb_loss += self.state_predictor.update(old_states, actions, new_states)
+
+        r_vals = [-0.0, -1.0]
+
+        if self.layer_number != 0:
+            r_vals.append(float(-self.time_scale))
+
+        for reward_val in r_vals:
+            learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
+
+        if self.model_based:
+            learn_history["mb_loss"] = mb_loss / num_updates
+
         for k,v in learn_history.items():
             learn_summary[k] = np.mean(v)
 

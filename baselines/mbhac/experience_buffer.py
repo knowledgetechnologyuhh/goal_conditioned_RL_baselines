@@ -3,23 +3,18 @@ import numpy as np
 class ExperienceBuffer():
 
     def __init__(self, max_buffer_size, batch_size):
-        self.size = 0
         self.max_buffer_size = max_buffer_size
         self.experiences = []
         self.batch_size = batch_size
 
     def add(self, experience):
-        assert len(experience) == 7, 'Experience must be of form (s, a, r, s, g, t, grip_info\')'
+        assert len(experience) == 7, 'Experience must be of form (s, a, r, s, g, t, info\')'
         assert type(experience[5]) == bool
 
         self.experiences.append(experience)
-        self.size += 1
 
-        # If replay buffer is filled, remove a percentage of replay buffer.  Only removing a single transition slows down performance
-        if self.size >= self.max_buffer_size:
-            beg_index = int(np.floor(self.max_buffer_size/6))
-            self.experiences = self.experiences[beg_index:]
-            self.size -= beg_index
+        while self.size and self.size >= self.max_buffer_size:
+            self.experiences.pop(0)
 
     def get_batch(self):
         states, actions, rewards, new_states, goals, is_terminals = [], [], [], [], [], []
@@ -34,3 +29,7 @@ class ExperienceBuffer():
             is_terminals.append(self.experiences[i][5])
 
         return states, actions, rewards, new_states, goals, is_terminals
+
+    @property
+    def size(self):
+        return len(self.experiences)

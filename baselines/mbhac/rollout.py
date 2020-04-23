@@ -27,7 +27,7 @@ class RolloutWorker(Rollout):
             dur_train += train_duration
             self.success_history.append(1.0 if success else 0.0)
             self.n_episodes += 1
-            dur_ro += time.time() - ro_start
+            dur_ro += time.time() - ro_start - train_duration
 
         return dur_train, dur_ro
 
