@@ -1,7 +1,7 @@
 import click
 mbhac_options = [
 click.option('--network_class', type=str, default='baselines.mbhac.actor_critic:ActorCritic', help='The Neural network model to use.'),
-click.option('--n_test_rollouts', type=int, default=10, help='The number of testing rollouts.'),
+click.option('--n_test_rollouts', type=int, default=25, help='The number of testing rollouts.'),
 click.option('--train_batch_size', type=int, default=1024, help='The number of state transitions processed during network training.'),
 click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
 click.option('--time_scale', type=int, default=27, help='The steps per layer.'),

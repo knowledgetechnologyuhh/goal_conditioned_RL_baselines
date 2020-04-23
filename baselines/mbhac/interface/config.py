@@ -19,17 +19,11 @@ DEFAULT_PARAMS = {
     'hidden_size': 64,  # number of neurons in each hidden layers
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
-    'buffer_size': 250,  # for experience replay
     'scope': 'mbhac',  # can be tweaked for testing
 
     'reuse': False,
     'use_mpi': False,
-
-    # training
     'rollout_batch_size': 1,  # per mpi thread
-    'n_batches': 40,  # training batches per cycle
-    'batch_size': 1024,
-    'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
 
     'atomic_noise': 0.1,
     'subgoal_noise': 0.1
@@ -79,8 +73,7 @@ def prepare_params(kwargs):
         kwargs['Q_lr'] = kwargs['lr']
         del kwargs['lr']
 
-    for name in ['buffer_size', 'hidden_size', 'layers',
-                 'batch_size', 'Q_lr', 'pi_lr', 'max_u', 'scope', 'verbose']:
+    for name in ['hidden_size', 'layers', 'Q_lr', 'pi_lr', 'max_u', 'scope', 'verbose']:
         mbhac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
@@ -117,8 +110,8 @@ def configure_policy(dims, params):
             "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
             "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
             "n_layers": params['n_layers'],
-            "batch_size": mbhac_params['batch_size'],
-            "buffer_size": mbhac_params['buffer_size'],
+            "batch_size": params['train_batch_size'],
+            "buffer_size": params['buffer_size'],
             "time_scale": params['time_scale'],
             "hidden_size": mbhac_params['hidden_size'],
             "Q_lr": mbhac_params['Q_lr'],
@@ -140,7 +133,7 @@ def configure_policy(dims, params):
         'reuse': params['reuse'],
         'use_mpi': params['use_mpi'],
         'batch_size': params['train_batch_size'],
-        'buffer_size': mbhac_params['buffer_size'],
+        'buffer_size': params['buffer_size'],
         'n_layers': params['n_layers'],
         'agent_params': agent_params,
         'env': env
