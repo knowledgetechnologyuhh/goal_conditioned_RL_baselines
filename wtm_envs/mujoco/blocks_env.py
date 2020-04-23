@@ -8,9 +8,7 @@ from wtm_envs.mujoco.blocks_env_pddl import *
 from wtm_envs.mujoco.blocks_env_pddl import PDDLBlocksEnv
 from wtm_envs.mujoco.wtm_env import goal_distance
 from wtm_envs.mujoco.wtm_env import WTMEnv
-
 import mujoco_py
-
 
 
 class BlocksEnv(WTMEnv, PDDLBlocksEnv):
@@ -24,7 +22,6 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
             gripper_goal, n_objects, table_height, obj_height, min_tower_height=None, max_tower_height=None,
     ):
         """Initializes a new Blocks environment.
-
         Args:
             model_path (string): path to the environments XML file
             n_substeps (int): number of substeps the simulation runs on every call to step

@@ -20,6 +20,8 @@ class ForwardModel():
         self.state_dim = env.state_dim
         self.learning_rate = mb_params['lr']
 
+        self.err_list = []
+
         self.action_ph, self.state_ph, self.y, self.pred, self.loss, self.optimizer \
             = self._build_graph(layer_number)
 
@@ -64,10 +66,15 @@ class ForwardModel():
 
     def pred_bonus(self, action, state, s_next):
         s_next_prediction = self.pred_state(action, state)
-        err = ((np.array(s_next_prediction) - np.array(s_next)) ** 2).mean()
-        assert type(err) == np.float64
+        errs = np.array((np.array(s_next_prediction) - np.array(s_next)) ** 2)
+        err = errs.mean(axis=1)
+        # assert type(err) == np.float64
         scale_curiosity = self.eta/2
         bonus = scale_curiosity * err
+        if self.err_list < 10000:
+            self.err_list += err
+            self.err_min = min(self.err_list)
+            self.err_max = max(self.err_list)
         return bonus
 
     def update(self, states, actions, new_states):

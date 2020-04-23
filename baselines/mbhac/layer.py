@@ -487,7 +487,8 @@ class Layer():
             # update the rewards with curiosity bonus
             if self.model_based:
                 bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
-                rewards = np.array(rewards) + np.array(bonus)
+                eta = 0.5
+                rewards = np.array(rewards) * eta + (1-eta) * np.array(bonus)
                 rewards = rewards.tolist()
 
             learn_history['reward'] += list(rewards)
