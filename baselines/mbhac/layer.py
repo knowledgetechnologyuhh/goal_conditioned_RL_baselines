@@ -316,10 +316,6 @@ class Layer():
         if "{}Q".format(train_test_prefix) not in eval_data:
             eval_data["{}Q".format(train_test_prefix)] = []
 
-        # Currently only for training
-        if self.model_based and not agent.test_mode and "{}curiosity".format(self.layer_number) not in eval_data:
-            eval_data["{}curiosity".format(train_test_prefix)] = []
-
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.layer_number]
         self.current_state = agent.current_state
@@ -374,8 +370,8 @@ class Layer():
 
             attempts_made += 1
 
-            # Currently only for training
-            if not agent.test_mode and self.model_based and self.state_predictor.err_list:
+            # This is very slow, only use for testing and render=True
+            if agent.test_mode and self.model_based and agent.visualize and self.state_predictor.err_list:
                 curi = self.state_predictor.pred_bonus([action], [self.current_state], [agent.current_state])
                 eval_data["{}curiosity".format(train_test_prefix)].append(curi[0])
                 self.curiosity += curi.tolist()

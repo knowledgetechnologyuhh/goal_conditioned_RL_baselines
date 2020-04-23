@@ -67,7 +67,7 @@ class RolloutWorker(Rollout):
                 else:
                     logs += [(subg_succ_prefix + '_rate', 0.0)]
 
-            for postfix in ["n_subgoals", "curiosity", "mb_loss", "mb_bonus", "reward", \
+            for postfix in ["n_subgoals", "mb_loss", "mb_bonus", "reward", \
                     "critic_loss", "wanted_qs", "next_state_qs", "this_qs", "q_grads", \
                     "q_grads_std", "reward_-0.0_frac", "reward_-1.0_frac", \
                     "reward_-{}.0_frac".format(self.time_scale)]:
