@@ -371,7 +371,7 @@ class Layer():
             attempts_made += 1
 
             # This is very slow, only use for testing and render=True
-            if agent.test_mode and self.model_based and agent.visualize and self.state_predictor.err_list:
+            if agent.test_mode and self.model_based and agent.env.visualize and self.state_predictor.err_list:
                 curi = self.state_predictor.pred_bonus([action], [self.current_state], [agent.current_state])
                 eval_data["{}curiosity".format(train_test_prefix)].append(curi[0])
                 self.curiosity += curi.tolist()
@@ -468,7 +468,11 @@ class Layer():
         #  if self.layer_number == 0:
         #      return {}
 
-        learn_history = { 'reward' : [], 'mb_bonus'  : [], 'mb_loss' : [] }
+        learn_history = {}
+        learn_history['reward'] = []
+        if self.model_based:
+            learn_history['mb_bonus'] = []
+            learn_history['mb_loss'] = []
         learn_summary = {}
 
         if self.replay_buffer.size <= 250:
