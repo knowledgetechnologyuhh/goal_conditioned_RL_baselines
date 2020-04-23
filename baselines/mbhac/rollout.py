@@ -15,6 +15,7 @@ class RolloutWorker(Rollout):
         self.env = self.policy.env
         self.env.visualize = render
         self.env.graph = kwargs['graph']
+        self.time_scale = kwargs['time_scale']
         self.eval_data = {}
 
     def train_policy(self, n_train_rollouts, n_train_batches):
@@ -66,17 +67,13 @@ class RolloutWorker(Rollout):
                 else:
                     logs += [(subg_succ_prefix + '_rate', 0.0)]
 
-            n_subg_prefix = "{}n_subgoals".format(layer_prefix)
-            if n_subg_prefix in eval_data.keys():
-                logs += [(n_subg_prefix, eval_data[n_subg_prefix])]
-
-            curi_prefix = "{}curiosity".format(layer_prefix)
-            if curi_prefix in eval_data.keys():
-                logs += [(curi_prefix, np.nanmean(eval_data[curi_prefix]))]
-
-            mb_loss_prefix = "{}mb_loss".format(layer_prefix)
-            if mb_loss_prefix in eval_data.keys():
-                logs += [(mb_loss_prefix, eval_data[mb_loss_prefix])]
+            for postfix in ["n_subgoals", "curiosity", "mb_loss", "mb_bonus", "reward", \
+                    "critic_loss", "wanted_qs", "next_state_qs", "this_qs", "q_grads", \
+                    "q_grads_std", "reward_-0.0_frac", "reward_-1.0_frac", \
+                    "reward_-{}.0_frac".format(self.time_scale)]:
+                metric_key = "{}{}".format(layer_prefix, postfix)
+                if metric_key in eval_data.keys():
+                    logs += [(metric_key, eval_data[metric_key])]
 
             q_prefix = "{}Q".format(layer_prefix)
             if q_prefix in eval_data.keys():

@@ -13,18 +13,15 @@ DEFAULT_ENV_PARAMS = {
 DEFAULT_PARAMS = {
     # env
     'max_u': 1.,  # max absolute value of actions on different coordinates
-
     # mbhac
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden_size': 64,  # number of neurons in each hidden layers
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
     'scope': 'mbhac',  # can be tweaked for testing
-
     'reuse': False,
     'use_mpi': False,
     'rollout_batch_size': 1,  # per mpi thread
-
     'atomic_noise': 0.1,
     'subgoal_noise': 0.1
 }

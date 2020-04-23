@@ -59,7 +59,7 @@ class Layer():
         if self.model_based:
             print('Layer {} uses forward model'.format(self.layer_number))
             with tf.variable_scope("predictor_{}".format(self.layer_number)):
-                self.state_predictor = ForwardModel(sess, env, self.layer_number, agent_params['mb_params'])
+                self.state_predictor = ForwardModel(sess, env, self.layer_number, agent_params['mb_params'], self.buffer_size)
 
         # Parameter determines degree of noise added to actions during training
         if self.layer_number == 0:
@@ -375,10 +375,10 @@ class Layer():
             attempts_made += 1
 
             # Currently only for training
-            if not agent.test_mode and self.model_based:
+            if not agent.test_mode and self.model_based and self.state_predictor.err_list:
                 curi = self.state_predictor.pred_bonus([action], [self.current_state], [agent.current_state])
-                eval_data["{}curiosity".format(train_test_prefix)] += [curi]
-                self.curiosity += [curi]
+                eval_data["{}curiosity".format(train_test_prefix)].append(curi[0])
+                self.curiosity += curi.tolist()
 
             # Print if goal from current layer has been achieved
             if agent.verbose and goal_status[self.layer_number]:
@@ -472,10 +472,8 @@ class Layer():
         #  if self.layer_number == 0:
         #      return {}
 
-        learn_history = {}
-        learn_history['reward'] = []
+        learn_history = { 'reward' : [], 'mb_bonus'  : [], 'mb_loss' : [] }
         learn_summary = {}
-        mb_loss = 0.0
 
         if self.replay_buffer.size <= 250:
             return learn_summary
@@ -486,12 +484,14 @@ class Layer():
 
             # update the rewards with curiosity bonus
             if self.model_based:
+                import ipdb; ipdb.set_trace()
                 bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
-                eta = 0.5
-                rewards = np.array(rewards) * eta + (1-eta) * np.array(bonus)
+                eta = self.state_predictor.eta
+                rewards = np.array(rewards) * eta + (1-eta) * bonus
                 rewards = rewards.tolist()
+                learn_history['mb_bonus'].append(bonus)
 
-            learn_history['reward'] += list(rewards)
+            learn_history['reward'] += rewards if isinstance(rewards, list) else list(rewards)
 
             q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor.get_action(new_states,goals), is_terminals)
 
@@ -502,8 +502,8 @@ class Layer():
             action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
             self.actor.update(old_states, goals, action_derivs, next_batch_size)
 
-            if self.model_based and self.state_predictor:
-                mb_loss += self.state_predictor.update(old_states, actions, new_states)
+            if self.model_based:
+                learn_history['mb_loss'].append(self.state_predictor.update(old_states, actions, new_states))
 
         r_vals = [-0.0, -1.0]
 
@@ -512,9 +512,6 @@ class Layer():
 
         for reward_val in r_vals:
             learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
-
-        if self.model_based:
-            learn_history["mb_loss"] = mb_loss / num_updates
 
         for k,v in learn_history.items():
             learn_summary[k] = np.mean(v)

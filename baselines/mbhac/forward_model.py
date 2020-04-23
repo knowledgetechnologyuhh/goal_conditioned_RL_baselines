@@ -5,7 +5,7 @@ from baselines.mbhac.utils import layer
 
 class ForwardModel():
 
-    def __init__(self, sess, env, layer_number, mb_params):
+    def __init__(self, sess, env, layer_number, mb_params, err_list_size):
 
         self.sess = sess
         self.model_name = 'model_' + str(layer_number)
@@ -19,6 +19,7 @@ class ForwardModel():
         self.eta = mb_params['eta']
         self.state_dim = env.state_dim
         self.learning_rate = mb_params['lr']
+        self.err_list_size = err_list_size
 
         self.err_list = []
 
@@ -64,18 +65,19 @@ class ForwardModel():
                 self.state_ph: state
             })
 
+    def normalize_bonus(self, bonus_lst):
+        """ Bonus range between 0 and 1 """
+        min_err = np.min(self.err_list)
+        max_err = np.max(self.err_list)
+        return (bonus_lst - min_err) / (max_err - min_err)
+
     def pred_bonus(self, action, state, s_next):
         s_next_prediction = self.pred_state(action, state)
         errs = np.array((np.array(s_next_prediction) - np.array(s_next)) ** 2)
         err = errs.mean(axis=1)
-        # assert type(err) == np.float64
-        scale_curiosity = self.eta/2
-        bonus = scale_curiosity * err
-        if self.err_list < 10000:
-            self.err_list += err
-            self.err_min = min(self.err_list)
-            self.err_max = max(self.err_list)
-        return bonus
+        if len(self.err_list) < self.err_list_size and err.size:
+            self.err_list += err.tolist()
+        return self.normalize_bonus(err)
 
     def update(self, states, actions, new_states):
         loss, _ = self.sess.run(

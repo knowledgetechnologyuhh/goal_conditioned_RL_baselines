@@ -12,8 +12,8 @@ cmd+=" --env AntReacherEnv-v0"
 # cmd+=" --env HookMujocoEnv-gripper_random-e1-v1"
 # cmd+=" --env BlockStackMujocoEnv-gripper_none-o2-v1"
 
-cmd+=" --n_epochs 100 --n_train_rollouts 100 --n_test_rollouts 25"
-cmd+=" --model_based 1 --mb_hidden_size 2048,2048,2048 --eta 0.1"
+cmd+=" --n_epochs 20 --n_train_rollouts 100 --n_test_rollouts 25"
+cmd+=" --model_based 1 --mb_hidden_size 128,128,128 --eta 0.5"
 
 max_active_procs=8
 n_runs=16

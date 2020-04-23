@@ -9,9 +9,9 @@ click.option('--buffer_size', type=int, default=250, help='The number of rollout
 click.option('--subgoal_test_perc', type=float, default=0.3, help='The percentage of subgoals to test.'),
 click.option('--n_layers', type=int, default=2, help='The number of used layers'),
 click.option('--model_based', type=int, default=0, help='Model-based flag'),
-click.option('--mb_hidden_size', type=str, default='64,64,64', help='Size for each layer added to the forward model'),
+click.option('--mb_hidden_size', type=str, default='128,128,128', help='Size for each layer added to the forward model'),
 click.option('--mb_lr', type=float, default=0.001, help='Learning rate to train the forward model'),
-click.option('--eta', type=float, default=0.1, help='Factor to scale the curiosity'),
+click.option('--eta', type=float, default=0.5, help='Reward fraction (r_e * eta + (1-eta) * r_i)'),
 click.option('--verbose', type=bool, default=False)
 ]
 
