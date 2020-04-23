@@ -23,6 +23,7 @@ class ForwardModel():
         self.action_ph, self.state_ph, self.y, self.pred, self.loss, self.optimizer \
             = self._build_graph(layer_number)
 
+
     def _build_graph(self, layer_number):
         name = self.model_name
 
