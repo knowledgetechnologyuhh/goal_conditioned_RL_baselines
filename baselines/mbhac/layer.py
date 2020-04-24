@@ -44,7 +44,16 @@ class Layer():
         self.buffer_size = min(self.trans_per_attempt * self.time_limit**(self.n_layers-1 - self.layer_number) * self.episodes_to_store, self.buffer_size_ceiling)
 
         self.batch_size = agent_params['batch_size']
-        self.replay_buffer = ExperienceBuffer(self.buffer_size, self.batch_size)
+
+        act_dim = goal_dim = env.subgoal_dim
+        if self.layer_number == 0:
+            # Actions of lowest layer are real actions in environment
+            act_dim = env.action_dim
+        if self.layer_number == self.n_layers - 1:
+            # Goals of highest layer are real goals of environment
+            goal_dim = env.end_goal_dim
+
+        self.replay_buffer = ExperienceBuffer(self.buffer_size, self.batch_size, env.state_dim, act_dim, goal_dim)
 
         # Create buffer to store not yet finalized goal replay transitions
         self.temp_goal_replay_storage = []

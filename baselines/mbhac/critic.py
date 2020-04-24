@@ -73,16 +73,12 @@ class Critic():
                     self.action_ph: new_actions
                 })
 
-        wanted_qs = np.zeros_like(next_state_qs)
-        for i in range(len(next_state_qs)):
-            if is_terminals[i]:
-                wanted_qs[i] = rewards[i]
-            else:
-                wanted_qs[i] = rewards[i] + self.gamma * next_state_qs[i][0]
-
-            # Ensure Q target is within bounds [-self.time_limit,0]
-            wanted_qs[i] = max(min(wanted_qs[i],0), self.q_limit)
-            assert wanted_qs[i] <= 0 and wanted_qs[i] >= self.q_limit, "Q-Value target not within proper bounds"
+        # invert terminals for this to work
+        is_terminals = np.logical_not(is_terminals).astype(np.int)
+        wanted_qs = rewards + is_terminals * self.gamma * next_state_qs[:, 0]
+        wanted_qs[wanted_qs > 0] = 0
+        wanted_qs[wanted_qs < self.q_limit] = self.q_limit
+        wanted_qs = np.vstack(wanted_qs).astype(np.float32)
 
         wanted_q_mean = np.mean(wanted_qs)
         next_state_q_mean = np.mean(next_state_qs)
