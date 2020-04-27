@@ -495,7 +495,7 @@ class Layer():
             if self.model_based:
                 bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
                 eta = self.state_predictor.eta
-                rewards = np.array(rewards) * eta + (1-eta) * bonus
+                rewards = rewards * eta + (1-eta) * bonus
                 rewards = rewards.tolist()
                 learn_history['mb_bonus'].append(bonus)
 

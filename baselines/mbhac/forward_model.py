@@ -19,8 +19,8 @@ class ForwardModel():
         self.eta = mb_params['eta']
         self.state_dim = env.state_dim
         self.learning_rate = mb_params['lr']
-        self.err_list_size = err_list_size
 
+        self.err_list_size = err_list_size
         self.err_list = []
 
         self.action_ph, self.state_ph, self.y, self.pred, self.loss, self.optimizer \
@@ -66,17 +66,21 @@ class ForwardModel():
             })
 
     def normalize_bonus(self, bonus_lst):
-        """ Bonus range between 0 and 1 """
-        min_err = np.min(self.err_list)
-        max_err = np.max(self.err_list)
-        return (bonus_lst - min_err) / (max_err - min_err)
+        """ Bonus range between -1.0 and 0.0 """
+        norm_bonus = (bonus_lst - self.min_err) / (self.max_err - self.min_err)
+        return norm_bonus - 1.0
 
     def pred_bonus(self, action, state, s_next):
         s_next_prediction = self.pred_state(action, state)
-        errs = np.array((np.array(s_next_prediction) - np.array(s_next)) ** 2)
+        errs = (s_next_prediction - s_next) ** 2
         err = errs.mean(axis=1)
+
         if len(self.err_list) < self.err_list_size and err.size:
             self.err_list += err.tolist()
+            # update bounds for normalization
+            self.min_err = np.min(self.err_list)
+            self.max_err = np.max(self.err_list)
+
         return self.normalize_bonus(err)
 
     def update(self, states, actions, new_states):
