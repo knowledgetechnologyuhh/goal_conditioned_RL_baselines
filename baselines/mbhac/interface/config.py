@@ -5,6 +5,7 @@ import pickle
 from baselines import logger
 from baselines.mbhac.mbhac_policy import MBHACPolicy
 from baselines.mbhac.utils import AntWrapper, BlockWrapper, UR5Wrapper
+from gym.envs.registration import registry
 
 DEFAULT_ENV_PARAMS = {
     'AntReacherEnv-v0':{ },
