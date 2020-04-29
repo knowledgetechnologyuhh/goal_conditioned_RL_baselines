@@ -103,7 +103,7 @@ class ReacherEnv(gym.GoalEnv):
         return obs
 
     def compute_reward(self, achieved_goal, goal, info):
-        if achieved_goal.shape[0] != 3:
+        if len(achieved_goal.shape) == 2:
             reward = [self.compute_reward(g1, g2, info) for g1, g2 in zip(achieved_goal, goal)]
         else:
             ax, ay, az = achieved_goal  # self.agent_ee_tip.get_position()
