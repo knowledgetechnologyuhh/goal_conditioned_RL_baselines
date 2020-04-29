@@ -17,7 +17,8 @@ class TestingConfig:
         'HookMujocoEnv-gripper_above-e1-v1',
         'CausalDependenciesMujocoEnv-o1-v0',
         'CopReacherEnv-ik1-v0',
-        'CopReacherEnv-ik0-v0']
+        'CopReacherEnv-ik0-v0',
+        'UR5ReacherEnv-v1']
 
 
 def get_her_cmds(base_cmd):
