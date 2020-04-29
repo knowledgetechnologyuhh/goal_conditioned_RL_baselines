@@ -7,6 +7,7 @@
         <joint damping="1" />
         <geom condim="4" solref="0.01 1" solimp="0.99 0.99 0.01" />
     </default>
+    <include file="common/materials.xml"/>
     <asset>
         <mesh name="v_base" file="v_base.stl" />
         <mesh name="c_base" file="c_base.stl" />
@@ -34,29 +35,29 @@
         <mesh name="outer_finger_coarse" file="outer_finger_coarse.stl" />
     </asset>
     <worldbody>
-        <geom name="bottom_plane" size="5 5 0.1" type="plane" />
+        <geom name="bottom_plane" size="5 5 0.1" type="plane" condim="3" material="grid"/>
         <camera name="main" pos="0 1.5 1" quat="1.22206e-06 -5.16678e-07 0.389418 0.921061" />
         <light name="light1" pos="0 -0.25 3" dir="0 0 -1" directional="true" />
         <light name="light2" pos="0 0.25 3" dir="0 0 -1" directional="true" />
         <body name="base_link" childclass="all" pos="0 0 0">
             <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="4" diaginertia="0.0072 0.00443333 0.00443333" />
-            <geom name="v_base_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_base" />
-            <geom name="c_base_link" type="mesh" mesh="c_base" />
+            <geom name="v_base_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_base" material="robo_hull"/>
+            <geom name="c_base_link" type="mesh" mesh="c_base" material="robo_hull"/>
             <body name="shoulder_link" pos="0 0 0.089159">
                 <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />
                 <joint name="shoulder_pan_joint" pos="0 0 0" axis="0 0 1" damping="10" />
-                <geom name="v_shoulder_link" type="mesh" contype="0" conaffinity="0" group="1"  mesh="v_shoulder" />
-                <geom name="c_shoulder_link" type="mesh" mesh="c_shoulder" />
+                <geom name="v_shoulder_link" type="mesh" contype="0" conaffinity="0" group="1"  mesh="v_shoulder" material="robo_hull"/>
+                <geom name="c_shoulder_link" type="mesh" mesh="c_shoulder" material="robo_hull"/>
                 <body name="upper_arm_link" pos="0 0.13585 0" quat="0.707107 0 0.707107 0">
                     <inertial pos="0 0 0.28" mass="8.393" diaginertia="0.226891 0.226891 0.0151074" />
                     <joint name="shoulder_lift_joint" pos="0 0 0" axis="0 1 0" damping="10" />
-                    <geom name="v_upper_arm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_upperarm" />
-                    <geom name="c_upper_arm_link" type="mesh" mesh="c_upperarm" />
+                    <geom name="v_upper_arm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_upperarm" material="robo_hull"/>
+                    <geom name="c_upper_arm_link" type="mesh" mesh="c_upperarm" material="robo_hull"/>
                     <body name="forearm_link" pos="0 -0.1197 0.425">
                         <inertial pos="0 0 0.25" mass="2.275" diaginertia="0.0494433 0.0494433 0.004095" />
                         <joint name="elbow_joint" pos="0 0 0" axis="0 1 0" damping="10" />
-                        <geom name="v_forearm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_forearm" />
-                        <geom name="c_forearm_link" type="mesh" mesh="c_forearm" />
+                        <geom name="v_forearm_link" type="mesh" contype="0" conaffinity="0" group="1" mesh="v_forearm" material="robo_hull"/>
+                        <geom name="c_forearm_link" type="mesh" mesh="c_forearm" material="robo_hull"/>
                         <!--body name="wrist_1_link" pos="0 0 0.39225" quat="0.707107 0 0.707107 0">
                             <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="1.219" diaginertia="0.21942 0.111173 0.111173" />
                             <joint name="wrist_1_joint" pos="0 0 0" axis="0 1 0" damping="10" />
@@ -130,6 +131,17 @@
                 </body>
             </body>
         </body>
+
+        <body name="robot0:external_camera_body_1" pos="0 0 0">
+			<camera euler="0 0.75 1.57" fovy="43.3" name="external_camera_1" pos="1.88 0 1.8"></camera>
+		</body>
+		<body name="robot0:internal_camera_body_r" pos="0 0 0">>
+			<!--<camera euler="0 -0.872665 -1.5708"  fovy="32.3" name="internal_camera_r" pos="-0.44 0 1.3"></camera>
+			<camera euler="0 -1.22 -1.5708"  fovy="40.3" name="internal_camera_r" pos="0.2 0 0.9"></camera>
+			<camera euler="0 -0.87 -1.5708"  fovy="50.3" name="internal_camera_r" pos="0.2 0 0.9"></camera>-->
+			<camera euler="0 -0.26 -1.5708"  fovy="65.5" name="internal_camera_r" pos="-0.4 0.05 1.5"></camera>
+			<!-- parameters of realsense D435 at camera position of Fetch robot-->
+		</body>
 
         <!-- End goal and subgoal Visualizations -->
 
@@ -216,7 +228,7 @@
     </worldbody>
     <actuator>
         <general name="shoulder_pan_joint" joint="shoulder_pan_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-150 150" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
-        <general name="shoulder_lift_joint" joint="shoulder_lift_joint" ctrllimited="true" forcelimited="true" ctrlrange="-5.0 5.0" forcerange="-150 150" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
+        <general name="shoulder_lift_joint" joint="shoulder_lift_joint" ctrllimited="true" forcelimited="true" ctrlrange="-5.0 5.0" forcerange="-150 150" biastype="affine" gainprm="15 0 0" biasprm="0 0 -10" />
         <general name="elbow_joint" joint="elbow_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-150 150" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
         <!--general name="wrist_1_joint" joint="wrist_1_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-28 28" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />
         <general name="wrist_2_joint" joint="wrist_2_joint" ctrllimited="true" forcelimited="true" ctrlrange="-3.15 3.15" forcerange="-28 28" biastype="affine" gainprm="10 0 0" biasprm="0 0 -10" />

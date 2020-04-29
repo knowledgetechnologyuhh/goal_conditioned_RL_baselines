@@ -4,172 +4,171 @@ import random
 from gym.envs.robotics import rotations
 from wtm_envs.mujoco import robot_env, utils
 from mujoco_py.generated import const as mj_const
-from wtm_envs.mujoco.ur5_env_pddl import *
-from wtm_envs.mujoco.wtm_env import goal_distance
+
 from wtm_envs.mujoco.wtm_env import WTMEnv
-from wtm_envs.mujoco.ur5_env_pddl import PDDLUR5Env
 import mujoco_py
 
 
-class UR5Env(WTMEnv, PDDLUR5Env):
-    """Superclass for all Hook environments.
+class UR5Env(WTMEnv):
+    """Superclass for all UR5 environment
     """
 
     def __init__(
-        self, model_path, n_substeps, gripper_extra_height, block_gripper,
-            target_in_the_air, target_offset, obj_range, target_range,
-            distance_threshold, initial_qpos, reward_type,
-            gripper_goal, n_objects, table_height, obj_height, min_tower_height=None, max_tower_height=None,
-            easy=1
+        self, model_path, n_substeps, reward_type, name, goal_space_train, goal_space_test,
+            project_state_to_end_goal, project_state_to_subgoal, end_goal_thresholds, initial_state_space,
+            initial_joint_pos,
+            subgoal_bounds, subgoal_thresholds, obs_type=1, env_random=False
     ):
-        """Initializes a new Fetch environment.
-
-        Args:
-            model_path (string): path to the environments XML file
-            n_substeps (int): number of substeps the simulation runs on every call to step
-            gripper_extra_height (float): additional height above the table when positioning the gripper
-            block_gripper (boolean): whether or not the gripper is blocked (i.e. not movable) or not
-            target_in_the_air (boolean): whether or not the target should be in the air above the table or on the table surface
-            target_offset (float or array with 3 elements): offset of the target
-            obj_range (float): range of a uniform distribution for sampling initial object positions
-            target_range (float): range of a uniform distribution for sampling a target
-            distance_threshold (float): the threshold after which a goal is considered achieved
-            initial_qpos (dict): a dictionary of joint names and values that define the initial configuration
-            reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
-            gripper_goal ('gripper_none', 'gripper_above', 'gripper_random'): the gripper's goal location
-            n_objects (int): no of objects in the environment. If none, then no_of_objects=0
-            min_tower_height (int): the minimum height of the tower. (not required)
-            max_tower_height (int): the maximum height of the tower. (not required)
+        """
+        UR5 environment
+        :param model_path:
+        :param n_substeps:
+        :param reward_type:
+        :param name:
+        :param goal_space_train:
+        :param goal_space_test:
+        :param project_state_to_end_goal:
+        :param project_state_to_subgoal:
+        :param end_goal_thresholds:
+        :param initial_state_space:
+        :param subgoal_bounds:
+        :param subgoal_thresholds:
         """
 
         # assert n_objects == 2, "Cannot have more than 2 objects for this environment at the time being!"
 
-        self.gripper_extra_height = gripper_extra_height
-        self.block_gripper = block_gripper
-        self.target_in_the_air = target_in_the_air
-        self.target_offset = target_offset
-        self.obj_range = obj_range
-        self.target_range = target_range
-        self.distance_threshold = distance_threshold
+        # self.gripper_extra_height = gripper_extra_height
+        # self.block_gripper = block_gripper
+        # self.target_in_the_air = target_in_the_air
+        # self.target_offset = target_offset
         self.reward_type = reward_type
 
-        self.gripper_goal = gripper_goal
-        self.n_objects = n_objects
-        self.table_height = table_height
-        self.obj_height = obj_height
-        self.min_tower_height = min_tower_height
-        self.max_tower_height = max_tower_height
+        # self.gripper_goal = gripper_goal
+
+        self.name = name
         self.step_ctr = 0
+        self.reward_type = reward_type
 
         self.obs_limits = [None, None]
         self.obs_noise_coefficient = 0.0
 
-        self.plan_cache = {}
         self.goal_hierarchy = {}
         self.goal = []
-        self.goal_size = (n_objects * 3)
+        self.end_goal_dim = self.goal_size = len(goal_space_test)
         self.final_goal = []
-        if self.gripper_goal != 'gripper_none':
-            self.goal_size += 3
-        self.gripper_has_target = (gripper_goal != 'gripper_none')
 
         self._viewers = {}
 
-        self.easy = easy
+        self.initial_joint_pos = initial_joint_pos
+        self.initial_state_space = initial_state_space
+        self.end_goal_thresholds = end_goal_thresholds
+        self.sub_goal_thresholds = subgoal_thresholds
+        self.project_state_to_end_goal = project_state_to_end_goal
+        self.project_state_to_sub_goal = project_state_to_subgoal
+        self.goal_space_train = goal_space_train
+        self.goal_space_test = goal_space_test
+        self.subgoal_bounds = subgoal_bounds
 
-        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=initial_qpos)
-        PDDLHookEnv.__init__(self, n_objects=self.n_objects)
+        # Convert subgoal bounds to symmetric bounds and offset.  Need these to properly configure subgoal actor networks
+        self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
+        self.subgoal_bounds_offset = np.zeros((len(self.subgoal_bounds)))
 
+        for i in range(len(self.subgoal_bounds)):
+            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
+            self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
 
+        # These are similar to original Levy implementation
+        self.goal_space_offset = self.subgoal_bounds_offset
+        self.goal_space_scale = self.subgoal_bounds_symmetric
+
+        # # TODO need to check these
+        # self.goal_space_offset = [np.mean(limits) for limits in goal_space_train]
+        # self.goal_space_scale = [goal_space_train[limits_idx][1] - self.goal_space_offset[limits_idx]
+        #                          for limits_idx in range(len(goal_space_train))]
+
+        if obs_type == 1:
+            self.visual_input = False
+        else:
+            self.visual_input = True
+
+        self.env_random = env_random
+
+        WTMEnv.__init__(self, model_path=model_path, n_substeps=n_substeps, initial_qpos=self.initial_joint_pos,
+                        n_actions=3)
+
+        self.action_bounds = self.sim.model.actuator_ctrlrange[:, 1]  # low-level action bounds
+        self.action_offset = np.zeros((len(self.action_bounds)))  # Assumes symmetric low-level action ranges
+
+        self.action_space.low = -self.action_bounds
+        self.action_space.high = self.action_bounds
+
+        if obs_type == 2:
+            self.camera_name = 'external_camera_1'
+        elif obs_type == 3:
+            self.camera_name = 'internal_camera_r'
+
+    def step(self, action):
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        for _ in range(10):
+            self._set_action(action)
+            self.sim.step()
+            self._step_callback()
+        obs = self._get_obs()
+
+        done = False
+        is_success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
+        info = {
+            'is_success': is_success
+        }
+        reward = self.compute_reward(obs['achieved_goal'], obs['desired_goal'], info)
+        return obs, reward, done, info
 
     def _set_action(self, action):
-        assert action.shape == (4,)
+        # assert action.shape == (4,)
         action = action.copy()  # ensure that we don't change the action outside of this scope
-        pos_ctrl, gripper_ctrl = action[:3], action[3]
+        # action = action*self.action_bounds + self.action_offset
 
-        pos_ctrl *= 0.05  # limit maximum change in position
-        rot_ctrl = [1., 0., 1., 0.]  # fixed rotation of the end effector, expressed as a quaternion
-        gripper_ctrl = np.array([gripper_ctrl, gripper_ctrl])
-        assert gripper_ctrl.shape == (2,)
-        if self.block_gripper:
-            gripper_ctrl = np.zeros_like(gripper_ctrl)
-        action = np.concatenate([pos_ctrl, rot_ctrl, gripper_ctrl])
-
-        # Apply action to simulation.
-        utils.ctrl_set_action(self.sim, action)
-        utils.mocap_set_action(self.sim, action)
+        self.sim.data.ctrl[:] = action
+        # pos_ctrl, gripper_ctrl = action[:3], action[3]
+        #
+        # pos_ctrl *= 0.05  # limit maximum change in position
+        # rot_ctrl = [1., 0., 1., 0.]  # fixed rotation of the end effector, expressed as a quaternion
+        # gripper_ctrl = np.array([gripper_ctrl, gripper_ctrl])
+        # assert gripper_ctrl.shape == (2,)
+        # if self.block_gripper:
+        #     gripper_ctrl = np.zeros_like(gripper_ctrl)
+        # action = np.concatenate([pos_ctrl, rot_ctrl, gripper_ctrl])
+        #
+        # # Apply action to simulation.
+        # utils.ctrl_set_action(self.sim, action)
+        # utils.mocap_set_action(self.sim, action)
         self.step_ctr += 1
 
     def _obs2goal(self, obs):
-        if len(obs.shape) == 1:
-            obs_arr = np.array([obs])
-        else:
-            obs_arr = obs
-        assert len(obs_arr.shape) == 2
-        goals = []
-        for o in obs_arr:
-            if self.gripper_goal != 'gripper_none':
-                g = o[:self.goal_size]
-            else:
-                g = o[3:self.goal_size+3]
-            goals.append(g)
-        goals = np.array(goals)
-        if len(obs.shape) == 1:
-            return goals[0]
-        else:
-            return goals
+        return self.project_state_to_end_goal(self.sim, obs)
 
     def _get_obs(self, grip_pos=None, grip_velp=None):
         # If the grip position and grip velp are provided externally, the external values will be used.
         # This can later be extended to provide the properties of all elements in the scene.
         dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-        # positions
-        if grip_pos is None:
-            grip_pos = self.sim.data.get_site_xpos('robot0:grip')
-        if grip_velp is None:
-            grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
+        # # positions
+        # if grip_pos is None:
+        #     grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+        # if grip_velp is None:
+        #     grip_velp = self.sim.data.get_site_xvelp('robot0:grip') * dt
 
-        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
-        object_pos, object_rot, object_velp, object_velr = ([] for _ in range(4))
-        object_rel_pos = []
+        # robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
+        # obs = np.concatenate([robot_qpos, robot_qvel])
 
-        if self.n_objects > 0:
-            for n_o in range(self.n_objects):
-                oname = 'object{}'.format(n_o)
-                this_object_pos = self.sim.data.get_site_xpos(oname)
-                # rotations
-                this_object_rot = rotations.mat2euler(self.sim.data.get_site_xmat(oname))
-                if n_o == 0:
-                    hook_handle_pos = self.compute_handle_pos(this_object_pos, this_object_rot)
-                    this_object_rot = np.concatenate([this_object_rot, hook_handle_pos])
-                # velocities
-                this_object_velp = self.sim.data.get_site_xvelp(oname) * dt
-                this_object_velr = self.sim.data.get_site_xvelr(oname) * dt
-                # gripper state
-                this_object_rel_pos = this_object_pos - grip_pos
-                this_object_velp -= grip_velp
-
-                object_pos = np.concatenate([object_pos, this_object_pos])
-                object_rot = np.concatenate([object_rot, this_object_rot])
-                object_velp = np.concatenate([object_velp, this_object_velp])
-                object_velr = np.concatenate([object_velr, this_object_velr])
-                object_rel_pos = np.concatenate([object_rel_pos, this_object_rel_pos])
+        if self.visual_input:
+            # image_obs = self._get_image()
+            image_obs = self.offscreen_buffer()
+            image_obs = image_obs.reshape(-1)
+            obs = np.concatenate([self.sim.data.qpos, self.sim.data.qvel, image_obs])
+            noisy_obs = obs.copy()
         else:
-            object_pos = object_rot = object_velp = object_velr = object_rel_pos = np.array(np.zeros(3))
-
-        gripper_state = robot_qpos[-2:]
-        gripper_vel = robot_qvel[-2:] * dt  # change to a scalar if the gripper is made symmetric
-
-        obs = np.concatenate([
-            grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-            object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
-        ])
-
-        # obs = np.concatenate([
-        #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel()
-        # ])
-
-        noisy_obs = self.add_noise(obs.copy(), self.obs_history, self.obs_noise_coefficient)
+            obs = np.concatenate([self.sim.data.qpos, self.sim.data.qvel])
+            noisy_obs = self.add_noise(obs.copy(), self.obs_history, self.obs_noise_coefficient)
         achieved_goal = self._obs2goal(noisy_obs)
 
         obs = {'observation': noisy_obs.copy(), 'achieved_goal': achieved_goal.copy(), 'desired_goal': self.goal.copy(), 'non_noisy_obs': obs.copy()}
@@ -197,230 +196,265 @@ class UR5Env(WTMEnv, PDDLUR5Env):
 
     def _render_callback(self):
         # Visualize target.
+        if self.final_goal != []:
+            self.display_end_goal(self.final_goal)
+        # self.display_end_goal(self.goal)
 
-        sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
-
-        obj_goal_start_idx = 0
-        if self.gripper_goal != 'gripper_none':
-            gripper_target_site_id = self.sim.model.site_name2id('final_arm_target')
-            gripper_goal_site_id = self.sim.model.site_name2id('final_arm_goal')
-            gripper_tgt_size = (np.ones(3) * 0.02)
-            gripper_tgt_size[1] = 0.05
-            self.sim.model.site_size[gripper_target_site_id] = gripper_tgt_size
-            self.sim.model.site_size[gripper_goal_site_id] = gripper_tgt_size
-            if self.goal != []:
-                gripper_tgt_goal = self.goal[0:3] - sites_offset[0]
-                self.sim.model.site_pos[gripper_target_site_id] = gripper_tgt_goal
-            if self.final_goal != []:
-                gripper_tgt_final_goal = self.final_goal[0:3] - sites_offset[0]
-                self.sim.model.site_pos[gripper_goal_site_id] = gripper_tgt_final_goal
-            obj_goal_start_idx += 3
-
-        for n in range(self.n_objects):
-            if n == 0:
-                o_tgt_y = 0.08
-            else:
-                o_tgt_y = 0.02
-            o_target_site_id = self.sim.model.site_name2id('target{}'.format(n))
-            o_goal_site_id = self.sim.model.site_name2id('goal{}'.format(n))
-            o_tgt_size = (np.ones(3) * 0.02)
-            o_tgt_size[1] = o_tgt_y
-            self.sim.model.site_size[o_target_site_id] = o_tgt_size
-            self.sim.model.site_size[o_goal_site_id] = o_tgt_size
-            if self.goal != []:
-                o_tgt_goal = self.goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
-                self.sim.model.site_pos[o_target_site_id] = o_tgt_goal
-            if self.final_goal != []:
-                o_tgt_final_goal = self.final_goal[obj_goal_start_idx:obj_goal_start_idx + 3] - sites_offset[0]
-                self.sim.model.site_pos[o_goal_site_id] = o_tgt_final_goal
-
-            obj_goal_start_idx += 3
-
+        # TODO check this
         self.sim.forward()
 
     def _reset_sim(self):
+        if self.env_random:
+            for name in self.sim.model.geom_names:
+                try:
+                    self.mod.rand_all(name)
+                except Exception as e:
+                    pass
         self.step_ctr = 0
-        self.sim.set_state(self.initial_state)
-        # Randomize start position of objects.
-        object_0 = None
-        for o in range(self.n_objects):
-            oname = 'object{}'.format(o)
-            object_xpos = self.initial_gripper_xpos[:2]
-            close = True
-            while close:
-                inner_radius_id = self.sim.model.site_name2id('inner_radius_target')
-                outer_radius_id = self.sim.model.site_name2id('outer_radius_target')
-                inner_outer_ratio = self.sim.model.site_size[inner_radius_id][0] / \
-                                    self.sim.model.site_size[outer_radius_id][0]
-                r = self.sim.model.site_size[outer_radius_id][0] * \
-                    np.sqrt(np.random.uniform(inner_outer_ratio, 0.7, 1))
-                theta = np.random.uniform(-0.1, 0.1, 1) * 2 * np.pi
-                x = self.sim.data.get_site_xpos('outer_radius_target')[0] + r * np.cos(theta)
-                y = self.sim.data.get_site_xpos('outer_radius_target')[1] + r * np.sin(theta)
-                object_xpos = [x,y]
 
-                close = False
-                dist_to_nearest = np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2])
-                # Iterate through all previously placed boxes and select closest:
-                for o_other in range(o):
-                    other_xpos = self.sim.data.get_joint_qpos('object{}:joint'.format(o_other))[:2]
-                    # Reduce the complexity of the environment by generating the cube very close to the hook
-                    if self.easy:
-                        if np.random.random() >= 0.5:
-                            object_xpos[1] = other_xpos[1] + 0.02
-                        else:
-                            object_xpos[1] = other_xpos[1] - 0.02
-                    dist = np.linalg.norm(object_xpos - other_xpos)
-                    dist_to_nearest = min(dist, dist_to_nearest)
-                if dist_to_nearest < 0.01:
-                    close = True
+        # Reset controls
+        self.sim.data.ctrl[:] = 0
 
-            object_qpos = self.sim.data.get_joint_qpos('{}:joint'.format(oname))
-            assert object_qpos.shape == (7,)
-            object_qpos[:2] = object_xpos
-            object_qpos[2] = self.table_height + (self.obj_height / 2)
-            self.sim.data.set_joint_qpos('{}:joint'.format(oname), object_qpos)
+        # self.sim.set_state(self.initial_state)
+
+        # Reset joint positions and velocities
+        for i in range(len(self.sim.data.qpos)):
+            self.sim.data.qpos[i] = self.initial_joint_pos[i] \
+                                    + np.random.uniform(self.initial_state_space[i][0], self.initial_state_space[i][1])
+        #
+        for i in range(len(self.sim.data.qvel)):
+            self.sim.data.qvel[i] = np.random.uniform(self.initial_state_space[len(self.sim.data.qpos) + i][0],self.initial_state_space[len(self.sim.data.qpos) + i][1])
+
         self.sim.forward()
+        self.sim.step()
         return True
 
     def _sample_goal(self):
-        obs = self._get_obs()
-        target_goal = None
-        if obs is not None:
-            if self.gripper_goal != 'gripper_none':
-                goal = obs['observation'].copy()[:self.goal_size]
-            else:
-                goal = obs['observation'].copy()[3:self.goal_size + 3]
+        # obs = self._get_obs()
+        end_goal = np.zeros((len(self.goal_space_test)))
 
-            if self.gripper_goal != 'gripper_none' and self.n_objects > 0:
-                target_goal_start_idx = 3
-            else:
-                target_goal_start_idx = 0
+        if self.name == "ur5.xml":
 
-            if self.n_objects > 0:
-                target_range = self.n_objects
-            else:
-                target_range = 1
-            hook = None
-            for n_o in range(target_range):
-                # too_close = True
-                while True:
-                    target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(0,
-                                                                                         self.target_range,
-                                                                                         size=3)
-                    sign = 1.
-                    oname = 1
-                    # if self.easy and self.n_objects >= 2:
-                    #     oname = 1
-                    #     sign = 1.
-                    # else:
-                    #     oname = 0
-                    #     sign = -1.
-                    if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object{}:joint'.format(oname))[1] \
-                                         - sign*self.np_random.uniform(0, self.target_range, size=1)
-                    else:
-                        target_goal[1] = self.sim.data.get_joint_qpos('object{}:joint'.format(oname))[1] \
-                                         + sign*self.np_random.uniform(0, self.target_range, size=1)
+            goal_possible = False
+            while not goal_possible:
+                end_goal = np.zeros(shape=(self.end_goal_dim,))
+                end_goal[0] = np.random.uniform(self.goal_space_test[0][0],self.goal_space_test[0][1])
 
-                    target_goal += self.target_offset
-                    rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
-                    self.goal_tower_height = rnd_height # TODO: remove tower_height in rollout for this environment
-                    target_goal[2] = self.table_height + (self.obj_height) - (self.obj_height / 2)
-                    too_close = False
-                    for i in range(0, target_goal_start_idx, 3):
-                        other_loc = goal[i:i + 3]
-                        dist = np.linalg.norm(other_loc[:2] - target_goal[:2], axis=-1)
-                        if dist < 0.01:
-                            too_close = True
-                    if too_close is False:
-                        break
+                end_goal[1] = np.random.uniform(self.goal_space_test[1][0],self.goal_space_test[1][1])
+                end_goal[2] = np.random.uniform(self.goal_space_test[2][0],self.goal_space_test[2][1])
 
-                if hook is not None:    # target_0 is None when n_o = 0: the hook case
-                    target_goal[0] = hook[0] - self.np_random.uniform(0.025, 0.035, size=1)
-                    if self.sim.data.get_joint_qpos('object0:joint')[1] >= self.sim.data.get_joint_qpos('object1:joint')[1]:
-                        target_goal[1] = hook[1] - self.np_random.uniform(0.03, 0.05, size=1)
-                    else:
-                        target_goal[1] = hook[1] + self.np_random.uniform(0.03, 0.05, size=1)
-                else:
-                    hook = target_goal
+                # Next need to ensure chosen joint angles result in achievable task (i.e., desired end effector position
+                # is above ground)
 
-                goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
-                target_goal_start_idx += 3
+                theta_1 = end_goal[0]
+                theta_2 = end_goal[1]
+                theta_3 = end_goal[2]
 
-            # Final gripper position
-            if self.gripper_goal != 'gripper_none':
-                # gripper_goal_pos = goal.copy()[-6:-3]
-                if self.gripper_goal == 'gripper_above':
-                    gripper_goal_pos = goal.copy()[3:6]  # hook tip position
-                    # gripper_goal_pos[0] -= self.sim.data.get_geom_xpos('object0/geom')[0]
-                    geom_id = self.sim.model.geom_name2id('object0:geom')
-                    gripper_goal_pos[0] -= 2 * (self.sim.model.geom_size[geom_id][0] - 0.01)  # 0.28
-                    gripper_goal_pos[2] += (1. * self.obj_height)
-                elif self.gripper_goal == 'gripper_random':
-                    too_close = True
-                    while too_close:
-                        gripper_goal_pos = self.initial_gripper_xpos[:3] + \
-                                           self.np_random.uniform(-self.target_range,
-                                                                  self.target_range, size=3)
-                        gripper_goal_pos[0] += self.random_gripper_goal_pos_offset[0]
-                        gripper_goal_pos[1] += self.random_gripper_goal_pos_offset[1]
-                        gripper_goal_pos[2] += self.random_gripper_goal_pos_offset[2]
+                # shoulder_pos_1 = np.array([0,0,0,1])
+                upper_arm_pos_2 = np.array([0,0.13585,0,1])
+                forearm_pos_3 = np.array([0.425,0,0,1])
+                wrist_1_pos_4 = np.array([0.39225,-0.1197,0,1])
 
-                        if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
-                            too_close = False
-                else:
-                    raise Exception('gripper_goal {} is not defined'.format(self.gripper_goal))
-                goal[:3] = gripper_goal_pos
+                # Transformation matrix from shoulder to base reference frame
+                T_1_0 = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0.089159],[0,0,0,1]])
 
-            return goal.copy()
+                # Transformation matrix from upper arm to shoulder reference frame
+                T_2_1 = np.array([[np.cos(theta_1), -np.sin(theta_1), 0, 0],[np.sin(theta_1), np.cos(theta_1), 0, 0],[0,0,1,0],[0,0,0,1]])
+
+                # Transformation matrix from forearm to upper arm reference frame
+                T_3_2 = np.array([[np.cos(theta_2),0,np.sin(theta_2),0],[0,1,0,0.13585],[-np.sin(theta_2),0,np.cos(theta_2),0],[0,0,0,1]])
+
+                # Transformation matrix from wrist 1 to forearm reference frame
+                T_4_3 = np.array([[np.cos(theta_3),0,np.sin(theta_3),0.425],[0,1,0,0],[-np.sin(theta_3),0,np.cos(theta_3),0],[0,0,0,1]])
+
+                forearm_pos = T_1_0.dot(T_2_1).dot(T_3_2).dot(forearm_pos_3)[:3]
+                wrist_1_pos = T_1_0.dot(T_2_1).dot(T_3_2).dot(T_4_3).dot(wrist_1_pos_4)[:3]
+
+                # Make sure wrist 1 pos is above ground so can actually be reached
+                if np.absolute(end_goal[0]) > np.pi/4 and forearm_pos[2] > 0.05 and wrist_1_pos[2] > 0.15:
+                    goal_possible = True
+
         else:
-            return []
+            assert self.goal_space_test is not None, "Need goal space for testing. Set goal_space_test variable in \"design_env.py\" file"
+
+            for i in range(len(self.goal_space_test)):
+                end_goal[i] = np.random.uniform(self.goal_space_test[i][0],self.goal_space_test[i][1])
+
+        # Visualize End Goal
+        self.display_end_goal(end_goal)
+
+        return end_goal.copy()
+
 
     # def _is_success(self, achieved_goal, desired_goal):
     #     d = goal_distance(achieved_goal, desired_goal)
     #     return (d < self.distance_threshold).astype(np.float32)
 
+    def compute_reward(self, achieved_goal, goal, info):    # TODO check
+        individual_differences = achieved_goal - goal
+        d = np.linalg.norm(individual_differences, axis=-1)
+
+        if self.reward_type == 'sparse':
+            reward = -1 * np.any(np.abs(individual_differences) > self.end_goal_thresholds, axis=-1).astype(np.float32)
+            return reward
+        else:
+            return -1 * d
+
+    def _is_success(self, achieved_goal, desired_goal): # TODO check
+        d = np.abs(achieved_goal - desired_goal)
+        return np.all(d < self.end_goal_thresholds, axis=-1).astype(np.float32)
+
     def _env_setup(self, initial_qpos):
-        for name, value in initial_qpos.items():
-            self.sim.data.set_joint_qpos(name, value)
-        utils.reset_mocap_welds(self.sim)
-        self.sim.forward()
+        pass
 
-        # Move end effector into position.
-        gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) \
-                         + self.sim.data.get_site_xpos('robot0:grip')
-        gripper_rotation = np.array([1., 0., 1., 0.])
-        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
-        for _ in range(10):
-            self.sim.step()
-
-        # offset the random goal if gripper random is used
-        # self.random_gripper_goal_pos_offset = (0.2, 0.0, 0.0)
-        self.random_gripper_goal_pos_offset = (0.0, 0.0, 0.14)
-
-        # Extract information for sampling goals.
-        self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
-        if self.n_objects > 0:
-            self.height_offset = self.sim.data.get_site_xpos('object0')[2]
+    def _viewer_setup(self, mode='human'):
+        if mode == 'human':
+            body_id = self.sim.model.body_name2id('upper_arm_link')
+            lookat = self.sim.data.body_xpos[body_id]
+            for idx, value in enumerate(lookat):
+                self._viewers[mode].cam.lookat[idx] = value
+            self._viewers[mode].cam.distance = 2.5
+            self._viewers[mode].cam.azimuth = 132.
+            self._viewers[mode].cam.elevation = -14.
+        elif mode == 'rgb_array':
+            body_id = self.sim.model.body_name2id('upper_arm_link')
+            lookat = self.sim.data.body_xpos[body_id]
+            for idx, value in enumerate(lookat):
+                self._viewers[mode].cam.lookat[idx] = value
+            self._viewers[mode].cam.distance = 1.7
+            self._viewers[mode].cam.azimuth = 180.
+            self._viewers[mode].cam.elevation = -50.
 
     def get_scale_and_offset_for_normalized_subgoal(self):
-        n_objects = self.n_objects
-        obj_height = self.obj_height
-        scale_xy = self.target_range
-        scale_z = obj_height * n_objects / 2
-        scale = np.array([scale_xy, scale_xy, scale_z] * (n_objects + 1))
-        offset = np.array(list(self.initial_gripper_xpos) * (n_objects + 1))
-        for j, off in enumerate(offset):
-            if j == 2:
-                offset[j] += self.random_gripper_goal_pos_offset[2]
-                if self.gripper_goal == 'gripper_random':
-                    scale[j] = self.target_range
-            elif (j + 1) % 3 == 0:
-                offset[j] += obj_height * n_objects / 2
-        if self.gripper_goal == 'gripper_none':
-            scale = scale[3:]
-            offset = offset[3:]
-        return scale, offset
+        return self.goal_space_scale, self.goal_space_offset
+
+    # Visualize end goal.  This function may need to be adjusted for new environments.
+    def display_end_goal(self, end_goal):
+
+        # Goal can be visualized by changing the location of the relevant site object.
+        if self.name == "pendulum.xml":
+            self.sim.data.mocap_pos[0] = np.array([0.5 * np.sin(end_goal[0]), 0, 0.5 * np.cos(end_goal[0]) + 0.6])
+        elif self.name == "ur5.xml":
+
+            theta_1 = end_goal[0]
+            theta_2 = end_goal[1]
+            theta_3 = end_goal[2]
+
+            # shoulder_pos_1 = np.array([0,0,0,1])
+            upper_arm_pos_2 = np.array([0, 0.13585, 0, 1])
+            forearm_pos_3 = np.array([0.425, 0, 0, 1])
+            wrist_1_pos_4 = np.array([0.39225, -0.1197, 0, 1])
+
+            # Transformation matrix from shoulder to base reference frame
+            T_1_0 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.089159], [0, 0, 0, 1]])
+
+            # Transformation matrix from upper arm to shoulder reference frame
+            T_2_1 = np.array(
+                [[np.cos(theta_1), -np.sin(theta_1), 0, 0], [np.sin(theta_1), np.cos(theta_1), 0, 0], [0, 0, 1, 0],
+                 [0, 0, 0, 1]])
+
+            # Transformation matrix from forearm to upper arm reference frame
+            T_3_2 = np.array([[np.cos(theta_2), 0, np.sin(theta_2), 0], [0, 1, 0, 0.13585],
+                              [-np.sin(theta_2), 0, np.cos(theta_2), 0], [0, 0, 0, 1]])
+
+            # Transformation matrix from wrist 1 to forearm reference frame
+            T_4_3 = np.array(
+                [[np.cos(theta_3), 0, np.sin(theta_3), 0.425], [0, 1, 0, 0], [-np.sin(theta_3), 0, np.cos(theta_3), 0],
+                 [0, 0, 0, 1]])
+
+            # Determine joint position relative to original reference frame
+            # shoulder_pos = T_1_0.dot(shoulder_pos_1)
+            upper_arm_pos = T_1_0.dot(T_2_1).dot(upper_arm_pos_2)[:3]
+            forearm_pos = T_1_0.dot(T_2_1).dot(T_3_2).dot(forearm_pos_3)[:3]
+            wrist_1_pos = T_1_0.dot(T_2_1).dot(T_3_2).dot(T_4_3).dot(wrist_1_pos_4)[:3]
+
+            joint_pos = [upper_arm_pos, forearm_pos, wrist_1_pos]
+
+            """
+            print("\nEnd Goal Joint Pos: ")
+            print("Upper Arm Pos: ", joint_pos[0])
+            print("Forearm Pos: ", joint_pos[1])
+            print("Wrist Pos: ", joint_pos[2])
+            """
+
+            for i in range(3):
+                self.sim.data.mocap_pos[i] = joint_pos[i]
+
+        else:
+            assert False, "Provide display end goal function in environment.py file"
+
+    # Visualize all subgoals
+    def display_subgoals(self, subgoals):
+
+        # Display up to 10 subgoals and end goal
+        if len(subgoals) <= 11:
+            subgoal_ind = 0
+        else:
+            subgoal_ind = len(subgoals) - 11
+
+        for i in range(1, min(len(subgoals), 11)):
+            if self.name == "pendulum.xml":
+                self.sim.data.mocap_pos[i] = np.array(
+                    [0.5 * np.sin(subgoals[subgoal_ind][0]), 0, 0.5 * np.cos(subgoals[subgoal_ind][0]) + 0.6])
+                # Visualize subgoal
+                self.sim.model.site_rgba[i][3] = 1
+                subgoal_ind += 1
+
+            elif self.name == "ur5.xml":
+
+                theta_1 = subgoals[subgoal_ind][0]
+                theta_2 = subgoals[subgoal_ind][1]
+                theta_3 = subgoals[subgoal_ind][2]
+
+                # shoulder_pos_1 = np.array([0,0,0,1])
+                upper_arm_pos_2 = np.array([0, 0.13585, 0, 1])
+                forearm_pos_3 = np.array([0.425, 0, 0, 1])
+                wrist_1_pos_4 = np.array([0.39225, -0.1197, 0, 1])
+
+                # Transformation matrix from shoulder to base reference frame
+                T_1_0 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.089159], [0, 0, 0, 1]])
+
+                # Transformation matrix from upper arm to shoulder reference frame
+                T_2_1 = np.array(
+                    [[np.cos(theta_1), -np.sin(theta_1), 0, 0], [np.sin(theta_1), np.cos(theta_1), 0, 0], [0, 0, 1, 0],
+                     [0, 0, 0, 1]])
+
+                # Transformation matrix from forearm to upper arm reference frame
+                T_3_2 = np.array([[np.cos(theta_2), 0, np.sin(theta_2), 0], [0, 1, 0, 0.13585],
+                                  [-np.sin(theta_2), 0, np.cos(theta_2), 0], [0, 0, 0, 1]])
+
+                # Transformation matrix from wrist 1 to forearm reference frame
+                T_4_3 = np.array([[np.cos(theta_3), 0, np.sin(theta_3), 0.425], [0, 1, 0, 0],
+                                  [-np.sin(theta_3), 0, np.cos(theta_3), 0], [0, 0, 0, 1]])
+
+                # Determine joint position relative to original reference frame
+                # shoulder_pos = T_1_0.dot(shoulder_pos_1)
+                upper_arm_pos = T_1_0.dot(T_2_1).dot(upper_arm_pos_2)[:3]
+                forearm_pos = T_1_0.dot(T_2_1).dot(T_3_2).dot(forearm_pos_3)[:3]
+                wrist_1_pos = T_1_0.dot(T_2_1).dot(T_3_2).dot(T_4_3).dot(wrist_1_pos_4)[:3]
+
+                joint_pos = [upper_arm_pos, forearm_pos, wrist_1_pos]
+
+                """
+                print("\nSubgoal %d Joint Pos: " % i)
+                print("Upper Arm Pos: ", joint_pos[0])
+                print("Forearm Pos: ", joint_pos[1])
+                print("Wrist Pos: ", joint_pos[2])
+                """
+
+                # Designate site position for upper arm, forearm and wrist
+                for j in range(3):
+                    self.sim.data.mocap_pos[3 + 3 * (i - 1) + j] = np.copy(joint_pos[j])
+                    self.sim.model.site_rgba[3 + 3 * (i - 1) + j][3] = 1
+
+                # print("\nLayer %d Predicted Pos: " % i, wrist_1_pos[:3])
+
+                subgoal_ind += 1
+            else:
+                # Visualize desired gripper position, which is elements 18-21 in subgoal vector
+                self.sim.data.mocap_pos[i] = subgoals[subgoal_ind]
+                # Visualize subgoal
+                self.sim.model.site_rgba[i][3] = 1
+                subgoal_ind += 1
+
 
