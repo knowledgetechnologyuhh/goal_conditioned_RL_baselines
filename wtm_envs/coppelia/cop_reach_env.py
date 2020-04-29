@@ -1,5 +1,5 @@
 from pyrep.pyrep import PyRep
-from pyrep.robots.arms.panda import Panda
+from pyrep.robots.arms.arm import Arm
 from pyrep.objects.shape import Shape
 from pyrep.const import PrimitiveShape
 from pyrep.errors import IKError
@@ -12,9 +12,12 @@ from gym.utils import seeding
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'CopReacherEnv.ttt')
+
+class ManipulatorPro (Arm):
+    def __init__(self, count: int = 0):
+        super().__init__(count, 'mp', num_joints=6)
+
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
-EPISODES = 5
-EPISODE_LENGTH = 200
 
 class ReacherEnv(gym.GoalEnv):
     """
@@ -37,7 +40,7 @@ class ReacherEnv(gym.GoalEnv):
         self.pr.start()
 
         # load robot and set position
-        self.agent = Panda()
+        self.agent = ManipulatorPro()
         if not self.ik:
             self.agent.set_control_loop_enabled(False)
             self.agent.set_motor_locked_at_zero_velocity(True)
@@ -54,7 +57,7 @@ class ReacherEnv(gym.GoalEnv):
         if self.ik:
             self.action_space = spaces.Box(-1., 1., shape=(3,), dtype='float32')
         else:
-            self.action_space = spaces.Box(-1., 1., shape=(7,), dtype='float32')
+            self.action_space = spaces.Box(-1., 1., shape=(6,), dtype='float32')
         obs = self._get_obs()
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
@@ -100,7 +103,7 @@ class ReacherEnv(gym.GoalEnv):
         return obs
 
     def compute_reward(self, achieved_goal, goal, info):
-        if achieved_goal.shape[0] != 3:
+        if len(achieved_goal.shape) == 2:
             reward = [self.compute_reward(g1, g2, info) for g1, g2 in zip(achieved_goal, goal)]
         else:
             ax, ay, az = achieved_goal  # self.agent_ee_tip.get_position()

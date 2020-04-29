@@ -29,3 +29,9 @@ You can find some troubleshooting on the PyRep git-page.
 
 Now you can test the installation by running
 `--env CopReacherEnv-ik1-v0 --algorithm baselines.her`
+
+**Known issues**
+
+If the code does not execute because of the following error: `ImportError: libcoppeliaSim.so.1: cannot open shared object file: No such file or directory` Then simply navigate to your COPELIASIM_ROOT and add a symlink by executing `ln -s libcoppeliaSim.so libcoppeliaSim.so.1` 
+
+

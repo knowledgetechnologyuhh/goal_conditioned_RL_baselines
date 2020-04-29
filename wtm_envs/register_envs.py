@@ -134,3 +134,11 @@ for IK in [0, 1]:  # whether to use inverse kinematics
          entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
          kwargs=kwargs,
          max_episode_steps=200)
+
+# UR5
+for obs_type in range(0, 4):
+    kwargs = {'obs_type': obs_type}
+    register(id='UR5ReacherEnv-v{}'.format(kwargs['obs_type']),
+             entry_point='wtm_envs.mujoco.ur5.reaching:Ur5ReacherEnv',
+             kwargs=kwargs,
+             max_episode_steps=100) # originally is 600 but it is too long
