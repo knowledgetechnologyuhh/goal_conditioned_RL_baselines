@@ -58,10 +58,15 @@ def prepare_params(kwargs):
         return gym.make(env_name)
 
     kwargs['make_env'] = make_env
+    if env_name[:3] == 'Cop':
+        registry.env_specs[env_name]._kwargs['tmp'] = 3
+        registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
+    if env_name[:3] == 'Cop':
+        registry.env_specs[env_name]._kwargs['tmp'] = 1
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
 
@@ -101,6 +106,8 @@ def configure_policy(dims, params):
     elif 'Causal' in params['env_name']:
         env = BlockWrapper(*wrapper_args)
     elif 'Hook' in params['env_name']:
+        env = BlockWrapper(*wrapper_args)
+    elif 'CopReacher' in params['env_name']:
         env = BlockWrapper(*wrapper_args)
 
     agent_params = {
@@ -144,6 +151,9 @@ def configure_policy(dims, params):
     policy = MBHACPolicy(**mbhac_params)
     env.agent = policy
 
+    if params['env_name'][:3] == 'Cop':
+        env.reset()
+
     return policy
 
 def load_policy(restore_policy_file, params):
@@ -156,6 +166,8 @@ def configure_dims(params):
     env = cached_make_env(params['make_env'])
     env.reset()
     obs, _, _, info = env.step(env.action_space.sample())
+    if params['env_name'][:3] == 'Cop':
+        env.reset()
 
     dims = {
         'o': obs['observation'].shape[0],
