@@ -114,6 +114,17 @@ class AntWrapper(BasicEnvWrapper):
         return self.wrapped_env.__getattribute__(attr)
 
 
+class UR5Wrapper(BasicEnvWrapper):
+
+    def __init__(self, env, n_layers, time_scale, input_dims):
+        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
+        self.subgoal_dim = len(self.subgoal_bounds)
+        self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
+        self.project_state_to_sub_goal = lambda state : self.wrapped_env.project_state_to_sub_goal(self.wrapped_env.sim, state)
+
+    def __getattr__(self, attr):
+        return self.wrapped_env.__getattribute__(attr)
+
 class BlockWrapper(BasicEnvWrapper):
     def __init__(self, env, n_layers, time_scale, input_dims):
         BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)

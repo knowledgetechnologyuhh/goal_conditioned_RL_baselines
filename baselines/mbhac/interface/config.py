@@ -4,7 +4,7 @@ import pickle
 
 from baselines import logger
 from baselines.mbhac.mbhac_policy import MBHACPolicy
-from baselines.mbhac.utils import AntWrapper, BlockWrapper
+from baselines.mbhac.utils import AntWrapper, BlockWrapper, UR5Wrapper
 
 DEFAULT_ENV_PARAMS = {
     'AntReacherEnv-v0':{ },
@@ -94,6 +94,8 @@ def configure_policy(dims, params):
     print('Wrapper Args', *wrapper_args)
     if 'Ant' in params['env_name']:
         env = AntWrapper(*wrapper_args)
+    elif 'UR5' in params['env_name']:
+        env = UR5Wrapper(*wrapper_args)
     elif 'Block' in params['env_name']:
         env = BlockWrapper(*wrapper_args)
     elif 'Causal' in params['env_name']:
