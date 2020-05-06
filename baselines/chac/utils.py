@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 import torch.nn as nn
 
 class Base(nn.Module):
@@ -19,15 +18,6 @@ class Base(nn.Module):
 
     def reset(self):
         self.apply(self._init_weights)
-
-def get_hs(cfg):
-    hidden_size = cfg.algo.hidden_size
-    if isinstance(hidden_size, int):
-        hidden_size = [hidden_size]
-    elif isinstance(hidden_size, str):
-        hidden_size = hidden_size.split(',')
-
-    return [int(hs) for hs in hidden_size]
 
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
@@ -67,17 +57,6 @@ class BasicEnvWrapper(object):
         self.subgoal_bounds_offset = offset
         print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
         print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
-
-    def observation(self, observation):
-        obs = torch.from_numpy(observation)
-        return obs
-
-    def step(self, action):
-        if isinstance(action, torch.Tensor):
-            action = action.numpy()
-        observation, reward, done, info = self.env.step(action)
-        return torch.from_numpy(observation), reward, done, info
-
 
     def __getattr__(self, attr):
         try:

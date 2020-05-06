@@ -125,13 +125,13 @@ class Layer():
 
 
     # Function selects action using an epsilon-greedy policy
-    def choose_action(self,agent, env, subgoal_test, enforce_random=False, enforce_zero_ll=False):
+    def choose_action(self,agent, env, subgoal_test):
 
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
             self.actor.eval()
-            action = self.actor(np.reshape(self.current_state,(1,len(self.current_state))),
-                                      np.reshape(self.goal,(1,len(self.goal))))[0]
+            action = self.actor(torch.FloatTensor(self.current_state).view(1, -1),
+                    torch.FloatTensor(self.goal).view(1, -1))[0].detach().numpy()
             action_type = "Policy"
             next_subgoal_test = subgoal_test
         else:
@@ -139,9 +139,11 @@ class Layer():
 
             if np.random.random_sample() > 0.2:
                 # Choose noisy action
-                action = self.add_noise(self.actor(
-                    np.reshape(self.current_state,(1,len(self.current_state))),
-                    np.reshape(self.goal,(1,len(self.goal))))[0], env)
+                action = self.add_noise(
+                        self.actor(
+                            torch.FloatTensor(self.current_state).view(1, -1),
+                            torch.FloatTensor(self.goal).view(1, -1)
+                            )[0].detach().numpy(), env)
 
                 action_type = "Noisy Policy"
 
@@ -156,20 +158,6 @@ class Layer():
                 next_subgoal_test = True
             else:
                 next_subgoal_test = False
-
-        if enforce_zero_ll:
-            if self.layer_number == 0:
-                action = self.get_random_action(env)
-                action = np.zeros_like(action)
-        if enforce_random:
-            if self.layer_number != 0:
-                subg = env.project_state_to_sub_goal(agent.current_state)
-                low = torch.tensor(env.subgoal_bounds)[:,0]
-                high = torch.tensor(env.subgoal_bounds)[:, 1]
-                rnd_factor = (high - low) / 12
-                rnd_offset = (np.random.uniform(size=len(rnd_factor)) - 0.5) * rnd_factor * 2
-                action = subg + rnd_offset
-                action = np.clip(action, env.subgoal_bounds[:,0], env.subgoal_bounds[:,1])
 
         return action, action_type, next_subgoal_test
 
@@ -345,14 +333,10 @@ class Layer():
 
         while True:
             # Select action to achieve goal state using epsilon-greedy policy or greedy policy if in test mode
-            # enforce_random = self.layer_number > 0
-            enforce_random = False
-            enforce_zero_ll = False
-            action, action_type, next_subgoal_test = self.choose_action(agent, env, subgoal_test, enforce_random=enforce_random, enforce_zero_ll=enforce_zero_ll)
+            action, action_type, next_subgoal_test = self.choose_action(agent, env, subgoal_test)
 
-            q_val = self.critic(np.reshape(self.current_state, (1, len(self.current_state))),
-                                            np.reshape(self.goal, (1, len(self.goal))),
-                                            np.reshape(action, (1, len(action))))
+            q_val = self.critic(torch.FloatTensor(self.current_state).view(1, -1),
+                    torch.FloatTensor(self.goal).view(1, -1), torch.FloatTensor(action).view(1, -1))
             eval_data["{}Q".format(train_test_prefix)] += [q_val[0].item()]
             self.q_values += [q_val[0].item()]
 
@@ -492,6 +476,10 @@ class Layer():
         if self.replay_buffer.size <= 250:
             return learn_summary
 
+        self.critic.train()
+        self.actor.train()
+        if self.fw:
+            self.state_predictor.train()
         for _ in range(num_updates):
             old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
 
@@ -504,15 +492,9 @@ class Layer():
 
             learn_history['reward'].append(rewards.mean().item())
 
-            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals), is_terminals)
-
-            self.actor.train()
-            self.actor.actor_optimizer.zero_grad()
-            actions = self.actor(old_states, goals)
-            actor_loss = -self.critic(old_states, goals, actions)
-            actor_loss = actor_loss.mean()
-            actor_loss.backward()
-            self.actor.actor_optimizer.step()
+            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), is_terminals)
+            actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
+            self.actor.update(actor_loss)
 
             for k,v in q_update.items():
                 if k not in learn_history.keys(): learn_history[k] = []

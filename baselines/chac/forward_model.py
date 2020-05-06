@@ -20,9 +20,8 @@ class ForwardModel(Base):
         self.hidden_sizes = [int(size) for size in mb_params['hidden_size'].split(',')]
         self.eta = mb_params['eta']
 
-
         self.mlp = mlp([env.state_dim + self.action_space_size] + self.hidden_sizes + \
-                [env.state_dim], nn.Identity)
+                [env.state_dim], nn.ReLU)
 
         self.fw_optimizer = optim.Adam(self.parameters(),  mb_params['lr'])
 
@@ -33,7 +32,7 @@ class ForwardModel(Base):
         self.err_list = []
 
     def forward(self, action, state):
-        x = torch.cat((action.float(), state.float()), dim=1)
+        x = torch.cat([ action.float(), state.float() ], dim=1)
         return self.mlp(x)
 
     def normalize_bonus(self, bonus_lst):
@@ -56,7 +55,6 @@ class ForwardModel(Base):
         return self.normalize_bonus(err)
 
     def update(self, states, actions, new_states):
-        self.train()
         self.fw_optimizer.zero_grad()
         state_prediction = self(actions, states)
         loss = F.mse_loss(state_prediction, new_states)

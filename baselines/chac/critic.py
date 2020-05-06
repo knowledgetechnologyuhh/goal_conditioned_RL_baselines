@@ -24,7 +24,6 @@ class Critic(Base):
         else:
             self.goal_dim = env.subgoal_dim
 
-        self.loss_val = 0
         self.state_dim = env.state_dim
 
         # Dimensions of action placeholder will differ depending on layer level
@@ -35,17 +34,12 @@ class Critic(Base):
 
         # Set parameters to give critic optimistic initialization near q_init
         self.q_init = -0.067
-        self.q_offset = -np.log(self.q_limit/self.q_init - 1)
+        self.q_offset = -torch.tensor([self.q_limit/self.q_init - 1]).log()
 
-        self.fcs1 = nn.Linear(self.state_dim, hidden_size)
-        self.fcs2 = nn.Linear(hidden_size, hidden_size)
-
-        self.fca1 = nn.Linear(action_dim, hidden_size)
-
-        self.fcg1 = nn.Linear(self.goal_dim, hidden_size)
-        self.fcg2 = nn.Linear(hidden_size, hidden_size)
-
-        self.fc3 = nn.Linear(hidden_size * 3, 1)
+        self.fc1 = nn.Linear(self.state_dim + action_dim + self.goal_dim, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, hidden_size)
+        self.fc4 = nn.Linear(hidden_size, 1)
 
         self.critic_optimizer = optim.Adam(self.parameters(), learning_rate)
 
@@ -53,44 +47,24 @@ class Critic(Base):
         self.reset()
 
     def forward(self, state, goal, action):
-        if not isinstance(state, torch.Tensor):
-            state = torch.from_numpy(state)
-
-        if not isinstance(action, torch.Tensor):
-            action = torch.from_numpy(action)
-
-        if not isinstance(goal, torch.Tensor):
-            goal = torch.from_numpy(goal)
-
-        s1 = F.relu(self.fcs1(state.float()))
-        s2 = F.relu(self.fcs2(s1))
-
-        a1 = F.relu(self.fca1(action.float()))
-
-        g1 = F.relu(self.fcg1(goal.float()))
-        g2 = F.relu(self.fcg2(g1))
-
-        x = torch.cat((s2, a1, g2), dim=1)
-
+        x = torch.cat([ state, action, goal ], dim=1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        output = torch.sigmoid(x + self.q_offset) * self.q_limit
-        return output
+        return -torch.sigmoid(self.fc4(x) + self.q_offset) * self.q_limit
 
     def update(self, old_states, old_actions, rewards, new_states, goals, new_actions, is_terminals):
-        self.train()
         next_q = self(new_states, goals, new_actions)
-        target_q = rewards + self.gamma * next_q * (1. - is_terminals)
-        self.critic_optimizer.zero_grad()
-
+        target_q = rewards + (self.gamma * next_q * (1. - is_terminals)).detach()
         current_q = self(old_states, goals, old_actions)
 
-        # Huber loss
-        self.loss_val = F.smooth_l1_loss(current_q, target_q)
-        self.loss_val.backward()
+        critic_loss = F.mse_loss(current_q, target_q)
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
         self.critic_optimizer.step()
 
         return {
-                "critic_loss" : self.loss_val.item(),
+                "critic_loss" : critic_loss.item(),
                 'target_q': target_q.mean().item(),
                 'next_q': next_q.mean().item(),
                 'current_q': current_q.mean().item()
