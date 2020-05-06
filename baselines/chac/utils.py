@@ -1,41 +1,40 @@
-import tensorflow as tf
-import itertools
 import numpy as np
+import torch
+import torch.nn as nn
 
-def flatten_mixed_np_array(a):
-    semi_flat = list(itertools.chain(*a))
-    flat = []
-    for item in semi_flat:
-        if type(item) == np.float32:
-            flat.append([item])
-        else:
-            flat.append(item)
-    flat = list(itertools.chain(*flat))
-    return flat
+class Base(nn.Module):
+    reset_type = 'xavier'
 
-def layer(input_layer, num_next_neurons, is_output=False):
-    num_prev_neurons = int(input_layer.shape[1])
-    shape = [num_prev_neurons, num_next_neurons]
+    def _init_weights(self, m):
+        if hasattr(m, 'weight'):
+            if self.reset_type == "xavier":
+                nn.init.xavier_uniform_(m.weight.data)
+            elif self.reset_type == "zeros":
+                nn.init.constant_(m.weight.data, 0.)
+            else:
+                raise ValueError("Unknown reset type")
 
-    if is_output:
-        weight_init = tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3)
-        bias_init = tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3)
-    else:
-        # 1/sqrt(f)
-        fan_in_init = 1 / num_prev_neurons ** 0.5
-        weight_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init)
-        bias_init = tf.random_uniform_initializer(minval=-fan_in_init, maxval=fan_in_init)
+        if hasattr(m, 'bias') and m.bias is not None:
+            nn.init.constant_(m.bias.data, 0.)
 
-    weights = tf.get_variable("weights", shape, initializer=weight_init)
-    biases = tf.get_variable("biases", [num_next_neurons], initializer=bias_init)
+    def reset(self):
+        self.apply(self._init_weights)
 
-    dot = tf.matmul(input_layer, weights) + biases
+def get_hs(cfg):
+    hidden_size = cfg.algo.hidden_size
+    if isinstance(hidden_size, int):
+        hidden_size = [hidden_size]
+    elif isinstance(hidden_size, str):
+        hidden_size = hidden_size.split(',')
 
-    if is_output:
-        return dot
+    return [int(hs) for hs in hidden_size]
 
-    relu = tf.nn.relu(dot)
-    return relu
+def mlp(sizes, activation, output_activation=nn.Identity):
+    layers = []
+    for j in range(len(sizes)-1):
+        act = activation if j < len(sizes)-2 else output_activation
+        layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
+    return nn.Sequential(*layers)
 
 class BasicEnvWrapper(object):
 
@@ -69,6 +68,17 @@ class BasicEnvWrapper(object):
         print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
         print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
+    def observation(self, observation):
+        obs = torch.from_numpy(observation)
+        return obs
+
+    def step(self, action):
+        if isinstance(action, torch.Tensor):
+            action = action.numpy()
+        observation, reward, done, info = self.env.step(action)
+        return torch.from_numpy(observation), reward, done, info
+
+
     def __getattr__(self, attr):
         try:
             return self.wrapped_env.__getattribute__(attr)
@@ -85,8 +95,8 @@ class BasicEnvWrapper(object):
             self.render()
             if self.graph:
                 for l in self.agent.layers:
-                    if self.agent.model_based:
-                        curi = np.mean(l.curiosity) if l.curiosity else 0.0
+                    if self.agent.fw:
+                        curi = np.mean(l.curiosity_hist) if l.curiosity_hist else 0.0
                         self.add_graph_values('curiosity_layer_{}'.format(l.layer_number), np.array([curi]) ,self.wrapped_env.step_ctr, reset=reset)
                     else:
                         q_val = np.mean(l.q_values) if l.q_values else 0.0
@@ -109,6 +119,8 @@ class AntWrapper(BasicEnvWrapper):
 
         self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
         self.project_state_to_sub_goal = lambda state : self.wrapped_env._obs2subgoal(state)
+        print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
+        print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
     def __getattr__(self, attr):
         return self.wrapped_env.__getattribute__(attr)

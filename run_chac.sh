@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cmd="python experiment/train.py --algorithm baselines.mbhac"
+cmd="python experiment/train.py --algorithm baselines.chac"
 cmd+=" --policy_save_interval 0 --graph 0 --render 0"
 cmd+=" --base_logdir data/ --buffer_size 250"
 
@@ -15,7 +15,7 @@ cmd+=" --env AntReacherEnv-v0"
 # cmd+=" --env BlockStackMujocoEnv-gripper_none-o2-v1"
 
 cmd+=" --n_epochs 20 --n_train_rollouts 100 --n_test_rollouts 25"
-cmd+=" --model_based 1 --mb_hidden_size 128,128,128 --eta 0.75"
+cmd+=" --fw 1 --fw_hidden_size 128,128,128 --eta 0.5"
 
 max_active_procs=8
 n_runs=16

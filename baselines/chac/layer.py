@@ -1,18 +1,17 @@
 import numpy as np
-from baselines.mbhac.experience_buffer import ExperienceBuffer
-from baselines.mbhac.actor import Actor
-from baselines.mbhac.critic import Critic
-from baselines.mbhac.forward_model import ForwardModel
-import tensorflow as tf
+import torch
+from baselines.chac.experience_buffer import ExperienceBuffer
+from baselines.chac.actor import Actor
+from baselines.chac.critic import Critic
+from baselines.chac.forward_model import ForwardModel
 
 class Layer():
-    def __init__(self, layer_number, env, sess, agent_params):
+    def __init__(self, layer_number, env, agent_params):
         self.layer_number = layer_number
-        self.sess = sess
         self.n_layers = agent_params['n_layers']
         self.time_scale = agent_params['time_scale']
         self.subgoal_test_perc = agent_params['subgoal_test_perc']
-        self.model_based = agent_params['model_based']
+        self.fw = agent_params['fw']
 
         # Set time limit for each layer. If agent uses only 1 layer, time limit
         # is the max number of low-level actions allowed in the episode (i.e, env.max_actions).
@@ -58,17 +57,20 @@ class Layer():
         # Create buffer to store not yet finalized goal replay transitions
         self.temp_goal_replay_storage = []
 
+        print('Layer', self.layer_number)
         # Initialize actor and critic networks
-        self.actor = Actor(sess, env, self.batch_size, self.layer_number, self.n_layers,
+        self.actor = Actor(env, self.batch_size, self.layer_number, self.n_layers,
                 hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr'])
 
-        self.critic = Critic(sess, env, self.layer_number, self.n_layers, self.time_scale,
-                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['Q_lr'])
+        print(self.actor)
 
-        if self.model_based:
-            print('Layer {} uses forward model'.format(self.layer_number))
-            with tf.variable_scope("predictor_{}".format(self.layer_number)):
-                self.state_predictor = ForwardModel(sess, env, self.layer_number, agent_params['mb_params'], self.buffer_size)
+        self.critic = Critic(env, self.layer_number, self.n_layers, self.time_scale,
+                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['Q_lr'])
+        print(self.critic)
+
+        if self.fw:
+            self.state_predictor = ForwardModel(env, self.layer_number, agent_params['fw_params'], self.buffer_size)
+            print(self.state_predictor)
 
         # Parameter determines degree of noise added to actions during training
         if self.layer_number == 0:
@@ -79,7 +81,7 @@ class Layer():
         # Create flag to indicate when layer has ran out of attempts to achieve goal.  This will be important for subgoal testing
         self.maxed_out = False
         self.subgoal_penalty = agent_params["subgoal_penalty"]
-        self.curiosity = []
+        self.curiosity_hist = []
         self.q_values = []
 
 
@@ -108,9 +110,9 @@ class Layer():
     def get_random_action(self, env):
 
         if self.layer_number == 0:
-            action = np.zeros((env.action_dim))
+            action = torch.zeros((env.action_dim))
         else:
-            action = np.zeros((env.subgoal_dim))
+            action = torch.zeros((env.subgoal_dim))
 
         # Each dimension of random action should take some value in the dimension's range
         for i in range(len(action)):
@@ -127,15 +129,17 @@ class Layer():
 
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
-            action = self.actor.get_action(np.reshape(self.current_state,(1,len(self.current_state))),
+            self.actor.eval()
+            action = self.actor(np.reshape(self.current_state,(1,len(self.current_state))),
                                       np.reshape(self.goal,(1,len(self.goal))))[0]
             action_type = "Policy"
             next_subgoal_test = subgoal_test
         else:
+            self.actor.train()
 
             if np.random.random_sample() > 0.2:
                 # Choose noisy action
-                action = self.add_noise(self.actor.get_action(
+                action = self.add_noise(self.actor(
                     np.reshape(self.current_state,(1,len(self.current_state))),
                     np.reshape(self.goal,(1,len(self.goal))))[0], env)
 
@@ -160,8 +164,8 @@ class Layer():
         if enforce_random:
             if self.layer_number != 0:
                 subg = env.project_state_to_sub_goal(agent.current_state)
-                low = np.array(env.subgoal_bounds)[:,0]
-                high = np.array(env.subgoal_bounds)[:, 1]
+                low = torch.tensor(env.subgoal_bounds)[:,0]
+                high = torch.tensor(env.subgoal_bounds)[:, 1]
                 rnd_factor = (high - low) / 12
                 rnd_offset = (np.random.uniform(size=len(rnd_factor)) - 0.5) * rnd_factor * 2
                 action = subg + rnd_offset
@@ -346,11 +350,11 @@ class Layer():
             enforce_zero_ll = False
             action, action_type, next_subgoal_test = self.choose_action(agent, env, subgoal_test, enforce_random=enforce_random, enforce_zero_ll=enforce_zero_ll)
 
-            q_val = self.critic.get_Q_value(np.reshape(self.current_state, (1, len(self.current_state))),
+            q_val = self.critic(np.reshape(self.current_state, (1, len(self.current_state))),
                                             np.reshape(self.goal, (1, len(self.goal))),
                                             np.reshape(action, (1, len(action))))
-            eval_data["{}Q".format(train_test_prefix)] += [q_val[0]]
-            self.q_values += [q_val[0]]
+            eval_data["{}Q".format(train_test_prefix)] += [q_val[0].item()]
+            self.q_values += [q_val[0].item()]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
             # whether that subgoal should be tested
@@ -380,10 +384,11 @@ class Layer():
             attempts_made += 1
 
             # This is very slow, only use for testing and render=True
-            if agent.test_mode and self.model_based and agent.env.visualize and self.state_predictor.err_list:
+            if agent.test_mode and self.fw and agent.env.visualize and self.state_predictor.err_list:
+                self.state_predictor.eval()
                 curi = self.state_predictor.pred_bonus([action], [self.current_state], [agent.current_state])
                 eval_data["{}curiosity".format(train_test_prefix)].append(curi[0])
-                self.curiosity += curi.tolist()
+                self.curiosity_hist += curi.tolist()
 
             # Print if goal from current layer has been achieved
             if agent.verbose and goal_status[self.layer_number]:
@@ -479,9 +484,9 @@ class Layer():
 
         learn_history = {}
         learn_history['reward'] = []
-        if self.model_based:
-            learn_history['mb_bonus'] = []
-            learn_history['mb_loss'] = []
+        if self.fw:
+            learn_history['fw_bonus'] = []
+            learn_history['fw_loss'] = []
         learn_summary = {}
 
         if self.replay_buffer.size <= 250:
@@ -489,39 +494,34 @@ class Layer():
 
         for _ in range(num_updates):
             old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
-            next_batch_size = min(self.replay_buffer.size, self.replay_buffer.batch_size)
 
             # update the rewards with curiosity bonus
-            if self.model_based:
-                bonus = self.state_predictor.pred_bonus(actions, old_states, new_states)
+            if self.fw:
+                bonus = self.state_predictor.pred_bonus(actions, old_states, new_states).unsqueeze(1)
                 eta = self.state_predictor.eta
                 rewards = rewards * eta + (1-eta) * bonus
-                rewards = rewards.tolist()
-                learn_history['mb_bonus'].append(bonus)
+                learn_history['fw_bonus'].append(bonus.mean().item())
 
-            learn_history['reward'] += rewards if isinstance(rewards, list) else list(rewards)
+            learn_history['reward'].append(rewards.mean().item())
 
-            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor.get_action(new_states,goals), is_terminals)
+            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals), is_terminals)
+
+            self.actor.train()
+            self.actor.actor_optimizer.zero_grad()
+            actions = self.actor(old_states, goals)
+            actor_loss = -self.critic(old_states, goals, actions)
+            actor_loss = actor_loss.mean()
+            actor_loss.backward()
+            self.actor.actor_optimizer.step()
 
             for k,v in q_update.items():
                 if k not in learn_history.keys(): learn_history[k] = []
                 learn_history[k].append(v)
 
-            action_derivs = self.critic.get_gradients(old_states, goals, self.actor.get_action(old_states, goals))
-            self.actor.update(old_states, goals, action_derivs, next_batch_size)
-
-            if self.model_based:
-                learn_history['mb_loss'].append(self.state_predictor.update(old_states, actions, new_states))
-
-        r_vals = [-0.0, -1.0]
-
-        if self.layer_number != 0:
-            r_vals.append(float(-self.time_scale))
-
-        for reward_val in r_vals:
-            learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
+            if self.fw:
+                learn_history['fw_loss'].append(self.state_predictor.update(old_states, actions, new_states))
 
         for k,v in learn_history.items():
-            learn_summary[k] = np.mean(v)
+            learn_summary[k] = v.mean() if isinstance(v, torch.Tensor) else np.mean(v)
 
         return learn_summary

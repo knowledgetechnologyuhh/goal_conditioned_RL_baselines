@@ -3,8 +3,8 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.mbhac.mbhac_policy import MBHACPolicy
-from baselines.mbhac.utils import AntWrapper, BlockWrapper, UR5Wrapper
+from baselines.chac.chac_policy import CHACPolicy
+from baselines.chac.utils import AntWrapper, BlockWrapper, UR5Wrapper
 from gym.envs.registration import registry
 
 DEFAULT_ENV_PARAMS = {
@@ -14,12 +14,12 @@ DEFAULT_ENV_PARAMS = {
 DEFAULT_PARAMS = {
     # env
     'max_u': 1.,  # max absolute value of actions on different coordinates
-    # mbhac
+    # chac
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden_size': 64,  # number of neurons in each hidden layers
     'Q_lr': 0.001,  # critic learning rate
     'pi_lr': 0.001,  # actor learning rate
-    'scope': 'mbhac',  # can be tweaked for testing
+    'scope': 'chac',  # can be tweaked for testing
     'reuse': False,
     'use_mpi': False,
     'rollout_batch_size': 1,  # per mpi thread
@@ -50,8 +50,8 @@ def cached_make_env(make_env):
 
 
 def prepare_params(kwargs):
-    # MBHAC params
-    mbhac_params = dict()
+    # CHAC params
+    chac_params = dict()
 
     env_name = kwargs['env_name']
 
@@ -77,11 +77,11 @@ def prepare_params(kwargs):
         del kwargs['lr']
 
     for name in ['hidden_size', 'layers', 'Q_lr', 'pi_lr', 'max_u', 'scope', 'verbose']:
-        mbhac_params[name] = kwargs[name]
+        chac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
 
-    kwargs['mbhac_params'] = mbhac_params
+    kwargs['chac_params'] = chac_params
 
     return kwargs
 
@@ -92,10 +92,10 @@ def log_params(params, logger=logger):
 
 def configure_policy(dims, params):
     # Extract relevant parameters.
-    mbhac_params = params['mbhac_params']
+    chac_params = params['chac_params']
     input_dims = dims.copy()
 
-    # MBHAC agent
+    # CHAC agent
     wrapper_args = (gym.make(params['env_name']).env, params['n_layers'], params['time_scale'], input_dims)
     print('Wrapper Args', *wrapper_args)
     if 'Ant' in params['env_name']:
@@ -120,19 +120,19 @@ def configure_policy(dims, params):
             "batch_size": params['train_batch_size'],
             "buffer_size": params['buffer_size'],
             "time_scale": params['time_scale'],
-            "hidden_size": mbhac_params['hidden_size'],
-            "Q_lr": mbhac_params['Q_lr'],
-            "pi_lr": mbhac_params['pi_lr'],
+            "hidden_size": chac_params['hidden_size'],
+            "Q_lr": chac_params['Q_lr'],
+            "pi_lr": chac_params['pi_lr'],
             # forward model
-            "model_based": params['model_based'],
-            "mb_params": {
-                "hidden_size": params['mb_hidden_size'],
-                "lr": params['mb_lr'],
+            "fw": params['fw'],
+            "fw_params": {
+                "hidden_size": params['fw_hidden_size'],
+                "lr": params['fw_lr'],
                 "eta": params['eta'],
                 }
             }
 
-    mbhac_params.update({
+    chac_params.update({
         'input_dims': input_dims,  # agent takes an input observations
         'T': params['T'],
         'rollout_batch_size': params['rollout_batch_size'],
@@ -145,11 +145,11 @@ def configure_policy(dims, params):
         'agent_params': agent_params,
         'env': env
         })
-    mbhac_params['info'] = {
+    chac_params['info'] = {
         'env_name': params['env_name'],
     }
 
-    policy = MBHACPolicy(**mbhac_params)
+    policy = CHACPolicy(**chac_params)
     env.agent = policy
 
     if params['env_name'][:3] == 'Cop':

@@ -1,12 +1,12 @@
 from baselines.util import (store_args)
 from baselines.template.policy import Policy
 import numpy as np
-from baselines.mbhac.layer import Layer
+from baselines.chac.layer import Layer
 import tensorflow as tf
 from baselines import logger
 import time
 
-class MBHACPolicy(Policy):
+class CHACPolicy(Policy):
     @store_args
     def __init__(self, input_dims, buffer_size, hidden_size, layers, batch_size, Q_lr, pi_lr, max_u,
             scope, T, rollout_batch_size, gamma, agent_params, env, reuse=False, verbose=False, **kwargs):
@@ -15,7 +15,7 @@ class MBHACPolicy(Policy):
         self.verbose = verbose
         self.n_layers = agent_params['n_layers']
         self.env = env
-        self.model_based = agent_params['model_based']
+        self.fw = agent_params['fw']
 
         with tf.variable_scope(self.scope):
             self._create_networks(agent_params)
@@ -75,15 +75,13 @@ class MBHACPolicy(Policy):
         self.test_mode = True
 
     def _create_networks(self, agent_params):
-        logger.info("Creating a MBHAC agent with action space %d x %s..." % (self.dimu, self.max_u))
+        logger.info("Creating a CHAC agent with action space %d x %s..." % (self.dimu, self.max_u))
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
-        self.sess = tf.Session(config=config)
         # Set subgoal testing ratio each layer will use
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
-        self.layers = [Layer(i, self.env, self.sess, agent_params) for i in range(self.n_layers)]
-        self.sess.run(tf.global_variables_initializer())
+        self.layers = [Layer(i, self.env, agent_params) for i in range(self.n_layers)]
 
     def learn(self, num_updates):
         """Update actor and critic networks for each layer"""
@@ -150,7 +148,14 @@ class MBHACPolicy(Policy):
                              'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers']
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
-        state['tf'] = self.sess.run([x for x in self._global_vars('') if 'buffer' not in x.name and 'obs2preds_buffer' not in x.name])
-        return state
+        state['torch'] = {}
+        # save pytoch model weights
+        for layer in self.layers:
+            l = str(layer.layer_number)
+            state['torch']['actor' + l] = layer.actor.state_dict()
+            state['torch']['crictic' + l] = layer.critic.state_dict()
+            if hasattr(layer, 'state_predictor'):
+                state['torch']['fw_model' + l] = layer.state_predictor.state_dict()
 
+        return state
 
