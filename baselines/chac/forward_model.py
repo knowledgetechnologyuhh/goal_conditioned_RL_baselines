@@ -24,6 +24,7 @@ class ForwardModel(Base):
                 [env.state_dim], nn.ReLU)
 
         self.fw_optimizer = optim.Adam(self.parameters(),  mb_params['lr'])
+        self.mse_loss = nn.MSELoss()
 
         # init weights
         self.reset()
@@ -57,7 +58,7 @@ class ForwardModel(Base):
     def update(self, states, actions, new_states):
         self.fw_optimizer.zero_grad()
         state_prediction = self(actions, states)
-        loss = F.mse_loss(state_prediction, new_states)
+        loss = self.mse_loss(state_prediction, new_states)
         loss.backward()
         self.fw_optimizer.step()
 

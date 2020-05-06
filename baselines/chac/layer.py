@@ -61,7 +61,6 @@ class Layer():
         # Initialize actor and critic networks
         self.actor = Actor(env, self.batch_size, self.layer_number, self.n_layers,
                 hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr'])
-
         print(self.actor)
 
         self.critic = Critic(env, self.layer_number, self.n_layers, self.time_scale,
@@ -127,23 +126,17 @@ class Layer():
     # Function selects action using an epsilon-greedy policy
     def choose_action(self,agent, env, subgoal_test):
 
+        current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1)
+        goal_tensor = torch.FloatTensor(self.goal).view(1, -1)
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
-            self.actor.eval()
-            action = self.actor(torch.FloatTensor(self.current_state).view(1, -1),
-                    torch.FloatTensor(self.goal).view(1, -1))[0].detach().numpy()
+            action = self.actor(current_state_tensor, goal_tensor)[0].detach().numpy()
             action_type = "Policy"
             next_subgoal_test = subgoal_test
         else:
-            self.actor.train()
-
             if np.random.random_sample() > 0.2:
                 # Choose noisy action
-                action = self.add_noise(
-                        self.actor(
-                            torch.FloatTensor(self.current_state).view(1, -1),
-                            torch.FloatTensor(self.goal).view(1, -1)
-                            )[0].detach().numpy(), env)
+                action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].detach().numpy(), env)
 
                 action_type = "Noisy Policy"
 
@@ -468,6 +461,7 @@ class Layer():
 
         learn_history = {}
         learn_history['reward'] = []
+        learn_history['actor_loss'] = []
         if self.fw:
             learn_history['fw_bonus'] = []
             learn_history['fw_loss'] = []
@@ -490,11 +484,13 @@ class Layer():
                 rewards = rewards * eta + (1-eta) * bonus
                 learn_history['fw_bonus'].append(bonus.mean().item())
 
-            learn_history['reward'].append(rewards.mean().item())
+            learn_history['reward'] += rewards.numpy().tolist()
 
             q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), is_terminals)
-            actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
+            actor_loss = self.critic(old_states, goals, self.actor(old_states, goals)).mean()
             self.actor.update(actor_loss)
+
+            learn_history['actor_loss'] += [actor_loss.detach().item()]
 
             for k,v in q_update.items():
                 if k not in learn_history.keys(): learn_history[k] = []
@@ -502,6 +498,14 @@ class Layer():
 
             if self.fw:
                 learn_history['fw_loss'].append(self.state_predictor.update(old_states, actions, new_states))
+
+        r_vals = [-0.0, -1.0]
+
+        if self.layer_number != 0:
+            r_vals.append(float(-self.time_scale))
+
+        for reward_val in r_vals:
+            learn_history["reward_{}_frac".format(reward_val)] = float(np.sum(np.isclose(learn_history['reward'], reward_val))) / len(learn_history['reward'])
 
         for k,v in learn_history.items():
             learn_summary[k] = v.mean() if isinstance(v, torch.Tensor) else np.mean(v)

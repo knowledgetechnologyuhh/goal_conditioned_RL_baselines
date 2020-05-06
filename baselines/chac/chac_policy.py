@@ -2,7 +2,6 @@ from baselines.util import (store_args)
 from baselines.template.policy import Policy
 import numpy as np
 from baselines.chac.layer import Layer
-import tensorflow as tf
 from baselines import logger
 import time
 
@@ -16,9 +15,7 @@ class CHACPolicy(Policy):
         self.n_layers = agent_params['n_layers']
         self.env = env
         self.fw = agent_params['fw']
-
-        with tf.variable_scope(self.scope):
-            self._create_networks(agent_params)
+        self._create_networks(agent_params)
 
         # goal_array stores goal for each layer of agent.
         self.goal_array = [None for i in range(self.n_layers)]
@@ -76,8 +73,6 @@ class CHACPolicy(Policy):
 
     def _create_networks(self, agent_params):
         logger.info("Creating a CHAC agent with action space %d x %s..." % (self.dimu, self.max_u))
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
         # Set subgoal testing ratio each layer will use
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
@@ -134,10 +129,6 @@ class CHACPolicy(Policy):
             logs = [(prefix + '/' + key, val) for key, val in logs]
 
         return logs
-
-    def _global_vars(self, scope):
-        res = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.scope + '/' + scope)
-        return res
 
     def __getstate__(self):
         #  TODO: modfiy exclude array #

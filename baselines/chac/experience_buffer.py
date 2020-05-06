@@ -6,11 +6,11 @@ class ExperienceBuffer:
         self.max_buffer_size = max_buffer_size
         self.batch_size = batch_size
 
-        self._states = torch.zeros((self.max_buffer_size, state_dim) ,dtype=torch.float)
-        self._actions = torch.zeros((self.max_buffer_size, action_dim), dtype=torch.float)
-        self._rewards = torch.zeros(self.max_buffer_size, dtype=torch.float)
-        self._new_states = torch.zeros((self.max_buffer_size, state_dim), dtype=torch.float)
-        self._goals = torch.zeros((self.max_buffer_size, goal_dim), dtype=torch.float)
+        self._states = torch.zeros((self.max_buffer_size, state_dim) ,dtype=torch.float32)
+        self._actions = torch.zeros((self.max_buffer_size, action_dim), dtype=torch.float32)
+        self._rewards = torch.zeros(self.max_buffer_size, dtype=torch.float32)
+        self._new_states = torch.zeros((self.max_buffer_size, state_dim), dtype=torch.float32)
+        self._goals = torch.zeros((self.max_buffer_size, goal_dim), dtype=torch.float32)
         self._is_terminals = torch.zeros(self.max_buffer_size, dtype=torch.int)
 
         self._size = 0

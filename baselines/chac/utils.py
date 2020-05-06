@@ -2,7 +2,7 @@ import numpy as np
 import torch.nn as nn
 
 class Base(nn.Module):
-    reset_type = 'xavier'
+    reset_type = 'zeros'
 
     def _init_weights(self, m):
         if hasattr(m, 'weight'):
@@ -39,8 +39,8 @@ class BasicEnvWrapper(object):
         self.state_dim = input_dims['o']
         self.action_dim = input_dims['u']
         self.end_goal_dim = input_dims['g']
-        self.action_bounds = np.ones(self.action_dim) # np.array([max_u] * self.action_dim)
-        self.action_offset = np.zeros(self.action_dim) # np.zeros((len(self.action_bounds)))
+        self.action_bounds = np.ones(self.action_dim)
+        self.action_offset = np.zeros(self.action_dim)
         self.max_actions = self.time_scale**(self.n_layers)
 
     def set_subgoal_props(self):

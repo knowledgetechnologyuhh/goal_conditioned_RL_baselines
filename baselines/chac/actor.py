@@ -53,7 +53,7 @@ class Actor(Base):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        return (torch.tanh(self.fc4(x)) * self.action_space_bounds) + self.action_offset
+        return torch.tanh(self.fc4(x)) * self.action_space_bounds + self.action_offset
 
     def update(self, actor_loss):
         self.actor_optimizer.zero_grad()

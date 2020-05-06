@@ -68,8 +68,8 @@ class RolloutWorker(Rollout):
                     logs += [(subg_succ_prefix + '_rate', 0.0)]
 
             for postfix in ["n_subgoals", "fw_loss", "fw_bonus", "reward", \
-                    "critic_loss", "wanted_qs", "next_state_qs", "this_qs", "q_grads", \
-                    "q_grads_std", "reward_-0.0_frac", "reward_-1.0_frac", \
+                    "critic_loss", "target_q", "next_q", "current_q", \
+                    "actor_loss", "reward_-0.0_frac", "reward_-1.0_frac", \
                     "reward_-{}.0_frac".format(self.time_scale)]:
                 metric_key = "{}{}".format(layer_prefix, postfix)
                 if metric_key in eval_data.keys():
