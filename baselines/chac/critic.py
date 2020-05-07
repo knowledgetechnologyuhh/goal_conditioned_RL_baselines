@@ -32,7 +32,7 @@ class Critic(Base):
 
         # Set parameters to give critic optimistic initialization near q_init
         self.q_init = -0.067
-        self.q_offset = -torch.tensor([self.q_limit/self.q_init - 1]).log()
+        self.q_offset = -torch.tensor([self.q_limit/self.q_init - 1]).log().view(1, -1)
 
         self.fc1 = nn.Linear(self.state_dim + action_dim + self.goal_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
@@ -57,7 +57,8 @@ class Critic(Base):
         target_q = rewards + (self.gamma * next_q * (1. - is_terminals)).detach()
         current_q = self(old_states, goals, old_actions)
 
-        critic_loss = self.mse_loss(current_q, target_q)
+        #  critic_loss = self.mse_loss(current_q, target_q)
+        critic_loss = F.smooth_l1_loss(current_q, target_q)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()

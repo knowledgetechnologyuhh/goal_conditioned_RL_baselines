@@ -17,12 +17,12 @@ class Actor(Base):
         # Determine range of actor network outputs.
         # This will be used to configure outer layer of neural network
         if layer_number == 0:
-            self.action_space_bounds = torch.FloatTensor(env.action_bounds)
-            self.action_offset = torch.FloatTensor(env.action_offset)
+            self.action_space_bounds = torch.FloatTensor(env.action_bounds).unsqueeze(0)
+            self.action_offset = torch.FloatTensor(env.action_offset).unsqueeze(0)
         else:
             # Determine symmetric range of subgoal space and offset
-            self.action_space_bounds = torch.FloatTensor(env.subgoal_bounds_symmetric)
-            self.action_offset = torch.FloatTensor(env.subgoal_bounds_offset)
+            self.action_space_bounds = torch.FloatTensor(env.subgoal_bounds_symmetric).unsqueeze(0)
+            self.action_offset = torch.FloatTensor(env.subgoal_bounds_offset).unsqueeze(0)
 
         # Dimensions of action will depend on layer level
         if layer_number == 0:
@@ -50,10 +50,10 @@ class Actor(Base):
 
     def forward(self, state, goal):
         x = torch.cat([ state, goal ], dim=1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return torch.tanh(self.fc4(x)) * self.action_space_bounds + self.action_offset
+        h1 = F.relu(self.fc1(x))
+        h2 = F.relu(self.fc2(h1))
+        h3 = F.relu(self.fc3(h2))
+        return torch.tanh(self.fc4(h3)) * self.action_space_bounds + self.action_offset
 
     def update(self, actor_loss):
         self.actor_optimizer.zero_grad()

@@ -142,7 +142,7 @@ class Layer():
 
             # Otherwise, choose random action
             else:
-                action = self.get_random_action(env)
+                action = self.get_random_action(env).numpy()
 
                 action_type = "Random"
 
@@ -487,7 +487,7 @@ class Layer():
             learn_history['reward'] += rewards.numpy().tolist()
 
             q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), is_terminals)
-            actor_loss = self.critic(old_states, goals, self.actor(old_states, goals)).mean()
+            actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
             self.actor.update(actor_loss)
 
             learn_history['actor_loss'] += [actor_loss.detach().item()]
