@@ -2,7 +2,7 @@ import numpy as np
 import torch.nn as nn
 
 class Base(nn.Module):
-    reset_type = 'zeros'
+    reset_type = 'xavier'
 
     def _init_weights(self, m):
         if hasattr(m, 'weight'):

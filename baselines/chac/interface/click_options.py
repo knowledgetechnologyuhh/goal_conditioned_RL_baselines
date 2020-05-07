@@ -3,6 +3,8 @@ chac_options = [
 click.option('--n_test_rollouts', type=int, default=25, help='The number of testing rollouts.'),
 click.option('--train_batch_size', type=int, default=1024, help='The number of state transitions processed during network training.'),
 click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
+click.option('--q_lr', type=float, default=0.001, help='critic learning rate'),
+click.option('--pi_lr', type=float, default=0.001, help='actor learning rate'),
 click.option('--time_scale', type=int, default=27, help='The steps per layer.'),
 click.option('--buffer_size', type=int, default=250, help='The number of rollouts to store per in each layers buffer.'), # old default 500
 click.option('--subgoal_test_perc', type=float, default=0.3, help='The percentage of subgoals to test.'),

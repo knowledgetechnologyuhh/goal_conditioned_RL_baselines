@@ -57,14 +57,14 @@ class Layer():
         # Create buffer to store not yet finalized goal replay transitions
         self.temp_goal_replay_storage = []
 
-        print('Layer', self.layer_number)
+        print('Layer:', self.layer_number)
         # Initialize actor and critic networks
         self.actor = Actor(env, self.batch_size, self.layer_number, self.n_layers,
                 hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr'])
         print(self.actor)
 
         self.critic = Critic(env, self.layer_number, self.n_layers, self.time_scale,
-                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['Q_lr'])
+                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['q_lr'])
         print(self.critic)
 
         if self.fw:
@@ -454,10 +454,7 @@ class Layer():
 
 
     def learn(self, num_updates):
-        """Update actor and critic networks"""
-        # TODO: For now, I disabled training the low-level network because it's zeroed out any ways.
-        #  if self.layer_number == 0:
-        #      return {}
+        """Update networks for num_updates"""
 
         learn_history = {}
         learn_history['reward'] = []
@@ -475,9 +472,9 @@ class Layer():
         if self.fw:
             self.state_predictor.train()
         for _ in range(num_updates):
-            old_states, actions, rewards, new_states, goals, is_terminals = self.replay_buffer.get_batch()
+            old_states, actions, rewards, new_states, goals, done = self.replay_buffer.get_batch()
 
-            # update the rewards with curiosity bonus
+            # use forward model to update reward with curiosity
             if self.fw:
                 bonus = self.state_predictor.pred_bonus(actions, old_states, new_states).unsqueeze(1)
                 eta = self.state_predictor.eta
@@ -486,7 +483,7 @@ class Layer():
 
             learn_history['reward'] += rewards.numpy().tolist()
 
-            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), is_terminals)
+            q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), done)
             actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
             self.actor.update(actor_loss)
 

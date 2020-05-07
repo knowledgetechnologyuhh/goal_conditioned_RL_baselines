@@ -17,8 +17,6 @@ DEFAULT_PARAMS = {
     # chac
     'layers': 3,  # number of layers in the critic/actor networks
     'hidden_size': 64,  # number of neurons in each hidden layers
-    'Q_lr': 0.001,  # critic learning rate
-    'pi_lr': 0.001,  # actor learning rate
     'scope': 'chac',  # can be tweaked for testing
     'reuse': False,
     'use_mpi': False,
@@ -71,12 +69,7 @@ def prepare_params(kwargs):
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
 
-    if 'lr' in kwargs:
-        kwargs['pi_lr'] = kwargs['lr']
-        kwargs['Q_lr'] = kwargs['lr']
-        del kwargs['lr']
-
-    for name in ['hidden_size', 'layers', 'Q_lr', 'pi_lr', 'max_u', 'scope', 'verbose']:
+    for name in ['hidden_size', 'layers', 'max_u', 'scope', 'verbose']:
         chac_params[name] = kwargs[name]
         kwargs['_' + name] = kwargs[name]
         del kwargs[name]
@@ -121,8 +114,8 @@ def configure_policy(dims, params):
             "buffer_size": params['buffer_size'],
             "time_scale": params['time_scale'],
             "hidden_size": chac_params['hidden_size'],
-            "Q_lr": chac_params['Q_lr'],
-            "pi_lr": chac_params['pi_lr'],
+            "q_lr": params['q_lr'],
+            "pi_lr": params['pi_lr'],
             # forward model
             "fw": params['fw'],
             "fw_params": {

@@ -40,7 +40,7 @@ class Critic(Base):
         self.fc4 = nn.Linear(hidden_size, 1)
 
         self.critic_optimizer = optim.Adam(self.parameters(), learning_rate)
-        self.mse_loss = nn.MSELoss()
+        #  self.mse_loss = nn.MSELoss()
 
         # init weights
         self.reset()
@@ -52,13 +52,14 @@ class Critic(Base):
         x = F.relu(self.fc3(x))
         return torch.sigmoid(self.fc4(x) + self.q_offset) * self.q_limit
 
-    def update(self, old_states, old_actions, rewards, new_states, goals, new_actions, is_terminals):
+    def update(self, states, actions, rewards, new_states, goals, new_actions, done):
         next_q = self(new_states, goals, new_actions)
-        target_q = rewards + (self.gamma * next_q * (1. - is_terminals)).detach()
-        current_q = self(old_states, goals, old_actions)
+        target_q = rewards + (self.gamma * next_q * (1. - done)).detach()
+        current_q = self(states, goals, actions)
 
+        # TODO: clarify buggy behavior
         #  critic_loss = self.mse_loss(current_q, target_q)
-        critic_loss = F.smooth_l1_loss(current_q, target_q)
+        critic_loss = torch.square(current_q - target_q).mean()
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()

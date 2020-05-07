@@ -7,7 +7,7 @@ import time
 
 class CHACPolicy(Policy):
     @store_args
-    def __init__(self, input_dims, buffer_size, hidden_size, layers, batch_size, Q_lr, pi_lr, max_u,
+    def __init__(self, input_dims, buffer_size, hidden_size, layers, batch_size, max_u,
             scope, T, rollout_batch_size, gamma, agent_params, env, reuse=False, verbose=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
