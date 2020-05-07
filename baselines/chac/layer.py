@@ -13,6 +13,8 @@ class Layer():
         self.subgoal_test_perc = agent_params['subgoal_test_perc']
         self.fw = agent_params['fw']
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         # Set time limit for each layer. If agent uses only 1 layer, time limit
         # is the max number of low-level actions allowed in the episode (i.e, env.max_actions).
         if self.n_layers > 1:
@@ -60,15 +62,15 @@ class Layer():
         print('Layer:', self.layer_number)
         # Initialize actor and critic networks
         self.actor = Actor(env, self.batch_size, self.layer_number, self.n_layers,
-                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr'])
+                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr']).to(self.device)
         print(self.actor)
 
         self.critic = Critic(env, self.layer_number, self.n_layers, self.time_scale,
-                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['q_lr'])
+                hidden_size=agent_params['hidden_size'], learning_rate=agent_params['q_lr']).to(self.device)
         print(self.critic)
 
         if self.fw:
-            self.state_predictor = ForwardModel(env, self.layer_number, agent_params['fw_params'], self.buffer_size)
+            self.state_predictor = ForwardModel(env, self.layer_number, agent_params['fw_params'], self.buffer_size).to(self.device)
             print(self.state_predictor)
 
         # Parameter determines degree of noise added to actions during training
@@ -130,13 +132,13 @@ class Layer():
         goal_tensor = torch.FloatTensor(self.goal).view(1, -1)
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
-            action = self.actor(current_state_tensor, goal_tensor)[0].detach().numpy()
+            action = self.actor(current_state_tensor, goal_tensor)[0].detach().cpu().numpy()
             action_type = "Policy"
             next_subgoal_test = subgoal_test
         else:
             if np.random.random_sample() > 0.2:
                 # Choose noisy action
-                action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].detach().numpy(), env)
+                action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].detach().cpu().numpy(), env)
 
                 action_type = "Noisy Policy"
 

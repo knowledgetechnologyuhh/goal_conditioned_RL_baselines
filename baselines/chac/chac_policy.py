@@ -135,7 +135,6 @@ class CHACPolicy(Policy):
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic',
-                             # TODO: fix layers
                              'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers']
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size

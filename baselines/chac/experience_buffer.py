@@ -5,6 +5,7 @@ class ExperienceBuffer:
     def __init__(self, max_buffer_size, batch_size, state_dim, action_dim, goal_dim):
         self.max_buffer_size = max_buffer_size
         self.batch_size = batch_size
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self._states = torch.zeros((self.max_buffer_size, state_dim) ,dtype=torch.float32)
         self._actions = torch.zeros((self.max_buffer_size, action_dim), dtype=torch.float32)
@@ -44,12 +45,12 @@ class ExperienceBuffer:
         #  dist = torch.randint(0, high=self._size, size=min(self._size, self.batch_size))
 
         # numpy indexing with arrays
-        states = self._states[dist]
-        actions = self._actions[dist]
-        rewards = self._rewards[dist].unsqueeze(1)
-        new_states = self._new_states[dist]
-        goals = self._goals[dist]
-        is_terminals = self._is_terminals[dist].unsqueeze(1)
+        states = self._states[dist].to(self.device)
+        actions = self._actions[dist].to(self.device)
+        rewards = self._rewards[dist].unsqueeze(1).to(self.device)
+        new_states = self._new_states[dist].to(self.device)
+        goals = self._goals[dist].to(self.device)
+        is_terminals = self._is_terminals[dist].unsqueeze(1).to(self.device)
 
         return states, actions, rewards, new_states, goals, is_terminals
 

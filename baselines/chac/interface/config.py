@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 import pickle
+import torch
 
 from baselines import logger
 from baselines.chac.chac_policy import CHACPolicy
@@ -87,6 +88,8 @@ def configure_policy(dims, params):
     # Extract relevant parameters.
     chac_params = params['chac_params']
     input_dims = dims.copy()
+
+    torch.set_num_threads(params['num_threads'])
 
     # CHAC agent
     wrapper_args = (gym.make(params['env_name']).env, params['n_layers'], params['time_scale'], input_dims)
