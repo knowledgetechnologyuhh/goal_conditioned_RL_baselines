@@ -12,14 +12,14 @@ class ForwardModel(Base):
         self.model_name = 'model_' + str(layer_number)
 
         if layer_number == 0:
-            self.action_space_size = env.action_dim
+            action_dim = env.action_dim
         else:
-            self.action_space_size = env.subgoal_dim
+            action_dim = env.subgoal_dim
 
         self.hidden_sizes = [int(size) for size in mb_params['hidden_size'].split(',')]
         self.eta = mb_params['eta']
 
-        self.mlp = mlp([env.state_dim + self.action_space_size] + self.hidden_sizes + \
+        self.mlp = mlp([env.state_dim + action_dim] + self.hidden_sizes + \
                 [env.state_dim], nn.ReLU)
 
         self.fw_optimizer = optim.Adam(self.parameters(),  mb_params['lr'])

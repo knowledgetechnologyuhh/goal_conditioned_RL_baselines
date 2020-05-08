@@ -14,7 +14,7 @@ click.option('--n_layers', type=int, default=2, help='The number hierarchies'),
 
 # Forward model
 click.option('--fw', type=int, default=0, help='Enable forward model'),
-click.option('--fw_hidden_size', type=str, default='128,128,128', help='Size for each hidden layer added to the forward model'),
+click.option('--fw_hidden_size', type=str, default='128,128,128', help='Size for each hidden layer of the forward model'),
 click.option('--fw_lr', type=float, default=0.001, help='Learning rate to train the forward model'),
 click.option('--eta', type=float, default=0.5, help='Reward fraction (r_e * eta + (1-eta) * r_i)'),
 

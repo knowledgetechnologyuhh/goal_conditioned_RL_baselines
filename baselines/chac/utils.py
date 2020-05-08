@@ -3,31 +3,24 @@ import torch.nn as nn
 import gym
 
 class Base(nn.Module):
-    reset_type = 'levy'
+    reset_type = 'xavier'
 
     def _init_weights(self, m):
-        fan_in = m.weight.size(-1)
-        #  fan_out = size[1]
-        if hasattr(m, 'weight'):
-            if self.reset_type == "xavier":
-                nn.init.xavier_uniform_(m.weight.data)
-            elif self.reset_type == "zeros":
-                nn.init.constant_(m.weight.data, 0.)
-            elif self.reset_type == "levy":
-                # assume hidden layers with equal in and out size
-                if m.out_features ==  m.in_features:
-                    fan_in_init = 1 / fan_in ** 0.5
-                    nn.init.uniform_(m.weight.data, -fan_in_init, fan_in_init)
-                    nn.init.uniform_(m.bias.data, -fan_in_init, fan_in_init)
-                else:
-                    nn.init.uniform_(m.weight.data, -3e-3, 3e-3)
-                nn.init.constant_(m.weight.data, 0.)
-            else:
-                raise ValueError("Unknown reset type")
 
-        if hasattr(m, 'bias') and m.bias is not None:
-            nn.init.uniform_(m.bias.data, -3e-3, 3e-3)
-            m.bias.data.uniform_()
+        if isinstance(m, nn.Linear):
+            if hasattr(m, 'weight'):
+
+                if self.reset_type == "xavier":
+                    nn.init.xavier_uniform_(m.weight.data)
+                elif self.reset_type == "zeros":
+                    nn.init.constant_(m.weight.data, 0.)
+                    nn.init.constant_(m.weight.data, 0.)
+                else:
+                    raise ValueError("Unknown reset type")
+
+            if hasattr(m, 'bias') and m.bias is not None:
+                nn.init.uniform_(m.bias.data, -3e-3, 3e-3)
+                m.bias.data.uniform_()
 
     def reset(self):
         self.apply(self._init_weights)
