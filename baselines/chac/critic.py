@@ -17,6 +17,7 @@ class Critic(Base):
         self.hidden_size = hidden_size
         self.q_limit = -time_scale
         self.state_dim = env.state_dim
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Dimensions of goal placeholder will differ depending on layer level
         if layer_number == n_layers - 1:
@@ -32,7 +33,7 @@ class Critic(Base):
 
         # Set parameters to give critic optimistic initialization near q_init
         self.q_init = -0.067
-        self.q_offset = -torch.tensor([self.q_limit/self.q_init - 1]).log().view(1, -1)
+        self.q_offset = -torch.tensor([self.q_limit/self.q_init - 1]).log().view(1, -1).to(self.device)
 
         self.fc1 = nn.Linear(self.state_dim + action_dim + self.goal_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)

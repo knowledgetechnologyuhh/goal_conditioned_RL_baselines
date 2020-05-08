@@ -13,16 +13,17 @@ class Actor(Base):
 
         self.actor_name = 'actor_' + str(layer_number)
         self.hidden_size = hidden_size
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Determine range of actor network outputs.
         # This will be used to configure outer layer of neural network
         if layer_number == 0:
-            self.action_space_bounds = torch.FloatTensor(env.action_bounds).unsqueeze(0)
-            self.action_offset = torch.FloatTensor(env.action_offset).unsqueeze(0)
+            self.action_space_bounds = torch.FloatTensor(env.action_bounds).unsqueeze(0).to(self.device)
+            self.action_offset = torch.FloatTensor(env.action_offset).unsqueeze(0).to(self.device)
         else:
             # Determine symmetric range of subgoal space and offset
-            self.action_space_bounds = torch.FloatTensor(env.subgoal_bounds_symmetric).unsqueeze(0)
-            self.action_offset = torch.FloatTensor(env.subgoal_bounds_offset).unsqueeze(0)
+            self.action_space_bounds = torch.FloatTensor(env.subgoal_bounds_symmetric).unsqueeze(0).to(self.device)
+            self.action_offset = torch.FloatTensor(env.subgoal_bounds_offset).unsqueeze(0).to(self.device)
 
         # Dimensions of action will depend on layer level
         if layer_number == 0:

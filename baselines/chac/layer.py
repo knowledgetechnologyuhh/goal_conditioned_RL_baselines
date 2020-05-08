@@ -128,8 +128,8 @@ class Layer():
     # Function selects action using an epsilon-greedy policy
     def choose_action(self,agent, env, subgoal_test):
 
-        current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1)
-        goal_tensor = torch.FloatTensor(self.goal).view(1, -1)
+        current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
+        goal_tensor = torch.FloatTensor(self.goal).view(1, -1).to(self.device)
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
             action = self.actor(current_state_tensor, goal_tensor)[0].detach().cpu().numpy()
@@ -329,9 +329,10 @@ class Layer():
         while True:
             # Select action to achieve goal state using epsilon-greedy policy or greedy policy if in test mode
             action, action_type, next_subgoal_test = self.choose_action(agent, env, subgoal_test)
-
-            q_val = self.critic(torch.FloatTensor(self.current_state).view(1, -1),
-                    torch.FloatTensor(self.goal).view(1, -1), torch.FloatTensor(action).view(1, -1))
+            current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
+            goal_tensor =  torch.FloatTensor(self.goal).view(1, -1).to(self.device)
+            action_tensor = torch.FloatTensor(action).view(1, -1).to(self.device)
+            q_val = self.critic(current_state_tensor, goal_tensor, action_tensor)
             eval_data["{}Q".format(train_test_prefix)] += [q_val[0].item()]
             self.q_values += [q_val[0].item()]
 
@@ -483,7 +484,7 @@ class Layer():
                 rewards = rewards * eta + (1-eta) * bonus
                 learn_history['fw_bonus'].append(bonus.mean().item())
 
-            learn_history['reward'] += rewards.numpy().tolist()
+            learn_history['reward'] += rewards.cpu().numpy().tolist()
 
             q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), done)
             actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
