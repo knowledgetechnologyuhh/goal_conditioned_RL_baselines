@@ -41,7 +41,7 @@ class Critic(Base):
         self.fc4 = nn.Linear(hidden_size, 1)
 
         self.critic_optimizer = optim.Adam(self.parameters(), learning_rate)
-        #  self.mse_loss = nn.MSELoss()
+        self.mse_loss = nn.MSELoss()
 
         # init weights
         self.reset()
@@ -58,9 +58,7 @@ class Critic(Base):
         target_q = rewards + (self.gamma * next_q * (1. - done)).detach()
         current_q = self(states, goals, actions)
 
-        # TODO: clarify buggy behavior
-        #  critic_loss = self.mse_loss(current_q, target_q)
-        critic_loss = torch.square(current_q - target_q).mean()
+        critic_loss = self.mse_loss(current_q, target_q)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
