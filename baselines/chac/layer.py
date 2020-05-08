@@ -24,7 +24,7 @@ class Layer():
 
         self.current_state = None
         self.goal = None
-        env.wrapped_env.goal_hierarchy[self.layer_number] = self.goal
+        #  env.wrapped_env.goal_hierarchy[self.layer_number] = self.goal
 
         # Ceiling on buffer size
         self.buffer_size_ceiling = 10**7
@@ -44,8 +44,6 @@ class Layer():
         # Buffer size = transitions per attempt * # attempts per episode * num of episodes stored
         self.buffer_size = min(self.trans_per_attempt * self.time_limit**(self.n_layers-1 - self.layer_number) * self.episodes_to_store, self.buffer_size_ceiling)
 
-        self.batch_size = agent_params['batch_size']
-
         act_dim = goal_dim = env.subgoal_dim
         if self.layer_number == 0:
             # Actions of lowest layer are real actions in environment
@@ -54,14 +52,14 @@ class Layer():
             # Goals of highest layer are real goals of environment
             goal_dim = env.end_goal_dim
 
-        self.replay_buffer = ExperienceBuffer(self.buffer_size, self.batch_size, env.state_dim, act_dim, goal_dim)
+        self.replay_buffer = ExperienceBuffer(self.buffer_size, agent_params['batch_size'], env.state_dim, act_dim, goal_dim)
 
         # Create buffer to store not yet finalized goal replay transitions
         self.temp_goal_replay_storage = []
 
         print('Layer:', self.layer_number)
-        # Initialize actor and critic networks
-        self.actor = Actor(env, self.batch_size, self.layer_number, self.n_layers,
+        # Initialize networks
+        self.actor = Actor(env, self.layer_number, self.n_layers,
                 hidden_size=agent_params['hidden_size'], learning_rate=agent_params['pi_lr']).to(self.device)
         print(self.actor)
 
@@ -111,9 +109,9 @@ class Layer():
     def get_random_action(self, env):
 
         if self.layer_number == 0:
-            action = torch.zeros((env.action_dim))
+            action = np.zeros((env.action_dim))
         else:
-            action = torch.zeros((env.subgoal_dim))
+            action = np.zeros((env.subgoal_dim))
 
         # Each dimension of random action should take some value in the dimension's range
         for i in range(len(action)):
@@ -126,26 +124,23 @@ class Layer():
 
 
     # Function selects action using an epsilon-greedy policy
-    def choose_action(self,agent, env, subgoal_test):
+    def choose_action(self, agent, env, subgoal_test):
 
         current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
         goal_tensor = torch.FloatTensor(self.goal).view(1, -1).to(self.device)
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
-            action = self.actor(current_state_tensor, goal_tensor)[0].detach().cpu().numpy()
+            with torch.no_grad():
+                action = self.actor(current_state_tensor, goal_tensor)[0].cpu().numpy()
             action_type = "Policy"
             next_subgoal_test = subgoal_test
         else:
             if np.random.random_sample() > 0.2:
-                # Choose noisy action
-                action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].detach().cpu().numpy(), env)
-
+                with torch.no_grad():
+                    action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].cpu().numpy(), env)
                 action_type = "Noisy Policy"
-
-            # Otherwise, choose random action
             else:
-                action = self.get_random_action(env).numpy()
-
+                action = self.get_random_action(env)
                 action_type = "Random"
 
             # Determine whether to test upcoming subgoal
@@ -160,16 +155,11 @@ class Layer():
         """Create action replay transition by evaluating hindsight action given original goal
            Determine reward (0 if goal achieved, -1 otherwise) and finished boolean """
         # The finished boolean is used for determining the target for Q-value updates
-        if goal_status[self.layer_number]:
-            reward = 0
-            finished = True
-        else:
-            reward = -1
-            finished = False
-
+        finished = goal_status[self.layer_number]
+        reward = 0.0 if finished else -1.0
         # Transition will take the form [old state, hindsight_action, reward, next_state, goal, terminate boolean, None]
-        transition = [self.current_state, hindsight_action, reward, next_state, self.goal, finished, None]
-        self.replay_buffer.add(np.copy(transition))
+        transition = np.array([self.current_state, hindsight_action, reward, next_state, self.goal, finished, None])
+        self.replay_buffer.add(transition)
 
 
     def create_prelim_goal_replay_trans(self, hindsight_action, next_state, env, total_layers):
@@ -184,22 +174,15 @@ class Layer():
         else:
             hindsight_goal = env.project_state_to_sub_goal(next_state)
 
-        transition = [self.current_state, hindsight_action, None, next_state, None, None, hindsight_goal]
-        self.temp_goal_replay_storage.append(np.copy(transition))
+        transition = np.array([self.current_state, hindsight_action, None, next_state, None, None, hindsight_goal])
+        self.temp_goal_replay_storage.append(transition)
 
     # Return reward given provided goal and goal achieved in hindsight
     def get_reward(self,new_goal, hindsight_goal, goal_thresholds):
-
         assert len(new_goal) == len(hindsight_goal) == len(goal_thresholds),\
                 "Goal, hindsight goal, and goal thresholds do not have same dimensions"
-
-        # If the difference in any dimension is greater than threshold, goal not achieved
-        for i in range(len(new_goal)):
-            if np.absolute(new_goal[i]-hindsight_goal[i]) > goal_thresholds[i]:
-                return -1
-
-        # Else goal is achieved
-        return 0
+        achived = np.all(np.absolute(new_goal - hindsight_goal) < goal_thresholds, axis=-1)
+        return achived - 1.0
 
 
 
@@ -253,14 +236,8 @@ class Layer():
         """Create transition penalizing subgoal if necessary. The target Q-value when this transition is used will ignore
         next state as the finished boolena = True.  Change the finished boolean to False, if you would like the subgoal
         penalty to depend on the next state."""
-
-        if test_fail:
-            transition = [self.current_state, subgoal, self.subgoal_penalty, next_state, self.goal, True, None]
-        else:
-            transition = [self.current_state, subgoal, 0, next_state, self.goal, True, None]
-
-        self.replay_buffer.add(np.copy(transition))
-
+        transition = np.array([self.current_state, subgoal, self.subgoal_penalty if test_fail else 0.0, next_state, self.goal, True, None])
+        self.replay_buffer.add(transition)
 
 
     # Determine whether layer is finished training
@@ -332,7 +309,8 @@ class Layer():
             current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
             goal_tensor =  torch.FloatTensor(self.goal).view(1, -1).to(self.device)
             action_tensor = torch.FloatTensor(action).view(1, -1).to(self.device)
-            q_val = self.critic(current_state_tensor, goal_tensor, action_tensor)
+            with torch.no_grad():
+                q_val = self.critic(current_state_tensor, goal_tensor, action_tensor)
             eval_data["{}Q".format(train_test_prefix)] += [q_val[0].item()]
             self.q_values += [q_val[0].item()]
 
@@ -364,10 +342,10 @@ class Layer():
             attempts_made += 1
 
             # This is very slow, only use for testing and render=True
-            if agent.test_mode and self.fw and agent.env.visualize and self.state_predictor.err_list:
+            if agent.env.graph and self.fw and agent.env.visualize and self.state_predictor.err_list:
+                agent_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
                 self.state_predictor.eval()
-                curi = self.state_predictor.pred_bonus([action], [self.current_state], [agent.current_state])
-                eval_data["{}curiosity".format(train_test_prefix)].append(curi[0])
+                curi = self.state_predictor.pred_bonus(action_tensor, current_state_tensor, agent_state_tensor)
                 self.curiosity_hist += curi.tolist()
 
             # Print if goal from current layer has been achieved
@@ -489,7 +467,6 @@ class Layer():
             q_update = self.critic.update(old_states, actions, rewards, new_states, goals, self.actor(new_states, goals).detach(), done)
             actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
             self.actor.update(actor_loss)
-
             learn_history['actor_loss'] += [actor_loss.detach().item()]
 
             for k,v in q_update.items():

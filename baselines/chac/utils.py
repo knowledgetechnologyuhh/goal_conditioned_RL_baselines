@@ -1,23 +1,41 @@
 import numpy as np
 import torch.nn as nn
+import gym
 
 class Base(nn.Module):
-    reset_type = 'xavier'
+    reset_type = 'levy'
 
     def _init_weights(self, m):
+        fan_in = m.weight.size(-1)
+        #  fan_out = size[1]
         if hasattr(m, 'weight'):
             if self.reset_type == "xavier":
                 nn.init.xavier_uniform_(m.weight.data)
             elif self.reset_type == "zeros":
                 nn.init.constant_(m.weight.data, 0.)
+            elif self.reset_type == "levy":
+                # assume hidden layers with equal in and out size
+                if m.out_features ==  m.in_features:
+                    fan_in_init = 1 / fan_in ** 0.5
+                    nn.init.uniform_(m.weight.data, -fan_in_init, fan_in_init)
+                    nn.init.uniform_(m.bias.data, -fan_in_init, fan_in_init)
+                else:
+                    nn.init.uniform_(m.weight.data, -3e-3, 3e-3)
+                nn.init.constant_(m.weight.data, 0.)
             else:
                 raise ValueError("Unknown reset type")
 
         if hasattr(m, 'bias') and m.bias is not None:
-            nn.init.constant_(m.bias.data, 0.)
+            nn.init.uniform_(m.bias.data, -3e-3, 3e-3)
+            m.bias.data.uniform_()
 
     def reset(self):
         self.apply(self._init_weights)
+
+def hidden_init(layer):
+    fan_in = layer.weight.data.size(-1)
+    lim = 1. / np.sqrt(fan_in)
+    return (-lim, lim)
 
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
@@ -72,7 +90,7 @@ class BasicEnvWrapper(object):
 
         if self.visualize:
             self.render()
-            if self.graph:
+            if self.graph and self.agent:
                 for l in self.agent.layers:
                     if self.agent.fw:
                         curi = np.mean(l.curiosity_hist) if l.curiosity_hist else 0.0
@@ -133,3 +151,21 @@ class BlockWrapper(BasicEnvWrapper):
         # TODO: Block environments only works for one subgoal
         self.wrapped_env.goal = subgoals[0]
 
+
+def prepare_env(env_name, n_layers, time_scale, input_dims):
+    wrapper_args = (gym.make(env_name).env, n_layers, time_scale, input_dims)
+    print('Wrapper Args', *wrapper_args)
+    if 'Ant' in env_name:
+        env = AntWrapper(*wrapper_args)
+    elif 'UR5' in env_name:
+        env = UR5Wrapper(*wrapper_args)
+    elif 'Block' in env_name:
+        env = BlockWrapper(*wrapper_args)
+    elif 'Causal' in env_name:
+        env = BlockWrapper(*wrapper_args)
+    elif 'Hook' in env_name:
+        env = BlockWrapper(*wrapper_args)
+    elif 'CopReacher' in env_name:
+        env = BlockWrapper(*wrapper_args)
+
+    return env

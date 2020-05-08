@@ -5,7 +5,7 @@ import torch
 
 from baselines import logger
 from baselines.chac.chac_policy import CHACPolicy
-from baselines.chac.utils import AntWrapper, BlockWrapper, UR5Wrapper
+from baselines.chac.utils import prepare_env
 from gym.envs.registration import registry
 
 DEFAULT_ENV_PARAMS = {
@@ -92,21 +92,7 @@ def configure_policy(dims, params):
     torch.set_num_threads(params['num_threads'])
 
     # CHAC agent
-    wrapper_args = (gym.make(params['env_name']).env, params['n_layers'], params['time_scale'], input_dims)
-    print('Wrapper Args', *wrapper_args)
-    if 'Ant' in params['env_name']:
-        env = AntWrapper(*wrapper_args)
-    elif 'UR5' in params['env_name']:
-        env = UR5Wrapper(*wrapper_args)
-    elif 'Block' in params['env_name']:
-        env = BlockWrapper(*wrapper_args)
-    elif 'Causal' in params['env_name']:
-        env = BlockWrapper(*wrapper_args)
-    elif 'Hook' in params['env_name']:
-        env = BlockWrapper(*wrapper_args)
-    elif 'CopReacher' in params['env_name']:
-        env = BlockWrapper(*wrapper_args)
-
+    env = prepare_env(params['env_name'], params['n_layers'], params['time_scale'], input_dims)
     agent_params = {
             "subgoal_test_perc": params['subgoal_test_perc'],
             "subgoal_penalty": -params['time_scale'],
@@ -119,6 +105,7 @@ def configure_policy(dims, params):
             "hidden_size": chac_params['hidden_size'],
             "q_lr": params['q_lr'],
             "pi_lr": params['pi_lr'],
+            'verbose': chac_params['verbose'],
             # forward model
             "fw": params['fw'],
             "fw_params": {
@@ -139,7 +126,7 @@ def configure_policy(dims, params):
         'buffer_size': params['buffer_size'],
         'n_layers': params['n_layers'],
         'agent_params': agent_params,
-        'env': env
+        'env': env,
         })
     chac_params['info'] = {
         'env_name': params['env_name'],

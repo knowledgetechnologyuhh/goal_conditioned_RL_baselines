@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from baselines.chac.utils import Base
+from baselines.chac.utils import Base, hidden_init
 
 
 class Actor(Base):
 
-    def __init__(self, env, batch_size, layer_number, n_layers,
+    def __init__(self, env, layer_number, n_layers,
             learning_rate=0.001, hidden_size=64):
         super(Actor, self).__init__()
 
@@ -46,8 +46,18 @@ class Actor(Base):
         self.fc4 = nn.Linear(hidden_size, self.action_space_size)
         self.actor_optimizer = optim.Adam(self.parameters(), learning_rate)
 
-        # init weights
-        self.reset()
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(*hidden_init(self.fc3))
+        self.fc4.weight.data.uniform_(-3e-3, 3e-3)
+
+        self.fc1.bias.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.bias.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.bias.data.uniform_(*hidden_init(self.fc3))
+        self.fc4.bias.data.uniform_(-3e-3, 3e-3)
 
     def forward(self, state, goal):
         x = torch.cat([ state, goal ], dim=1)

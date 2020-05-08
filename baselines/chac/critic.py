@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from baselines.chac.utils import Base
+from baselines.chac.utils import Base, hidden_init
 
 
 class Critic(Base):
@@ -43,8 +43,7 @@ class Critic(Base):
         self.critic_optimizer = optim.Adam(self.parameters(), learning_rate)
         self.mse_loss = nn.MSELoss()
 
-        # init weights
-        self.reset()
+        self.reset_parameters()
 
     def forward(self, state, goal, action):
         x = torch.cat([ state, action, goal ], dim=1)
@@ -52,6 +51,17 @@ class Critic(Base):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         return torch.sigmoid(self.fc4(x) + self.q_offset) * self.q_limit
+
+    def reset_parameters(self):
+        self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.weight.data.uniform_(*hidden_init(self.fc3))
+        self.fc4.weight.data.uniform_(-3e-3, 3e-3)
+
+        self.fc1.bias.data.uniform_(*hidden_init(self.fc1))
+        self.fc2.bias.data.uniform_(*hidden_init(self.fc2))
+        self.fc3.bias.data.uniform_(*hidden_init(self.fc3))
+        self.fc4.bias.data.uniform_(-3e-3, 3e-3)
 
     def update(self, states, actions, rewards, new_states, goals, new_actions, done):
         next_q = self(new_states, goals, new_actions)

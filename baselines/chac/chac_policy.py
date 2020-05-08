@@ -2,6 +2,7 @@ from baselines.util import (store_args)
 from baselines.template.policy import Policy
 import numpy as np
 from baselines.chac.layer import Layer
+from baselines.chac.utils import prepare_env
 from baselines import logger
 import time
 
@@ -131,15 +132,16 @@ class CHACPolicy(Policy):
         return logs
 
     def __getstate__(self):
-        #  TODO: modfiy exclude array #
         excluded_subnames = ['_tf', '_op', '_vars', '_adam', 'buffer', 'sess', '_stats',
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic',
-                             'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers']
+                             'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers', 'goal_array', 'total_steps',
+                             'current_state']
+
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
-
         state['torch'] = {}
+
         # save pytoch model weights
         for layer in self.layers:
             l = str(layer.layer_number)
@@ -147,37 +149,24 @@ class CHACPolicy(Policy):
             state['torch']['critic' + l] = layer.critic.state_dict()
             if hasattr(layer, 'state_predictor'):
                 state['torch']['fw_model' + l] = layer.state_predictor.state_dict()
+                state['fw_model' + l + 'err_list'] = layer.state_predictor.err_list
 
         return state
 
     def __setstate__(self, state):
-        import gym
-        from baselines.chac.utils import AntWrapper, BlockWrapper, UR5Wrapper
         agent_params = state['agent_params']
         env_name = state['info']['env_name']
         state['layers'] = agent_params['n_layers']
-        wrapper_args = (gym.make(env_name).env, agent_params['n_layers'], agent_params['time_scale'], state['input_dims'])
-        print('Wrapper Args', *wrapper_args)
-        if 'Ant' in env_name:
-            env = AntWrapper(*wrapper_args)
-        elif 'UR5' in env_name:
-            env = UR5Wrapper(*wrapper_args)
-        elif 'Block' in env_name:
-            env = BlockWrapper(*wrapper_args)
-        elif 'Causal' in env_name:
-            env = BlockWrapper(*wrapper_args)
-        elif 'Hook' in env_name:
-            env = BlockWrapper(*wrapper_args)
-        elif 'CopReacher' in env_name:
-            env = BlockWrapper(*wrapper_args)
-
-        state['env'] = env
-
+        state['env'] = prepare_env(env_name, agent_params['n_layers'], agent_params['time_scale'], state['input_dims'])
         self.__init__(**state)
+        self.env.agent = self
+
+        # load network states
         for layer in self.layers:
             l = str(layer.layer_number)
             layer.actor.load_state_dict(state['torch']['actor' + l])
             layer.critic.load_state_dict(state['torch']['critic' + l])
             if hasattr(layer, 'state_predictor'):
                layer.state_predictor.load_state_dict(state['torch']['fw_model' + l])
+               layer.state_predictor.err_list = state['fw_model' + l + 'err_list']
 
