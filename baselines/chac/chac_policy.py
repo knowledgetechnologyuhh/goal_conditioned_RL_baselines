@@ -138,14 +138,46 @@ class CHACPolicy(Policy):
                              'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers']
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
+
         state['torch'] = {}
         # save pytoch model weights
         for layer in self.layers:
             l = str(layer.layer_number)
             state['torch']['actor' + l] = layer.actor.state_dict()
-            state['torch']['crictic' + l] = layer.critic.state_dict()
+            state['torch']['critic' + l] = layer.critic.state_dict()
             if hasattr(layer, 'state_predictor'):
                 state['torch']['fw_model' + l] = layer.state_predictor.state_dict()
 
         return state
+
+    def __setstate__(self, state):
+        import gym
+        from baselines.chac.utils import AntWrapper, BlockWrapper, UR5Wrapper
+        agent_params = state['agent_params']
+        env_name = state['info']['env_name']
+        state['layers'] = agent_params['n_layers']
+        wrapper_args = (gym.make(env_name).env, agent_params['n_layers'], agent_params['time_scale'], state['input_dims'])
+        print('Wrapper Args', *wrapper_args)
+        if 'Ant' in env_name:
+            env = AntWrapper(*wrapper_args)
+        elif 'UR5' in env_name:
+            env = UR5Wrapper(*wrapper_args)
+        elif 'Block' in env_name:
+            env = BlockWrapper(*wrapper_args)
+        elif 'Causal' in env_name:
+            env = BlockWrapper(*wrapper_args)
+        elif 'Hook' in env_name:
+            env = BlockWrapper(*wrapper_args)
+        elif 'CopReacher' in env_name:
+            env = BlockWrapper(*wrapper_args)
+
+        state['env'] = env
+
+        self.__init__(**state)
+        for layer in self.layers:
+            l = str(layer.layer_number)
+            layer.actor.load_state_dict(state['torch']['actor' + l])
+            layer.critic.load_state_dict(state['torch']['critic' + l])
+            if hasattr(layer, 'state_predictor'):
+               layer.state_predictor.load_state_dict(state['torch']['fw_model' + l])
 
