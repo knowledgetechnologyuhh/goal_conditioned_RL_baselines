@@ -153,6 +153,12 @@ class CHACPolicy(Policy):
                 state['torch']['fw_model' + l] = layer.state_predictor.cpu().state_dict()
                 state['fw_model' + l + 'err_list'] = layer.state_predictor.err_list
 
+            # move back, just in case
+            layer.actor.to(self.device)
+            layer.critic.to(self.device)
+            if hasattr(layer, 'state_predictor'):
+                layer.state_predictor.to(self.device)
+
         return state
 
     def __setstate__(self, state):
@@ -171,11 +177,4 @@ class CHACPolicy(Policy):
             if hasattr(layer, 'state_predictor'):
                layer.state_predictor.load_state_dict(state['torch']['fw_model' + l])
                layer.state_predictor.err_list = state['fw_model' + l + 'err_list']
-
-            # TODO: verify this
-            # move back, just in case
-            layer.actor.to(self.device)
-            layer.critic.to(self.device)
-            if hasattr(layer, 'state_predictor'):
-                layer.state_predictor.to(self.device)
 
