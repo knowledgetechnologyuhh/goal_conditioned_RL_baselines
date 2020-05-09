@@ -1,6 +1,7 @@
 import numpy as np
 import torch.nn as nn
 import gym
+from baselines import logger
 
 class Base(nn.Module):
     reset_type = 'xavier'
@@ -19,27 +20,28 @@ class Base(nn.Module):
                     raise ValueError("Unknown reset type")
 
             if hasattr(m, 'bias') and m.bias is not None:
-                nn.init.uniform_(m.bias.data, -3e-3, 3e-3)
-                m.bias.data.uniform_()
+                nn.init.uniform_(m.bias.data, *hidden_init(m))
 
     def reset(self):
         self.apply(self._init_weights)
+
 
 def hidden_init(layer):
     fan_in = layer.weight.data.size(-1)
     lim = 1. / np.sqrt(fan_in)
     return (-lim, lim)
 
+
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
-    for j in range(len(sizes)-1):
-        act = activation if j < len(sizes)-2 else output_activation
-        layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
+    for j in range(len(sizes) - 1):
+        act = activation if j < len(sizes) - 2 else output_activation
+        layers += [nn.Linear(sizes[j], sizes[j + 1]), act()]
     return nn.Sequential(*layers)
 
-class BasicEnvWrapper(object):
 
-    def __init__(self, env, n_layers, time_scale, input_dims ):
+class BasicEnvWrapper(object):
+    def __init__(self, env, n_layers, time_scale, input_dims):
         self.wrapped_env = env
         self.n_layers = n_layers
         self.time_scale = time_scale
@@ -63,11 +65,14 @@ class BasicEnvWrapper(object):
         self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
 
         for i in range(len(self.subgoal_bounds)):
-            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
+            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] -
+                                                self.subgoal_bounds[i][0]) / 2
 
         self.subgoal_bounds_offset = offset
-        print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
-        print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
+        logger.info('dims: action = {}, subgoal = {}, end_goal = {}'.format(
+            self.action_dim, self.subgoal_dim, self.end_goal_dim))
+        logger.info('subgoal_bounds: symmetric {}, offset {}'.format(
+            self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
     def __getattr__(self, attr):
         try:
@@ -81,22 +86,29 @@ class BasicEnvWrapper(object):
         self.sim.step()
         self._step_callback()
 
+        #  if self.visualize and self.agent.test_mode:
         if self.visualize:
             self.render()
             if self.graph and self.agent:
                 for l in self.agent.layers:
                     if self.agent.fw:
-                        curi = np.mean(l.curiosity_hist) if l.curiosity_hist else 0.0
-                        self.add_graph_values('curiosity_layer_{}'.format(l.layer_number), np.array([curi]) ,self.wrapped_env.step_ctr, reset=reset)
+                        curi = np.mean(
+                            l.curiosity_hist) if l.curiosity_hist else 0.0
+                        self.add_graph_values('curiosity_layer_{}'.format(l.layer_number),
+                                              np.array([curi]),
+                                              self.wrapped_env.step_ctr,
+                                              reset=reset)
                     else:
                         q_val = np.mean(l.q_values) if l.q_values else 0.0
-                        self.add_graph_values('q_layer_{}'.format(l.layer_number), np.array([q_val]) ,self.wrapped_env.step_ctr, reset=reset)
+                        self.add_graph_values('q_layer_{}'.format(l.layer_number),
+                                              np.array([q_val]),
+                                              self.wrapped_env.step_ctr,
+                                              reset=reset)
 
         return self._get_obs()['observation']
 
 
 class AntWrapper(BasicEnvWrapper):
-
     def __init__(self, env, n_layers, time_scale, input_dims):
         BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
 
@@ -104,36 +116,39 @@ class AntWrapper(BasicEnvWrapper):
         self.subgoal_bounds_symmetric = np.zeros(self.subgoal_dim)
         self.subgoal_bounds_offset = np.zeros(self.subgoal_dim)
         for i in range(self.subgoal_dim):
-            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0])/2
+            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] -
+                                                self.subgoal_bounds[i][0]) / 2
             self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
 
-        self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
-        self.project_state_to_sub_goal = lambda state : self.wrapped_env._obs2subgoal(state)
-        print('dims: action = {}, subgoal = {}, end_goal = {}'.format(self.action_dim, self.subgoal_dim, self.end_goal_dim))
-        print('subgoal_bounds: symmetric {}, offset {}'.format(self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
+        self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
+        self.project_state_to_sub_goal = lambda state: self.wrapped_env._obs2subgoal(state)
+        logger.info('dims: action = {}, subgoal = {}, end_goal = {}'.format(
+            self.action_dim, self.subgoal_dim, self.end_goal_dim))
+        logger.info('subgoal_bounds: symmetric {}, offset {}'.format(
+            self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
 
     def __getattr__(self, attr):
         return self.wrapped_env.__getattribute__(attr)
 
 
 class UR5Wrapper(BasicEnvWrapper):
-
     def __init__(self, env, n_layers, time_scale, input_dims):
         BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
         self.subgoal_dim = len(self.subgoal_bounds)
-        self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
-        self.project_state_to_sub_goal = lambda state : self.wrapped_env.project_state_to_sub_goal(self.wrapped_env.sim, state)
+        self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
+        self.project_state_to_sub_goal = lambda state: self.wrapped_env.project_state_to_sub_goal(self.wrapped_env.sim, state)
 
     def __getattr__(self, attr):
         return self.wrapped_env.__getattribute__(attr)
+
 
 class BlockWrapper(BasicEnvWrapper):
     def __init__(self, env, n_layers, time_scale, input_dims):
         BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
 
         self.set_subgoal_props()
-        self.project_state_to_sub_goal = lambda state : self.wrapped_env._obs2goal(state)
-        self.project_state_to_end_goal = lambda state : self.wrapped_env._obs2goal(state)
+        self.project_state_to_sub_goal = lambda state: self.wrapped_env._obs2goal(state)
+        self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
         self.sub_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
         self.end_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
 
@@ -147,7 +162,6 @@ class BlockWrapper(BasicEnvWrapper):
 
 def prepare_env(env_name, n_layers, time_scale, input_dims):
     wrapper_args = (gym.make(env_name).env, n_layers, time_scale, input_dims)
-    print('Wrapper Args', *wrapper_args)
     if 'Ant' in env_name:
         env = AntWrapper(*wrapper_args)
     elif 'UR5' in env_name:

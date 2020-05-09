@@ -5,12 +5,13 @@ from baselines.template.util import store_args
 from baselines.template.rollout import Rollout
 from tqdm import tqdm
 
+
 class RolloutWorker(Rollout):
-
-
     @store_args
-    def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1, exploit=False, history_len=100, render=False, **kwargs):
-        Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size, history_len=history_len, render=render, **kwargs)
+    def __init__(self, make_env, policy, dims, logger, T, rollout_batch_size=1,
+            exploit=False, history_len=100, render=False, **kwargs):
+        Rollout.__init__(self, make_env, policy, dims, logger, T, rollout_batch_size=rollout_batch_size,
+                history_len=history_len, render=render, **kwargs)
 
         self.env = self.policy.env
         self.env.visualize = render
@@ -44,7 +45,7 @@ class RolloutWorker(Rollout):
     def generate_rollouts(self, return_states=False):
         self.reset_all_rollouts()
         self.policy.set_test_mode()
-        success, self.eval_data, _ = self.policy.train(self.env, self.n_episodes, self.eval_data, 0)
+        success, self.eval_data, _ = self.policy.train(self.env, self.n_episodes, self.eval_data, None)
         self.success_history.append(1.0 if success else 0.0)
         self.n_episodes += 1
         return self.eval_data
@@ -57,13 +58,14 @@ class RolloutWorker(Rollout):
         logs += [('episodes', self.n_episodes)]
 
         # Get metrics for all layers of the hierarchy
-        for i in range(self.policy.n_layers):
+        for i in range(self.policy.n_levels):
             layer_prefix = '{}_{}/'.format(prefix, i)
 
             subg_succ_prefix = '{}subgoal_succ'.format(layer_prefix)
             if subg_succ_prefix in eval_data.keys():
                 if len(eval_data[subg_succ_prefix]) > 0:
-                    logs += [(subg_succ_prefix + '_rate', np.mean(eval_data[subg_succ_prefix]))]
+                    logs += [(subg_succ_prefix + '_rate',
+                              np.mean(eval_data[subg_succ_prefix]))]
                 else:
                     logs += [(subg_succ_prefix + '_rate', 0.0)]
 
@@ -86,7 +88,7 @@ class RolloutWorker(Rollout):
             new_logs = []
             for key, val in logs:
                 if not key.startswith(prefix):
-                    new_logs +=[((prefix + '/' + key, val))]
+                    new_logs += [((prefix + '/' + key, val))]
                 else:
                     new_logs += [(key, val)]
             logs = new_logs
@@ -98,4 +100,3 @@ class RolloutWorker(Rollout):
         self.custom_histories.clear()
         if hasattr(self, 'eval_data'):
             self.eval_data.clear()
-

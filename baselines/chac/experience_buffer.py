@@ -7,7 +7,7 @@ class ExperienceBuffer:
         self.batch_size = batch_size
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self._states = torch.empty((self.max_buffer_size, state_dim) ,dtype=torch.float32)
+        self._states = torch.empty((self.max_buffer_size, state_dim), dtype=torch.float32)
         self._actions = torch.empty((self.max_buffer_size, action_dim), dtype=torch.float32)
         self._rewards = torch.empty(self.max_buffer_size, dtype=torch.float32)
         self._new_states = torch.empty((self.max_buffer_size, state_dim), dtype=torch.float32)
@@ -18,7 +18,7 @@ class ExperienceBuffer:
         self._cursor = 0
 
     def add(self, experience):
-        assert len(experience) == 7, 'Experience must be of form (s, a, r, s, g, t, info\')'
+        assert len( experience) == 7, 'Experience must be of form (s, a, r, s, g, t, info\')'
         assert type(experience[5]) == bool
 
         # Enter experience at current cursor
@@ -40,7 +40,7 @@ class ExperienceBuffer:
             self._cursor = 0
 
     def get_batch(self):
-        dist = torch.randint(0, high=self._size, size=(min(self._size, self.batch_size),))
+        dist = torch.randint(0, high=self._size, size=(min(self._size, self.batch_size), ))
         states = self._states[dist].to(self.device)
         actions = self._actions[dist].to(self.device)
         rewards = self._rewards[dist].unsqueeze(1).to(self.device)

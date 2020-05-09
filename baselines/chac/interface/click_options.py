@@ -1,16 +1,19 @@
 import click
 chac_options = [
 click.option('--n_test_rollouts', type=int, default=25, help='The number of testing rollouts.'),
-click.option('--train_batch_size', type=int, default=1024, help='The number of state transitions processed during network training.'),
+click.option('--batch_size', type=int, default=1024, help='The number of state transitions processed during network training.'),
 click.option('--n_train_batches', type=int, default=40, help='The number of batches for model training.'),
-click.option('--buffer_size', type=int, default=250, help='The number of rollouts to store per in each layers buffer.'), # old default 500
+click.option('--buffer_size', type=int, default=500, help='The number of rollouts to store per in each levels buffer.'),
 
 # HAC
 click.option('--q_lr', type=float, default=0.001, help='critic learning rate'),
-click.option('--pi_lr', type=float, default=0.001, help='actor learning rate'),
-click.option('--time_scale', type=int, default=27, help='The steps per layer.'),
+click.option('--q_hidden_size', type=int, default=64),
+click.option('--mu_lr', type=float, default=0.001, help='actor learning rate'),
+click.option('--mu_hidden_size', type=int, default=64),
+
+click.option('--time_scale', type=int, default=27, help='The steps per level.'),
 click.option('--subgoal_test_perc', type=float, default=0.3, help='The percentage of subgoals to test.'),
-click.option('--n_layers', type=int, default=2, help='The number hierarchies'),
+click.option('--n_levels', type=int, default=2, help='The number hierarchies'),
 
 # Forward model
 click.option('--fw', type=int, default=0, help='Enable forward model'),

@@ -9,17 +9,11 @@ from baselines.chac.utils import prepare_env
 from gym.envs.registration import registry
 
 DEFAULT_ENV_PARAMS = {
-    'AntReacherEnv-v0':{ },
+    'AntReacherEnv-v0': {},
 }
 
 DEFAULT_PARAMS = {
-    # env
-    'max_u': 1.,  # max absolute value of actions on different coordinates
     # chac
-    'layers': 3,  # number of layers in the critic/actor networks
-    'hidden_size': 64,  # number of neurons in each hidden layers
-    'scope': 'chac',  # can be tweaked for testing
-    'reuse': False,
     'use_mpi': False,
     'rollout_batch_size': 1,  # per mpi thread
     'atomic_noise': 0.1,
@@ -28,8 +22,8 @@ DEFAULT_PARAMS = {
 
 POLICY_ACTION_PARAMS = {}
 CACHED_ENVS = {}
-ROLLOUT_PARAMS = { 'T': 50, 'policy_action_params': {} }
-EVAL_PARAMS = { 'policy_action_params': { } }
+ROLLOUT_PARAMS = {'T': 0, 'policy_action_params': {}}
+EVAL_PARAMS = {'policy_action_params': {}}
 
 OVERRIDE_PARAMS_LIST = list(DEFAULT_PARAMS.keys())
 
@@ -58,23 +52,18 @@ def prepare_params(kwargs):
         return gym.make(env_name)
 
     kwargs['make_env'] = make_env
+
     if env_name[:3] == 'Cop':
         registry.env_specs[env_name]._kwargs['tmp'] = 3
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
+
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
     if env_name[:3] == 'Cop':
         registry.env_specs[env_name]._kwargs['tmp'] = 1
-    kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
-
-    for name in ['hidden_size', 'layers', 'max_u', 'scope', 'verbose']:
-        chac_params[name] = kwargs[name]
-        kwargs['_' + name] = kwargs[name]
-        del kwargs[name]
-
     kwargs['chac_params'] = chac_params
 
     return kwargs
@@ -84,6 +73,7 @@ def log_params(params, logger=logger):
     for key in sorted(params.keys()):
         logger.info('{}: {}'.format(key, params[key]))
 
+
 def configure_policy(dims, params):
     # Extract relevant parameters.
     chac_params = params['chac_params']
@@ -92,42 +82,38 @@ def configure_policy(dims, params):
     torch.set_num_threads(params['num_threads'])
 
     # CHAC agent
-    env = prepare_env(params['env_name'], params['n_layers'], params['time_scale'], input_dims)
+    env = prepare_env(params['env_name'], params['n_levels'],
+                      params['time_scale'], input_dims)
     agent_params = {
-            "subgoal_test_perc": params['subgoal_test_perc'],
-            "subgoal_penalty": -params['time_scale'],
-            "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
-            "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
-            "n_layers": params['n_layers'],
-            "batch_size": params['train_batch_size'],
-            "buffer_size": params['buffer_size'],
-            "time_scale": params['time_scale'],
-            "hidden_size": chac_params['hidden_size'],
-            "q_lr": params['q_lr'],
-            "pi_lr": params['pi_lr'],
-            'verbose': chac_params['verbose'],
-            # forward model
-            "fw": params['fw'],
-            "fw_params": {
-                "hidden_size": params['fw_hidden_size'],
-                "lr": params['fw_lr'],
-                "eta": params['eta'],
-                }
-            }
+        "subgoal_test_perc": params['subgoal_test_perc'],
+        "subgoal_penalty": -params['time_scale'],
+        "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
+        "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
+        "n_levels": params['n_levels'],
+        "batch_size": params['batch_size'],
+        "buffer_size": params['buffer_size'],
+        "time_scale": params['time_scale'],
+        "q_lr": params['q_lr'],
+        "q_hidden_size": params['q_hidden_size'],
+        "mu_lr": params['mu_lr'],
+        "mu_hidden_size": params['mu_hidden_size'],
+        # forward model
+        "fw": params['fw'],
+        "fw_params": {
+            "hidden_size": params['fw_hidden_size'],
+            "lr": params['fw_lr'],
+            "eta": params['eta'],
+        }
+    }
 
     chac_params.update({
         'input_dims': input_dims,  # agent takes an input observations
         'T': params['T'],
         'rollout_batch_size': params['rollout_batch_size'],
-        'gamma': params['gamma'],
-        'reuse': params['reuse'],
-        'use_mpi': params['use_mpi'],
-        'batch_size': params['train_batch_size'],
-        'buffer_size': params['buffer_size'],
-        'n_layers': params['n_layers'],
         'agent_params': agent_params,
         'env': env,
-        })
+        'verbose': params['verbose'],
+    })
     chac_params['info'] = {
         'env_name': params['env_name'],
     }
@@ -140,16 +126,19 @@ def configure_policy(dims, params):
 
     return policy
 
+
 def load_policy(restore_policy_file, params):
     # Load policy
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     return policy
 
+
 def configure_dims(params):
     env = cached_make_env(params['make_env'])
     env.reset()
     obs, _, _, info = env.step(env.action_space.sample())
+
     if params['env_name'][:3] == 'Cop':
         env.reset()
 
