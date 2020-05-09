@@ -1,7 +1,7 @@
 import numpy as np
 import gym
-import pickle
 import torch
+import pickle
 
 from baselines import logger
 from baselines.chac.chac_policy import CHACPolicy
@@ -141,7 +141,7 @@ def configure_policy(dims, params):
     return policy
 
 def load_policy(restore_policy_file, params):
-    # Load policy.
+    # Load policy
     with open(restore_policy_file, 'rb') as f:
         policy = pickle.load(f)
     return policy

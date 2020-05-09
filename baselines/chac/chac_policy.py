@@ -4,6 +4,7 @@ import numpy as np
 from baselines.chac.layer import Layer
 from baselines.chac.utils import prepare_env
 from baselines import logger
+import torch
 import time
 
 class CHACPolicy(Policy):
@@ -12,6 +13,7 @@ class CHACPolicy(Policy):
             scope, T, rollout_batch_size, gamma, agent_params, env, reuse=False, verbose=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.verbose = verbose
         self.n_layers = agent_params['n_layers']
         self.env = env
@@ -77,7 +79,7 @@ class CHACPolicy(Policy):
         # Set subgoal testing ratio each layer will use
         self.subgoal_test_perc = agent_params["subgoal_test_perc"]
         # Create agent with number of levels specified by user
-        self.layers = [Layer(i, self.env, agent_params) for i in range(self.n_layers)]
+        self.layers = [Layer(i, self.env, agent_params, self.device) for i in range(self.n_layers)]
 
     def learn(self, num_updates):
         """Update actor and critic networks for each layer"""
@@ -136,7 +138,7 @@ class CHACPolicy(Policy):
                              'main', 'target', 'lock', 'env', 'sample_transitions',
                              'stage_shapes', 'create_actor_critic',
                              'obs2preds_buffer', 'obs2preds_model', 'eval_data', 'layers', 'goal_array', 'total_steps',
-                             'current_state']
+                             'current_state', 'device']
 
         state = {k: v for k, v in self.__dict__.items() if all([not subname in k for subname in excluded_subnames])}
         state['buffer_size'] = self.buffer_size
@@ -145,10 +147,10 @@ class CHACPolicy(Policy):
         # save pytoch model weights
         for layer in self.layers:
             l = str(layer.layer_number)
-            state['torch']['actor' + l] = layer.actor.state_dict()
-            state['torch']['critic' + l] = layer.critic.state_dict()
+            state['torch']['actor' + l] = layer.actor.cpu().state_dict()
+            state['torch']['critic' + l] = layer.critic.cpu().state_dict()
             if hasattr(layer, 'state_predictor'):
-                state['torch']['fw_model' + l] = layer.state_predictor.state_dict()
+                state['torch']['fw_model' + l] = layer.state_predictor.cpu().state_dict()
                 state['fw_model' + l + 'err_list'] = layer.state_predictor.err_list
 
         return state
@@ -169,4 +171,11 @@ class CHACPolicy(Policy):
             if hasattr(layer, 'state_predictor'):
                layer.state_predictor.load_state_dict(state['torch']['fw_model' + l])
                layer.state_predictor.err_list = state['fw_model' + l + 'err_list']
+
+            # TODO: verify this
+            # move back, just in case
+            layer.actor.to(self.device)
+            layer.critic.to(self.device)
+            if hasattr(layer, 'state_predictor'):
+                layer.state_predictor.to(self.device)
 

@@ -6,14 +6,13 @@ from baselines.chac.critic import Critic
 from baselines.chac.forward_model import ForwardModel
 
 class Layer():
-    def __init__(self, layer_number, env, agent_params):
+    def __init__(self, layer_number, env, agent_params, device):
         self.layer_number = layer_number
         self.n_layers = agent_params['n_layers']
         self.time_scale = agent_params['time_scale']
         self.subgoal_test_perc = agent_params['subgoal_test_perc']
         self.fw = agent_params['fw']
-
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device
 
         # Set time limit for each layer. If agent uses only 1 layer, time limit
         # is the max number of low-level actions allowed in the episode (i.e, env.max_actions).
