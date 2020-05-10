@@ -60,11 +60,14 @@ class Critic(Base):
         critic_loss = self.mse_loss(current_q, target_q)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        flat_grads = torch.cat([param.flatten() for _, param in self.named_parameters()])
         self.critic_optimizer.step()
 
         return {
-            "critic_loss": critic_loss.item(),
+            'q_loss': critic_loss.item(),
             'target_q': target_q.mean().item(),
             'next_q': next_q.mean().item(),
-            'current_q': current_q.mean().item()
+            'current_q': current_q.mean().item(),
+            'q_grads': flat_grads.mean().item(),
+            'q_grads_std': flat_grads.std().item(),
         }

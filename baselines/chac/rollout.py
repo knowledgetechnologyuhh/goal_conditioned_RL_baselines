@@ -69,20 +69,20 @@ class RolloutWorker(Rollout):
                 else:
                     logs += [(subg_succ_prefix + '_rate', 0.0)]
 
-            for postfix in ["n_subgoals", "fw_loss", "fw_bonus", "reward", \
-                    "critic_loss", "target_q", "next_q", "current_q", \
-                    "actor_loss", "reward_-0.0_frac", "reward_-1.0_frac", \
+            for postfix in ["n_subgoals", "fw_loss", "fw_bonus", "reward", "q_loss", "q_grads",
+                    "q_grads_std", "target_q", "next_q", "current_q", "mu_loss", "mu_grads",
+                    "mu_grads_std", "reward_-0.0_frac", "reward_-1.0_frac",
                     "reward_-{}.0_frac".format(self.time_scale)]:
                 metric_key = "{}{}".format(layer_prefix, postfix)
                 if metric_key in eval_data.keys():
                     logs += [(metric_key, eval_data[metric_key])]
 
-            q_prefix = "{}Q".format(layer_prefix)
+            q_prefix = "{}q".format(layer_prefix)
             if q_prefix in eval_data.keys():
                 if len(eval_data[q_prefix]) > 0:
-                    logs += [("{}avg_Q".format(layer_prefix), np.mean(eval_data[q_prefix]))]
+                    logs += [("{}avg_q".format(layer_prefix), np.mean(eval_data[q_prefix]))]
                 else:
-                    logs += [("{}avg_Q".format(layer_prefix), 0.0)]
+                    logs += [("{}avg_q".format(layer_prefix), 0.0)]
 
         if prefix != '' and not prefix.endswith('/'):
             new_logs = []

@@ -300,8 +300,8 @@ class Layer():
             if "{}n_subgoals".format(train_test_prefix) not in eval_data:
                 eval_data["{}n_subgoals".format(train_test_prefix)] = 0
 
-        if "{}Q".format(train_test_prefix) not in eval_data:
-            eval_data["{}Q".format(train_test_prefix)] = []
+        if "{}q".format(train_test_prefix) not in eval_data:
+            eval_data["{}q".format(train_test_prefix)] = []
 
         # Set layer's current state and new goal state
         self.goal = agent.goal_array[self.level]
@@ -325,7 +325,7 @@ class Layer():
             action_tensor = torch.FloatTensor(action).view(1, -1).to(self.device)
             with torch.no_grad():
                 q_val = self.critic(current_state_tensor, goal_tensor, action_tensor)
-            eval_data["{}Q".format(train_test_prefix)] += [q_val[0].item()]
+            eval_data["{}q".format(train_test_prefix)] += [q_val[0].item()]
             self.q_values += [q_val[0].item()]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
@@ -484,11 +484,15 @@ class Layer():
 
             q_update = self.critic.update(old_states, actions, rewards, new_states, goals,
                     self.actor(new_states, goals).detach(), done)
-            actor_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
-            self.actor.update(actor_loss)
-            learn_history['actor_loss'] += [actor_loss.detach().item()]
 
             for k, v in q_update.items():
+                if k not in learn_history.keys(): learn_history[k] = []
+                learn_history[k].append(v)
+
+            mu_loss = -self.critic(old_states, goals, self.actor(old_states, goals)).mean()
+            mu_update = self.actor.update(mu_loss)
+
+            for k, v in mu_update.items():
                 if k not in learn_history.keys(): learn_history[k] = []
                 learn_history[k].append(v)
 

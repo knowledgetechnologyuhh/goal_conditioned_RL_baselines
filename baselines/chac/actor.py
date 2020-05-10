@@ -51,7 +51,13 @@ class Actor(Base):
         h3 = F.relu(self.fc3(h2))
         return torch.tanh(self.fc4(h3)) * self.action_space_bounds + self.action_offset
 
-    def update(self, actor_loss):
+    def update(self, mu_loss):
         self.actor_optimizer.zero_grad()
-        actor_loss.backward()
+        mu_loss.backward()
+        flat_grads = torch.cat([param.flatten() for _, param in self.named_parameters()])
         self.actor_optimizer.step()
+        return {
+            'mu_loss': mu_loss.item(),
+            'mu_grads': flat_grads.mean().item(),
+            'mu_grads_std': flat_grads.std().item(),
+        }
