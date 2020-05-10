@@ -41,10 +41,8 @@ def mlp(sizes, activation, output_activation=nn.Identity):
 
 
 class BasicEnvWrapper(object):
-    def __init__(self, env, n_layers, time_scale, input_dims):
+    def __init__(self, env, time_scales, input_dims):
         self.wrapped_env = env
-        self.n_layers = n_layers
-        self.time_scale = time_scale
         self.visualize = False
         self.graph = self.visualize
         # set in config
@@ -54,7 +52,7 @@ class BasicEnvWrapper(object):
         self.end_goal_dim = input_dims['g']
         self.action_bounds = np.ones(self.action_dim)
         self.action_offset = np.zeros(self.action_dim)
-        self.max_actions = self.time_scale**(self.n_layers)
+        self.max_actions = np.prod(time_scales)
 
     def set_subgoal_props(self):
         """ use wtm internal methods to specify subgoal properties"""
@@ -108,8 +106,8 @@ class BasicEnvWrapper(object):
 
 
 class AntWrapper(BasicEnvWrapper):
-    def __init__(self, env, n_layers, time_scale, input_dims):
-        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
+    def __init__(self, env, time_scale, input_dims):
+        BasicEnvWrapper.__init__(self, env, time_scale, input_dims)
 
         self.subgoal_dim = len(self.subgoal_bounds)
         self.subgoal_bounds_symmetric = np.zeros(self.subgoal_dim)
@@ -131,8 +129,8 @@ class AntWrapper(BasicEnvWrapper):
 
 
 class UR5Wrapper(BasicEnvWrapper):
-    def __init__(self, env, n_layers, time_scale, input_dims):
-        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
+    def __init__(self, env, time_scale, input_dims):
+        BasicEnvWrapper.__init__(self, env, time_scale, input_dims)
         self.subgoal_dim = len(self.subgoal_bounds)
         self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
         self.project_state_to_sub_goal = lambda state: self.wrapped_env.project_state_to_sub_goal(self.wrapped_env.sim, state)
@@ -142,8 +140,8 @@ class UR5Wrapper(BasicEnvWrapper):
 
 
 class BlockWrapper(BasicEnvWrapper):
-    def __init__(self, env, n_layers, time_scale, input_dims):
-        BasicEnvWrapper.__init__(self, env, n_layers, time_scale, input_dims)
+    def __init__(self, env, time_scale, input_dims):
+        BasicEnvWrapper.__init__(self, env, time_scale, input_dims)
 
         self.set_subgoal_props()
         self.project_state_to_sub_goal = lambda state: self.wrapped_env._obs2goal(state)
@@ -159,8 +157,8 @@ class BlockWrapper(BasicEnvWrapper):
         self.wrapped_env.goal = subgoals[0]
 
 
-def prepare_env(env_name, n_layers, time_scale, input_dims):
-    wrapper_args = (gym.make(env_name).env, n_layers, time_scale, input_dims)
+def prepare_env(env_name, time_scale, input_dims):
+    wrapper_args = (gym.make(env_name).env, time_scale, input_dims)
     if 'Ant' in env_name:
         env = AntWrapper(*wrapper_args)
     elif 'UR5' in env_name:

@@ -11,7 +11,7 @@ class Layer():
     def __init__(self, level, env, agent_params, device):
         self.level = level
         self.n_levels = agent_params['n_levels']
-        self.time_scale = agent_params['time_scale']
+        self.time_scale = agent_params['time_scales'][level]
         self.subgoal_test_perc = agent_params['subgoal_test_perc']
         self.fw = agent_params['fw']
         self.device = device
@@ -60,7 +60,7 @@ class Layer():
         # Create buffer to store not yet finalized goal replay transitions
         self.temp_goal_replay_storage = []
 
-        logger.info('Hierarchy Level:', self.level)
+        logger.info('\nHierarchy Level {} with time scale {}'.format(self.level, self.time_scale))
         # Initialize networks
         self.actor = Actor(env,
                            self.level,
@@ -91,7 +91,7 @@ class Layer():
 
         # Create flag to indicate when layer has ran out of attempts to achieve goal.  This will be important for subgoal testing
         self.maxed_out = False
-        self.subgoal_penalty = agent_params["subgoal_penalty"]
+        self.subgoal_penalty = agent_params["subgoal_penalties"][level]
         self.curiosity_hist = []
         self.q_values = []
 
@@ -455,7 +455,6 @@ class Layer():
 
         learn_history = {}
         learn_history['reward'] = []
-        learn_history['actor_loss'] = []
         if self.fw:
             learn_history['fw_bonus'] = []
             learn_history['fw_loss'] = []

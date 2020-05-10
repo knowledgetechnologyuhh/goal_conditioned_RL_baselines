@@ -16,7 +16,7 @@ class RolloutWorker(Rollout):
         self.env = self.policy.env
         self.env.visualize = render
         self.env.graph = kwargs['graph']
-        self.time_scale = kwargs['time_scale']
+        self.time_scales = np.array([int(t) for t in kwargs['time_scales'].split(',')])
         self.eval_data = {}
 
     def train_policy(self, n_train_rollouts, n_train_batches):
@@ -72,7 +72,7 @@ class RolloutWorker(Rollout):
             for postfix in ["n_subgoals", "fw_loss", "fw_bonus", "reward", "q_loss", "q_grads",
                     "q_grads_std", "target_q", "next_q", "current_q", "mu_loss", "mu_grads",
                     "mu_grads_std", "reward_-0.0_frac", "reward_-1.0_frac",
-                    "reward_-{}.0_frac".format(self.time_scale)]:
+                    "reward_-{}.0_frac".format(self.time_scales[i])]:
                 metric_key = "{}{}".format(layer_prefix, postfix)
                 if metric_key in eval_data.keys():
                     logs += [(metric_key, eval_data[metric_key])]

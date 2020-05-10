@@ -13,12 +13,13 @@ class CHACPolicy(Policy):
     def __init__(self, input_dims, T, rollout_batch_size, agent_params, env, verbose=False, **kwargs):
         Policy.__init__(self, input_dims, T, rollout_batch_size, **kwargs)
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if self.device == "cuda":
-            logger.info('Use GPU:{} {}', torch.cuda.current_device(),
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+            logger.info('Running on GPU: {} {}', torch.cuda.current_device(),
                   torch.cuda.get_device_name(torch.cuda.current_device()))
         else:
-            logger.info('Use CPU')
+            self.device = torch.device('cpu')
+            logger.info('Running on CPU ...')
 
         self.verbose = verbose
         self.n_levels = agent_params['n_levels']
@@ -179,10 +180,8 @@ class CHACPolicy(Policy):
     def __setstate__(self, state):
         agent_params = state['agent_params']
         env_name = state['info']['env_name']
-        state['n_levels'] = agent_params['n_levels']
-        state['env'] = prepare_env(env_name, agent_params['n_levels'],
-                                   agent_params['time_scale'],
-                                   state['input_dims'])
+
+        state['env'] = prepare_env(env_name, agent_params['time_scales'], state['input_dims'])
         self.__init__(**state)
         self.env.agent = self
 

@@ -11,7 +11,7 @@ click.option('--q_hidden_size', type=int, default=64),
 click.option('--mu_lr', type=float, default=0.001, help='actor learning rate'),
 click.option('--mu_hidden_size', type=int, default=64),
 
-click.option('--time_scale', type=int, default=27, help='The steps per level.'),
+click.option('--time_scales', type=str, default='27,27', help='Steps per level from lowest to highest also used to define penalties'),
 click.option('--subgoal_test_perc', type=float, default=0.3, help='The percentage of subgoals to test.'),
 click.option('--n_levels', type=int, default=2, help='The number hierarchies'),
 

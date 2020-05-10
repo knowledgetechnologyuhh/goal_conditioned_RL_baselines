@@ -80,19 +80,21 @@ def configure_policy(dims, params):
     input_dims = dims.copy()
 
     torch.set_num_threads(params['num_threads'])
+    time_scales = np.array([int(t) for t in params['time_scales'].split(',')])
+    assert len(time_scales) == params['n_levels']
 
     # CHAC agent
-    env = prepare_env(params['env_name'], params['n_levels'],
-                      params['time_scale'], input_dims)
+    env = prepare_env(params['env_name'], time_scales, input_dims)
+
     agent_params = {
         "subgoal_test_perc": params['subgoal_test_perc'],
-        "subgoal_penalty": -params['time_scale'],
+        "subgoal_penalties": -1. * time_scales,
         "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
         "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
         "n_levels": params['n_levels'],
         "batch_size": params['batch_size'],
         "buffer_size": params['buffer_size'],
-        "time_scale": params['time_scale'],
+        "time_scales": time_scales,
         "q_lr": params['q_lr'],
         "q_hidden_size": params['q_hidden_size'],
         "mu_lr": params['mu_lr'],
