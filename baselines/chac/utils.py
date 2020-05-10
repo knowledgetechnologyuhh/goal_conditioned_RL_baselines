@@ -92,15 +92,14 @@ class BasicEnvWrapper(object):
             if self.graph and self.agent:
                 for l in self.agent.layers:
                     if self.agent.fw:
-                        curi = np.mean(
-                            l.curiosity_hist) if l.curiosity_hist else 0.0
-                        self.add_graph_values('curiosity_layer_{}'.format(l.layer_number),
+                        curi = np.mean(l.curiosity_hist) if l.curiosity_hist else 0.0
+                        self.add_graph_values('curiosity_layer_{}'.format(l.level),
                                               np.array([curi]),
                                               self.wrapped_env.step_ctr,
                                               reset=reset)
                     else:
                         q_val = np.mean(l.q_values) if l.q_values else 0.0
-                        self.add_graph_values('q_layer_{}'.format(l.layer_number),
+                        self.add_graph_values('q_layer_{}'.format(l.level),
                                               np.array([q_val]),
                                               self.wrapped_env.step_ctr,
                                               reset=reset)

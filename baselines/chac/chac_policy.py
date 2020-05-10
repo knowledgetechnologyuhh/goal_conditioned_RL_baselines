@@ -194,3 +194,5 @@ class CHACPolicy(Policy):
             if hasattr(layer, 'state_predictor'):
                 layer.state_predictor.load_state_dict(state['torch']['fw_model' + l])
                 layer.state_predictor.err_list = state['fw_model' + l + 'err_list']
+                layer.state_predictor.min_err = np.min(state['fw_model' + l + 'err_list'])
+                layer.state_predictor.max_err = np.max(state['fw_model' + l + 'err_list'])

@@ -6,12 +6,12 @@ from baselines.chac.utils import Base, mlp
 
 
 class ForwardModel(Base):
-    def __init__(self, env, layer_number, mb_params, err_list_size):
+    def __init__(self, env, level, mb_params, err_list_size):
 
         super(ForwardModel, self).__init__()
-        self.model_name = 'model_' + str(layer_number)
+        self.model_name = 'model_' + str(level)
 
-        action_dim = env.action_dim if layer_number == 0 else env.subgoal_dim
+        action_dim = env.action_dim if level == 0 else env.subgoal_dim
 
         self.hidden_sizes = [
             int(size) for size in mb_params['hidden_size'].split(',')
