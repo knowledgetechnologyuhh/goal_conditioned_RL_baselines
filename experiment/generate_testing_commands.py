@@ -1,14 +1,13 @@
-import os
 import getpass
 
 """
-This script is used for testing backwards compatibility after adding a new feature. 
+This script is used for testing backwards compatibility after adding a new feature.
 If you want to merge your development branch with the overall devel branch, please proceed as described in README.md file
 """
 
 
 class TestingConfig:
-    algorithms = ['herhrl', 'her']
+    algorithms = ['herhrl', 'her', 'chac']
     environments = [
         'BlockStackMujocoEnv-gripper_random-o0-v1',
         'BlockStackMujocoEnv-gripper_random-o2-v1',
@@ -52,6 +51,27 @@ def get_herhrl_cmds(base_cmd):
 
     return all_cmds
 
+def get_chac_cmds(base_cmd):
+    base_cmd = base_cmd + " --algorithm baselines.chac"
+    forward_model = [0, 1]
+    forward_model_hs = ['32', '32,32', '32,32,32']
+    n_levels = [1, 2]
+    time_scales = ['10', '10,3']
+
+    all_cmds = []
+    for fw in forward_model:
+        for levels, tscale in zip(n_levels, time_scales):
+            cmd = base_cmd
+            cmd += " --fw {}".format(fw)
+            cmd += " --n_levels {}".format(levels)
+            cmd += " --time_scales {}".format(fw)
+            if fw:
+                for fwhs in forward_model_hs:
+                    cmds.append(cmd + " --fw_hidden_size {}".format(fwhs))
+            else:
+                cmds.append(cmd)
+
+    return all_cmds
 
 if __name__ == "__main__":
     cmds = []
