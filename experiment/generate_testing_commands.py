@@ -54,7 +54,7 @@ def get_herhrl_cmds(base_cmd):
 def get_chac_cmds(base_cmd):
     base_cmd = base_cmd + " --algorithm baselines.chac"
     forward_model = [0, 1]
-    forward_model_hs = ['32', '32,32', '32,32,32']
+    forward_model_hs = ['32', '32,32,32']
     n_levels = [1, 2]
     time_scales = ['10', '10,3']
 
@@ -64,7 +64,7 @@ def get_chac_cmds(base_cmd):
             cmd = base_cmd
             cmd += " --fw {}".format(fw)
             cmd += " --n_levels {}".format(levels)
-            cmd += " --time_scales {}".format(fw)
+            cmd += " --time_scales {}".format(tscale)
             if fw:
                 for fwhs in forward_model_hs:
                     cmds.append(cmd + " --fw_hidden_size {}".format(fwhs))
