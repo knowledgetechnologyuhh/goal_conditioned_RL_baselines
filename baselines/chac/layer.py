@@ -92,7 +92,7 @@ class Layer():
         # Create flag to indicate when layer has ran out of attempts to achieve goal.  This will be important for subgoal testing
         self.maxed_out = False
         self.subgoal_penalty = agent_params["subgoal_penalties"][level]
-        self.curiosity_hist = []
+        self.surprise_history = []
         self.q_values = []
 
     # Add noise to provided action
@@ -359,10 +359,8 @@ class Layer():
             # This is very slow, only use for testing and render=True
             if agent.env.graph and self.fw and agent.env.visualize and self.state_predictor.err_list:
                 agent_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
-                curi = self.state_predictor.pred_bonus(action_tensor,
-                                                       current_state_tensor,
-                                                       agent_state_tensor)
-                self.curiosity_hist += curi.tolist()
+                surprise = self.state_predictor.pred_bonus(action_tensor, current_state_tensor, agent_state_tensor)
+                self.surprise_history += surprise.tolist()
 
             # Print if goal from current layer has been achieved
             if agent.verbose and goal_status[self.level]:

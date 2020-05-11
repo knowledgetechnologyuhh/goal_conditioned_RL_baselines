@@ -90,9 +90,9 @@ class BasicEnvWrapper(object):
             if self.graph and self.agent:
                 for l in self.agent.layers:
                     if self.agent.fw:
-                        curi = l.curiosity_hist[-1] if l.curiosity_hist else 0.0
-                        self.add_graph_values('curiosity_layer_{}'.format(l.level),
-                                              np.array([curi]),
+                        surprise = l.surprise_history[-1] if l.surprise_history else 0.0
+                        self.add_graph_values('surprise_layer_{}'.format(l.level),
+                                              np.array([surprise]),
                                               self.wrapped_env.step_ctr,
                                               reset=reset)
                     else:
