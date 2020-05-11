@@ -15,8 +15,8 @@ class CHACPolicy(Policy):
 
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
-            logger.info('Running on GPU: {} {}', torch.cuda.current_device(),
-                  torch.cuda.get_device_name(torch.cuda.current_device()))
+            logger.info('Running on GPU: {} {}'.format(torch.cuda.current_device(),
+                  torch.cuda.get_device_name(torch.cuda.current_device())))
         else:
             self.device = torch.device('cpu')
             logger.info('Running on CPU ...')
