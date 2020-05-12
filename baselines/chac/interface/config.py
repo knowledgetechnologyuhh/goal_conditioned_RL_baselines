@@ -14,6 +14,11 @@ DEFAULT_ENV_PARAMS = {
 
 DEFAULT_PARAMS = {
     # chac
+    'fw': 1,
+    'fw_hidden_size': '64,64,64',
+    'eta': 0.5,
+    'n_levels': 2,
+    'time_scales': '27,27',
     'use_mpi': False,
     'rollout_batch_size': 1,  # per mpi thread
     'atomic_noise': 0.1,
