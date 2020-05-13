@@ -40,37 +40,77 @@ def mlp(sizes, activation, output_activation=nn.Identity):
     return nn.Sequential(*layers)
 
 
-class BasicEnvWrapper(object):
-    def __init__(self, env, time_scales, input_dims):
+class EnvWrapper(object):
+    def __init__(self, env_name , env, time_scales, input_dims):
+        self.name = env_name
         self.wrapped_env = env
         self.visualize = False
         self.graph = self.visualize
-        # set in config
         self.agent = None
         self.state_dim = input_dims['o']
         self.action_dim = input_dims['u']
         self.end_goal_dim = input_dims['g']
         self.action_bounds = np.ones(self.action_dim)
         self.action_offset = np.zeros(self.action_dim)
+        # maximum number of actions as product of steps per level
         self.max_actions = np.prod(time_scales)
 
-    def set_subgoal_props(self):
-        """ use wtm internal methods to specify subgoal properties"""
-        self.subgoal_dim = self.end_goal_dim
-        scale, offset = self.get_scale_and_offset_for_normalized_subgoal()
-        self.subgoal_bounds = np.stack((scale, scale), axis=1)
-        self.subgoal_bounds[:2, 0] *= -1.0
-        self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
+        if hasattr(env, 'subgoal_bounds'):
+            # some enviroments have a predefined subgoal space
+            self.subgoal_dim = len(env.subgoal_bounds)
+            self.subgoal_bounds_symmetric = np.zeros(self.subgoal_dim)
+            self.subgoal_bounds_offset = np.zeros(self.subgoal_dim)
+            for i in range(self.subgoal_dim):
+                self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0]) / 2
+                self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
 
-        for i in range(len(self.subgoal_bounds)):
-            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] -
-                                                self.subgoal_bounds[i][0]) / 2
+        else:
+            # otherwise we assume the end goal space to be equal to the sub goal space
+            self.subgoal_dim = self.end_goal_dim
+            scale, offset = self.get_scale_and_offset_for_normalized_subgoal()
+            self.subgoal_bounds = np.stack((scale, scale), axis=1)
+            self.subgoal_bounds[:2, 0] *= -1.0
+            self.subgoal_bounds_offset = offset
+            self.subgoal_bounds_symmetric = np.zeros((len(self.subgoal_bounds)))
+            for i in range(len(self.subgoal_bounds)):
+                self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] - self.subgoal_bounds[i][0]) / 2
 
-        self.subgoal_bounds_offset = offset
+            self.sub_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
+            self.end_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
+
         logger.info('dims: action = {}, subgoal = {}, end_goal = {}'.format(
             self.action_dim, self.subgoal_dim, self.end_goal_dim))
         logger.info('subgoal_bounds: symmetric {}, offset {}'.format(
             self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
+
+        self.project_state_to_end_goal = lambda state: env._obs2goal(state)
+        if hasattr(env, '_obs2subgoal'):
+            # use predefined method of environment
+            self.project_state_to_sub_goal = lambda state: env._obs2subgoal(state)
+        else:
+            if hasattr(env, 'project_state_to_sub_goal'):
+                # wrap lambda to only input state
+                self.project_state_to_sub_goal = lambda state: env.project_state_to_sub_goal(env.sim, state)
+            else:
+                # project to end goal space
+                self.project_state_to_sub_goal = lambda state: env._obs2goal(state)
+
+
+    def display_end_goal(self, endgoal):
+        if hasattr(self.wrapped_env, 'display_end_goal'):
+            self.wrapped_env.display_end_goal(endgoal)
+        else:
+            return endgoal
+
+    def display_subgoals(self, subgoals):
+        if hasattr(self.wrapped_env, 'display_subgoals'):
+                self.wrapped_env.display_subgoals(subgoals)
+        else:
+            # Block environments only works for one subgoal
+            if 'Block' in self.name:
+                self.wrapped_env.goal = subgoals[0]
+            else:
+                pass
 
     def __getattr__(self, attr):
         try:
@@ -105,71 +145,5 @@ class BasicEnvWrapper(object):
         return self._get_obs()['observation']
 
 
-class AntWrapper(BasicEnvWrapper):
-    def __init__(self, env, time_scale, input_dims):
-        BasicEnvWrapper.__init__(self, env, time_scale, input_dims)
-
-        self.subgoal_dim = len(self.subgoal_bounds)
-        self.subgoal_bounds_symmetric = np.zeros(self.subgoal_dim)
-        self.subgoal_bounds_offset = np.zeros(self.subgoal_dim)
-        for i in range(self.subgoal_dim):
-            self.subgoal_bounds_symmetric[i] = (self.subgoal_bounds[i][1] -
-                                                self.subgoal_bounds[i][0]) / 2
-            self.subgoal_bounds_offset[i] = self.subgoal_bounds[i][1] - self.subgoal_bounds_symmetric[i]
-
-        self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
-        self.project_state_to_sub_goal = lambda state: self.wrapped_env._obs2subgoal(state)
-        logger.info('dims: action = {}, subgoal = {}, end_goal = {}'.format(
-            self.action_dim, self.subgoal_dim, self.end_goal_dim))
-        logger.info('subgoal_bounds: symmetric {}, offset {}'.format(
-            self.subgoal_bounds_symmetric, self.subgoal_bounds_offset))
-
-    def __getattr__(self, attr):
-        return self.wrapped_env.__getattribute__(attr)
-
-
-class UR5Wrapper(BasicEnvWrapper):
-    def __init__(self, env, time_scale, input_dims):
-        BasicEnvWrapper.__init__(self, env, time_scale, input_dims)
-        self.subgoal_dim = len(self.subgoal_bounds)
-        self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
-        self.project_state_to_sub_goal = lambda state: self.wrapped_env.project_state_to_sub_goal(self.wrapped_env.sim, state)
-
-    def __getattr__(self, attr):
-        return self.wrapped_env.__getattribute__(attr)
-
-
-class BlockWrapper(BasicEnvWrapper):
-    def __init__(self, env, time_scale, input_dims):
-        BasicEnvWrapper.__init__(self, env, time_scale, input_dims)
-
-        self.set_subgoal_props()
-        self.project_state_to_sub_goal = lambda state: self.wrapped_env._obs2goal(state)
-        self.project_state_to_end_goal = lambda state: self.wrapped_env._obs2goal(state)
-        self.sub_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
-        self.end_goal_thresholds = np.array([self.distance_threshold] * self.end_goal_dim)
-
-    def display_end_goal(self, end_goal):
-        pass
-
-    def display_subgoals(self, subgoals):
-        # TODO: Block environments only works for one subgoal
-        self.wrapped_env.goal = subgoals[0]
-
-
 def prepare_env(env_name, time_scale, input_dims):
-    wrapper_args = (gym.make(env_name).env, time_scale, input_dims)
-    if 'Ant' in env_name:
-        env = AntWrapper(*wrapper_args)
-    elif 'UR5' in env_name:
-        env = UR5Wrapper(*wrapper_args)
-    elif 'Block' in env_name:
-        env = BlockWrapper(*wrapper_args)
-    elif 'Causal' in env_name:
-        env = BlockWrapper(*wrapper_args)
-    elif 'Hook' in env_name:
-        env = BlockWrapper(*wrapper_args)
-    elif 'CopReacher' in env_name:
-        env = BlockWrapper(*wrapper_args)
-
-    return env
+    return EnvWrapper(env_name, gym.make(env_name).env, time_scale, input_dims)
