@@ -1,7 +1,7 @@
 # Curious Hierarchical Actor-Critic (CHAC)
 
 CHAC is a combination of Levy's Hierarchical Actor-Critic (HAC, [Learning Multi-Level Hierarchies with Hindsight](https://arxiv.org/abs/1712.00948))
-and curiosity-driven exploration ([Curiosity-driven Exploration by Self-supervised Predicton](https://pathak22.github.io/noreward-rl/).
+and curiosity-driven exploration ([Curiosity-driven Exploration by Self-supervised Prediction](https://pathak22.github.io/noreward-rl/).
 This folder contains a HAC implementation using [PyTorch](https://pytorch.org/).
 For training with curiosity, a forward model is added to each level of the hierarchy to partially add an intrinsic reward to the external reward
 of the environment.
