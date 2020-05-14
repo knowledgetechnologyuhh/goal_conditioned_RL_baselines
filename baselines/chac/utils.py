@@ -3,10 +3,12 @@ import torch.nn as nn
 import gym
 from baselines import logger
 
+
 class Base(nn.Module):
     reset_type = 'xavier'
 
     def _init_weights(self, m):
+        """Recursive apply initializations to components of module"""
 
         if isinstance(m, nn.Linear):
             if hasattr(m, 'weight'):
@@ -41,7 +43,7 @@ def mlp(sizes, activation, output_activation=nn.Identity):
 
 
 class EnvWrapper(object):
-    def __init__(self, env_name , env, time_scales, input_dims):
+    def __init__(self, env_name, env, time_scales, input_dims):
         self.name = env_name
         self.wrapped_env = env
         self.visualize = False
@@ -95,7 +97,6 @@ class EnvWrapper(object):
                 # project to end goal space
                 self.project_state_to_sub_goal = lambda state: env._obs2goal(state)
 
-
     def display_end_goal(self, endgoal):
         if hasattr(self.wrapped_env, 'display_end_goal'):
             self.wrapped_env.display_end_goal(endgoal)
@@ -104,7 +105,7 @@ class EnvWrapper(object):
 
     def display_subgoals(self, subgoals):
         if hasattr(self.wrapped_env, 'display_subgoals'):
-                self.wrapped_env.display_subgoals(subgoals)
+            self.wrapped_env.display_subgoals(subgoals)
         else:
             # Block environments only works for one subgoal
             if 'Block' in self.name:
@@ -119,12 +120,12 @@ class EnvWrapper(object):
             raise AttributeError(attr)
 
     def execute_action(self, action):
-        if self.graph: reset = self.wrapped_env.step_ctr == 0
+        if self.graph:
+            reset = self.wrapped_env.step_ctr == 0
         self._set_action(action)
         self.sim.step()
         self._step_callback()
 
-        #  if self.visualize and self.agent.test_mode:
         if self.visualize:
             self.render()
             if self.graph and self.agent:
@@ -141,6 +142,9 @@ class EnvWrapper(object):
                                               np.array([q_val]),
                                               self.wrapped_env.step_ctr,
                                               reset=reset)
+                    if reset:
+                        l.q_values.clear()
+                        l.surprise_history.clear()
 
         return self._get_obs()['observation']
 

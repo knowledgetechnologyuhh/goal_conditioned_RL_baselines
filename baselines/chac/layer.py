@@ -326,7 +326,9 @@ class Layer():
             with torch.no_grad():
                 q_val = self.critic(current_state_tensor, goal_tensor, action_tensor)
             eval_data["{}q".format(train_test_prefix)] += [q_val[0].item()]
-            self.q_values += [q_val[0].item()]
+
+            if agent.env.graph and not self.fw and agent.env.visualize:
+                self.q_values += [q_val[0].item()]
 
             # If next layer is not bottom level, propose subgoal for next layer to achieve and determine
             # whether that subgoal should be tested
@@ -356,7 +358,6 @@ class Layer():
 
             attempts_made += 1
 
-            # This is very slow, only use for testing and render=True
             if agent.env.graph and self.fw and agent.env.visualize and self.state_predictor.err_list:
                 agent_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
                 surprise = self.state_predictor.pred_bonus(action_tensor, current_state_tensor, agent_state_tensor)
