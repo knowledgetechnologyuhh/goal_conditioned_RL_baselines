@@ -41,8 +41,14 @@ class Rollout:
 
         self.policy_action_params = kwargs['policy_action_params']
 
-        self.envs = [make_env() for _ in range(rollout_batch_size)]
-        self.first_env = self.envs[0]
+        if 'cached_make_env' in kwargs:
+            self.first_env = kwargs['cached_make_env'](make_env)
+            self.envs = [self.first_env]
+            for _ in range(1, rollout_batch_size):
+                self.envs.append(make_env())
+        else:
+            self.envs = [make_env() for _ in range(rollout_batch_size)]
+            self.first_env = self.envs[0]
         env_name = kwargs['env_name']
         if env_name[:3] == 'Cop':
             registry.env_specs[env_name]._kwargs['tmp'] = 0
