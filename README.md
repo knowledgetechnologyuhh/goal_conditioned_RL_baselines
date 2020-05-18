@@ -1,11 +1,70 @@
 # Getting started
+We have some environments using the MuJoCo simulator and some with CoppeliaSim & PyRep.
+You can choose to use both or only one of them.
 
+If you want to use both:
+
+1. Download MuJoCo (mujoco.org) and obtain a license (as a student you can obtain a free one-year student license). 
+Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the 
+registration to folders of your choice.
+2. Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
+3. Then `git clone https://github.com/stepjam/PyRep.git`. 
+If you don't want to have to adjust the paths in `set_paths.sh`, put 
+CoppeliaSim and PyRep in /data/*username*/.
+You are free to put them somewhere else, but you'll have to adjust the paths then.
+4. Set the environment variables for MuJoCo and CoppeliaSim in `set_paths.sh` according to the locations 
+where you saved the mjpro200_linux folder, mjkey.txt and CoppeliaSim. 
+If you are using an IDE, set the variables there as well. 
+(Note that PyCharm does not dynamically evaluate environment variables at all, so things like `$(whoami)` 
+or even `~/` will not work.)
+5. Set up a virtual environment using `virtualenv -p python3 venv`
+6. Activate the virtual environment using `source venv/bin/activate`
+7. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
+8. Pip install PyRep by running: 
+`pip install git+https://github.com/stepjam/PyRep.git` You can find some troubleshooting on the PyRep git-page.
+9. Now you can test the MuJoCo installation by running
+`experiment/train.py`
+and the CoppeliaSim & PyRep installation by running
+`experiment/train.py --env CopReacherEnv-ik1-v0 --algorithm baselines.her`
+
+If you want to use MuJoCo only:
+ 
 1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to folders of your choice
-2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. If you are using an IDE, set the variables there as well. 
-3. Set up virtual environment using `virtualenv -p python3 venv`
-4. Activate virtualenvironment using `source venv/bin/activate`
+2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. 
+In `set_paths.sh`, comment out the lines below `#For CoppeliaSim`.
+If you are using an IDE, set the variables there as well. 
+(Note that PyCharm does not dynamically evaluate environment variables at all, so things like `$(whoami)` 
+or even `~/` will not work.)
+3. Set up a virtual environment using `virtualenv -p python3 venv`
+4. Activate the virtual environment using `source venv/bin/activate`
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
 6. Run script with `experiment/train.py`
+
+If you want to use CoppeliaSim only:
+
+1. Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
+2. Then `git clone https://github.com/stepjam/PyRep.git`. 
+If you don't want to have to adjust the paths in `set_paths.sh`, put 
+CoppeliaSim and PyRep in /data/*username*/.
+You are free to put them somewhere else, but you'll have to adjust the paths then.
+3. In `set_paths.sh`, comment out the lines below `#For MuJoCo` and, if necessary, edit the lines below `#For CoppeliaSim`.
+If you are using an IDE, set the variables there as well. 
+(Note that PyCharm does not dynamically evaluate environment variables at all, so things like `$(whoami)` 
+or even `~/` will not work.)
+4. Set up a virtual environment using `virtualenv -p python3 venv`
+5. Activate the virtual environment using `source venv/bin/activate`
+6. Install python libraries using `pip3 install -r requirements_gpu.txt` 
+if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU, 
+but comment out `mujoco-py==2.0.2.5` in the respective requirements.txt before.
+7. Pip install PyRep by running: 
+`pip install git+https://github.com/stepjam/PyRep.git` You can find some troubleshooting on the PyRep git-page.
+8. Now you can test the MuJoCo installation by running
+`experiment/train.py`
+and the CoppeliaSim & PyRep installation by running
+`experiment/train.py --env CopReacherEnv-ik1-v0 --algorithm baselines.her`
+
+<br/><br/>
+<br/><br/>
 
 Logs will be stored in a directory according to the `--base_logdir` command line parameter (by default `data`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far.
 
@@ -57,15 +116,19 @@ This is adapted from the implementation by Levy et al. 2018. We extended it with
 # Adding new features to this repository
 If you work on this repository and add a new feature, please proceed as follows:
 1. Start a new branch with the devel branch as base and add your feature
+
     * If you develop a new algorithm, you should have added a respective subdir with the algorithm's name 
-    (referred to here as <alg_name>) in the baselines folder. Proceed as follows: 
-        * Add the <alg_name> to TestingConfig.algorithms, and 
-        * add a function get_<alg_name>_cmds to this script. This function should generate a list commandline-strings that call all important 
-    configurations for your algorithm.
+    (referred to here as <alg_name>) in the baselines folder.
+    In *baselines/templates/* you can find templates that you can use for your algorithm.
+    * If your algorithm is finished, proceed as follows: 
+        * In the `generate_testing_commands.py` script, add the <alg_name> to TestingConfig.algorithms, and 
+        * add a function get_<alg_name>_cmds to this script. This function should generate a list of commandline-strings 
+        that call all important configurations for your algorithm.
     
     * If you add a feature to an existing algorithm, only change the get_<alg_name>_cmds function appropriately.
     
     * If you add a new environment, add the environment name to the TestingConfig.environments list.
+      You find tips for adding a new environment further below.
 
 2. After you have finished working on your feature:
     * merge the devel branch to your branch and 
@@ -74,6 +137,33 @@ If you work on this repository and add a new feature, please proceed as follows:
 3. If all errors are fixed, check if there are new updates on devel. 
     * If there are, goto 2. 
     * Else: merge your branch to devel. Done.   
-     
-  
+
+
+## Tips for adding a new environment
+Currently there are two types of environments in this project. 
+Ones that use MuJoCo and ones that use CoppeliaSim.
+
+**If you want to use MuJoCo**, let your environment class inherit from *wtm_envs/mujoco/wtm_env.py*.
+Also take a look at the other environments in the folder, e.g. *blocks_env*, to see which functions are needed so that the algorithms
+can operate on the environment. 
+Put your <environment_name>.py file into *wtm_envs/mujoco/*.
+In *wtm_envs/mujoco/assets/*, create a subfolder with your environment name 
+and save your *environment.xml* in it.
+
+In *wtm_envs/mujoco/*, create a subfolder with your environment name and 
+put an empty file *\_\_init\_\_.py* in it.
+In the same folder, create a python script with a name that resembles the task that the
+agent should solve in your environment. In it, create a class that inherits from your 
+environment class (the one that you have in *wtm_envs/mujoco/<environment_name>.py*) and
+set some task-specific parameters there.
+
+**If you want to use CoppeliaSim**, create your environment in *wtm_envs/coppelia/*.
+Look at the *cop_reach_env* to see which functions are needed so that the environment
+can be used by the algorithms. At the top of *cop_reach_env.py* a scene file is referenced.
+You will also need a CoppeliaSim scene file (ends with .ttt) for your environment. You can
+edit the .ttt file in the CoppeliaSim IDE. Use PyRep to control objects in the CoppeliaSim scene.
+
+**Independent of using MuJoCo or CoppeliaSim**, you'll have to register your environment in 
+*wtm_envs/register_envs.py*.
+You use the environment placed in *wtm_envs/mujoco/<environment_name>/<task_name>.py for this.
 
