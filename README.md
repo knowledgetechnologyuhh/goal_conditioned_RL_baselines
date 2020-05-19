@@ -72,6 +72,3 @@ If you work on this repository and add a new feature, please proceed as follows:
 3. If all errors are fixed, check if there are new updates on devel.
     * If there are, goto 2.
     * Else: merge your branch to devel. Done.
-
-
-
