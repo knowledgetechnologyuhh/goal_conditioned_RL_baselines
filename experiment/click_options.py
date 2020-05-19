@@ -4,7 +4,7 @@ import importlib
 # default name: 'TowerBuildMujocoEnv-sparse-gripper_above-o1-h1-1-v1'
 
 _global_options = [
-click.option('--env', type=str, default='AntReacherEnv-v0', help='the name of the OpenAI Gym environment that you want to train on. E.g. TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1, AntFourRoomsEnv-v0'),
+click.option('--env', type=str, default='AntFourRoomsEnv-v0', help='the name of the OpenAI Gym environment that you want to train on. E.g. TowerBuildMujocoEnv-sparse-gripper_random-o2-h1-2-v1, AntFourRoomsEnv-v0'),
 click.option('--algorithm', default='baselines.her', help='the name of the algorithm to be used',
              type=click.Choice(['baselines.her', 'baselines.model_based', 'baselines.her_pddl', 'baselines.herhrl', 'baselines.chac'])),
 click.option('--base_logdir', type=str, default='data', help='the path to where logs and policy pickles should go. If not specified, creates a folder in /tmp/'),
