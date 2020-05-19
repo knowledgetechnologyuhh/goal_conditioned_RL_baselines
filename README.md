@@ -44,13 +44,13 @@ For curiosity, we add a forward model to every level of the hierarchy in order t
 and produce a surprise at inference time. To implement our neural networks, we make use of PyTorch Version 1.5.0.
 
 The most important options to consider are:
-- `--n_levels 1-3` to specify the numbers of hierarchies used (currently 2 levels seem most useful)
+- `--n_levels 1-3` to specify the numbers of hierarchies used
 - `--time_scales 25,10` to determine the number of actions each level is allowed to do (from lowest to highest as comma-separated string)
 - `--fw 0/1` to enable training with curiosity
-- `--fw_hidden_layer 256,256,256` as comma-separated string to specify depth and size
-- `--eta 0.5` specifies how much of the internal reward to use and external reward to keep (`0.5` as good default for now, see paper)
+- `--fw_hidden_layer 256,256,256` a comma-separated string to specify depth and size
+- `--eta 0.5` specifies how much of the intrinsic reward to use and external reward to keep
 
-For further details consider looking at the [baselines/chac/README.md](./baselines/chac/README.md).
+For further details consider looking at [baselines/chac/README.md](./baselines/chac/README.md).
 
 # Adding new features to this repository
 If you work on this repository and add a new feature, please proceed as follows:
