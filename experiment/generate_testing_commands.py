@@ -80,18 +80,20 @@ if __name__ == "__main__":
     n_test_rollouts = 2
     n_epochs = 2
     rollout_batch_size = 1
-    opts_values = {"general": {}}
+    n_cpu = 1
 
     whoami = getpass.getuser()
-    opts_values["general"]['base_logdir'] = "/data/" + whoami + "/herhrl"
+
+    opts_values = {"general": {}}
+    opts_values["general"]['num_cpu'] = n_cpu
+    opts_values["general"]['rollout_batch_size'] = rollout_batch_size
+    opts_values["general"]['n_epochs'] = n_epochs
+    opts_values["general"]['n_train_rollouts'] = n_train_rollouts
+    opts_values["general"]['n_test_rollouts'] = n_test_rollouts
+    opts_values["general"]['base_logdir'] = "/data/" + whoami + "/baselines"
+    opts_values["general"]['render'] = 0
     opts_values["general"]['try_start_idx'] = 100
     opts_values["general"]['max_try_idx'] = 500
-    opts_values["general"]['render'] = 0
-    opts_values["general"]['num_cpu'] = 1
-    opts_values["general"]['rollout_batch_size'] = 1
-    opts_values["general"]['n_epochs'] = 2
-    opts_values["general"]['n_train_rollouts'] = 2
-    opts_values["general"]['n_test_rollouts'] = 2
 
     base_cmd = "python3 experiment/train.py"
     for k, v in sorted(opts_values["general"].items()):
