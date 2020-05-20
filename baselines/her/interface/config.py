@@ -111,14 +111,11 @@ def prepare_params(kwargs):
         return gym.make(env_name)
     kwargs['make_env'] = make_env
     if env_name[:3] == 'Cop':
-        registry.env_specs[env_name]._kwargs['tmp'] = 3
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    if env_name[:3] == 'Cop':
-        registry.env_specs[env_name]._kwargs['tmp'] = 1
     kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
     if 'lr' in kwargs:
@@ -181,8 +178,7 @@ def configure_policy(dims, params):
 
     # DDPG agent
     env = cached_make_env(params['make_env'])
-    if params['env_name'][:3] != 'Cop':
-        env.reset()
+    env.reset()
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns

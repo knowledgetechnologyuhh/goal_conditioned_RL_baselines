@@ -131,7 +131,7 @@ register(id='AntReacherEnv-v0',
 for IK in [0, 1]:  # whether to use inverse kinematics
     kwargs = {'ik': IK}
     register(id='CopReacherEnv-ik{}-v0'.format(kwargs['ik']),
-         entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
+         entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnvHandler',
          kwargs=kwargs,
          max_episode_steps=200)
 

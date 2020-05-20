@@ -2,7 +2,6 @@ from collections import deque
 import numpy as np
 import pickle
 from baselines import logger
-from gym.envs.registration import registry
 
 logger.info("Now importing MujocoException. This sometimes causes an error. If system is stuck here, try to delete the following file:")
 logger.info("venv/lib/python3.5/site-packages/mujoco_py/generated/mujocopy-buildlock.lock")
@@ -41,17 +40,8 @@ class Rollout:
 
         self.policy_action_params = kwargs['policy_action_params']
 
-        if 'cached_make_env' in kwargs:
-            self.first_env = kwargs['cached_make_env'](make_env)
-            self.envs = [self.first_env]
-            for _ in range(1, rollout_batch_size):
-                self.envs.append(make_env())
-        else:
-            self.envs = [make_env() for _ in range(rollout_batch_size)]
-            self.first_env = self.envs[0]
-        env_name = kwargs['env_name']
-        if env_name[:3] == 'Cop':
-            registry.env_specs[env_name]._kwargs['tmp'] = 0
+        self.envs = [make_env() for _ in range(rollout_batch_size)]
+        self.first_env = self.envs[0]
         assert self.T > 0
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]

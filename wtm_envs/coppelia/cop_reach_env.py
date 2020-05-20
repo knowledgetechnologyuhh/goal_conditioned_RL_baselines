@@ -14,16 +14,26 @@ CACHED_ENV = None
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'CopReacherEnv.ttt')
 
+
 class ManipulatorPro (Arm):
     def __init__(self, count: int = 0):
         super().__init__(count, 'mp', num_joints=6)
 
+
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
 
-class ReacherEnvHandler():
+
+class ReacherEnvHandler:
     """
     Creates a Reacher Environment or returns an existing instance if one has already been created.
     """
+    def __new__(cls, *args, **kwargs):
+        global CACHED_ENV
+        if CACHED_ENV is None:
+            return ReacherEnv(*args, **kwargs)
+        else:
+            print('\033[92m' + 'Using cached Env' + '\033[0m')
+            return CACHED_ENV
 
 
 class ReacherEnv(gym.GoalEnv):
@@ -31,19 +41,11 @@ class ReacherEnv(gym.GoalEnv):
     Environment with Reacher tasks that uses CoppeliaSim and the Franka Emika Panda robot.
     Args:
         render: If render=0, CoppeliaSim will run in headless mode.
-        tmp: whether the environment is only used temporarily to acquire e.g. the shape of the observation space.
         ik: whether to use inverse kinematics. If not, the actuators will be controlled directly.
             Note, that also the observation changes, when ik is set.
             !!!The IK can not always be computed. In that case, the action is not carried out!!!
     """
-    def __new__(cls, render=1, tmp=False, **kwargs):
-        if CACHED_ENV is not None:
-            print('\033[92m' + 'Using cached Env' + '\033[0m')
-            return CACHED_ENV
-        print('Ö'*250)
-        return super(ReacherEnv, cls).__new__(cls)  # , render=1, tmp=False, **kwargs)
-
-    def __init__(self, render=1, tmp=False, ik=1):
+    def __init__(self, render=1, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
         render = bool(render)
         self.ik = bool(ik)
@@ -82,9 +84,6 @@ class ReacherEnv(gym.GoalEnv):
             achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs['achieved_goal'].shape, dtype='float32'),
             observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),))
 
-        # set if environment is only for short usage
-        self.tmp = tmp
-
         global CACHED_ENV
         CACHED_ENV = self
 
@@ -116,11 +115,6 @@ class ReacherEnv(gym.GoalEnv):
         self.agent.set_joint_positions(self.initial_joint_positions)
         self.goal = self._sample_goal()
         obs = self._get_obs()
-        if self.tmp > 0:
-            self.tmp -= 1
-            print('\033[91m' + 'This Env will shut down after ' + str(self.tmp) + ' resets' + '\033[0m')
-            if self.tmp == 0:
-                self.close()
         return obs
 
     def compute_reward(self, achieved_goal, goal, info):
