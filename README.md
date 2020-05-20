@@ -1,7 +1,7 @@
 # Getting started
 
 1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to folders of your choice
-2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. If you are using an IDE, set the variables there as well. 
+2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. If you are using an IDE, set the variables there as well.
 3. Set up virtual environment using `virtualenv -p python3 venv`
 4. Activate virtualenvironment using `source venv/bin/activate`
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
@@ -36,44 +36,39 @@ This is adapted from the implementation by Levy et al. 2018. We extended it with
 * `--test_subgoal_perc` determines the probability that a penalty is applied to a specific high-level policy step (also see Levy et al. 2018).
 
 
-# model_based algorithm
-1. Initialize replay buffer (The replay buffer is implemented in the class [ModelReplayBuffer](baselines/model_based/mb_policy.py) and initialized as part of the class [MBPolicy](baselines/model_based/mb_policy.py).)
-2. **Exploration Phase**
-    1. For each epoch (in function [train](experiment/train.py))
-        1. For each episode (in function  [generate_rollouts_update](baselines/model_based/rollout.py) in class `RolloutWorker`)
-            1. Generate Rollouts: For each step (in function `generate_rollouts` in [Rollout](baselines/template/rollout.py)
-                1. policy.get_actions (in function [MBPolicy](baselines/model_based/mb_policy.py))
-                1. Return rollouts
-            1. `policy.store_episode` (This is implemented in class [ModelReplayBuffer](baselines/model_based/model_replay_buffer.py) May throw away other rollouts if they are not interesting anymore. The computation of the "level of interestingness", represented by variable `ModelReplayBuffer.memory_value`, is determined by command line argument `--memval_method`)
-            1. For each sampled train_batch: (batch sampling is realized by command line argument `buff_sampling', default is "random")
-                1. `losses = policy.train()`
-                1. Recompute `ModelReplayBuffer.memory_value` for those samples that were included in the batch.
-            1. Execute `test_prediction_error` to count the number of successive forward modeling steps that are possible without moving away too much from ground truth. (Maybe good for evaluating when to move from exploration to exploitation)
-            
-3. **Exploitation Phase**
-    As in HER, but instead of generating actions in `policy.get_actions`, generate multiple candidate-actions (e.g. by adding noise to observations) and use the model to select the most promising one.
+# chac algorithm
+This algorithm is an adapted version of Levy's Hierarchical Actor-Critic
+(HAC, [Learning Multi-Level Hierarchies with Hindsight](https://arxiv.org/abs/1712.00948)) and curiosity-driven exploration
+inspired by [Curiosity-driven Exploration by Self-supervised Prediction](https://pathak22.github.io/noreward-rl/).
+For curiosity, we add a forward model to every level of the hierarchy in order to learn the transition function
+and produce a surprise at inference time. To implement our neural networks, we make use of PyTorch Version 1.5.0.
 
+The most important options to consider are:
+- `--n_levels 1-3` to specify the numbers of hierarchies used
+- `--time_scales 25,10` to determine the number of actions each level is allowed to do (from lowest to highest as comma-separated string)
+- `--fw 0/1` to enable training with curiosity
+- `--fw_hidden_layer 256,256,256` a comma-separated string to specify depth and size
+- `--eta 0.5` specifies how much of the intrinsic reward to use and external reward to keep
+
+For further details consider looking at [baselines/chac/README.md](./baselines/chac/README.md).
 
 # Adding new features to this repository
 If you work on this repository and add a new feature, please proceed as follows:
 1. Start a new branch with the devel branch as base and add your feature
-    * If you develop a new algorithm, you should have added a respective subdir with the algorithm's name 
-    (referred to here as <alg_name>) in the baselines folder. Proceed as follows: 
-        * Add the <alg_name> to TestingConfig.algorithms, and 
-        * add a function get_<alg_name>_cmds to this script. This function should generate a list commandline-strings that call all important 
+    * If you develop a new algorithm, you should have added a respective subdir with the algorithm's name
+    (referred to here as <alg_name>) in the baselines folder. Proceed as follows:
+        * Add the <alg_name> to TestingConfig.algorithms, and
+        * add a function get_<alg_name>_cmds to this script. This function should generate a list commandline-strings that call all important
     configurations for your algorithm.
-    
+
     * If you add a feature to an existing algorithm, only change the get_<alg_name>_cmds function appropriately.
-    
+
     * If you add a new environment, add the environment name to the TestingConfig.environments list.
 
 2. After you have finished working on your feature:
-    * merge the devel branch to your branch and 
+    * merge the devel branch to your branch and
     * run the testing script `run_testing.sh`. The script will create a folder testing_logs where all test results are stored.
     * Go through all logs and see if there are errors. If there are errors, fix them.
-3. If all errors are fixed, check if there are new updates on devel. 
-    * If there are, goto 2. 
-    * Else: merge your branch to devel. Done.   
-     
-  
-
+3. If all errors are fixed, check if there are new updates on devel.
+    * If there are, goto 2.
+    * Else: merge your branch to devel. Done.

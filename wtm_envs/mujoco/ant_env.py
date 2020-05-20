@@ -131,7 +131,7 @@ class AntEnv(WTMEnv, PDDLAntEnv):
         else:
             subgoal_ind = len(subgoals) - 11
 
-        for i in range(1, min(len(subgoals) + 1, 11)):
+        for i in range(1, min(len(subgoals), 11)):
             self.sim.data.mocap_pos[i][:3] = np.copy(subgoals[subgoal_ind][:3])
             self.sim.model.site_rgba[i][3] = 1
 
