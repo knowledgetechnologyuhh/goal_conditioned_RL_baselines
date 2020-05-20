@@ -10,13 +10,13 @@ Further details can be found in the paper [Curious Hierarchical Actor-Critic Rei
 
 ## Getting Started
 
-### Train with HAC
+### Train with HAC (without curiosity)
 ```bash
 python experiment/train.py --algorithm baselines.chac --render 0 --env AntReacherEnv-v0 \
   --n_epochs 10 --n_train_rollouts 100 --fw 0
 ```
 
-### Train with CHAC
+### Train with CHAC (with curiosity)
 
 ```bash
 python experiment/train.py --algorithm baselines.chac --render 0 --env AntReacherEnv-v0 \
@@ -37,7 +37,7 @@ python experiment/train.py --algorithm baselines.chac --render 0 --env AntReache
 ### `--fw 1`
 
 This option includes the forward model into the training process and enables
-curiosity for training the actor-critic. With a `0`, CHAC works similarly to HAC.
+curiosity for training the actor-critic. When set to `0`, CHAC is effectively the same as HAC and should provide comparable results.
 
 ### `--eta 0.5`
 
