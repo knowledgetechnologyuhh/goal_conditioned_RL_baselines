@@ -9,6 +9,7 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
+CACHED_ENV = None
 
 SCENE_FILE = join(dirname(abspath(__file__)),
                   'CopReacherEnv.ttt')
@@ -18,6 +19,12 @@ class ManipulatorPro (Arm):
         super().__init__(count, 'mp', num_joints=6)
 
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
+
+class ReacherEnvHandler():
+    """
+    Creates a Reacher Environment or returns an existing instance if one has already been created.
+    """
+
 
 class ReacherEnv(gym.GoalEnv):
     """
@@ -29,6 +36,13 @@ class ReacherEnv(gym.GoalEnv):
             Note, that also the observation changes, when ik is set.
             !!!The IK can not always be computed. In that case, the action is not carried out!!!
     """
+    def __new__(cls, render=1, tmp=False, **kwargs):
+        if CACHED_ENV is not None:
+            print('\033[92m' + 'Using cached Env' + '\033[0m')
+            return CACHED_ENV
+        print('Ö'*250)
+        return super(ReacherEnv, cls).__new__(cls)  # , render=1, tmp=False, **kwargs)
+
     def __init__(self, render=1, tmp=False, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
         render = bool(render)
@@ -44,6 +58,10 @@ class ReacherEnv(gym.GoalEnv):
         if not self.ik:
             self.agent.set_control_loop_enabled(False)
             self.agent.set_motor_locked_at_zero_velocity(True)
+        else:
+            print('\033[91m' + 'You are running with inverse kinematics. Sometimes the IK are not working and the '
+                               'action can not be carried out. In that case, \'Attempting to reach out of reach\' is '
+                               'printed.' + '\033[0m')
         self.target = Shape('target')
         self.vis = {}
         self.agent_ee_tip = self.agent.get_tip()
@@ -66,6 +84,9 @@ class ReacherEnv(gym.GoalEnv):
 
         # set if environment is only for short usage
         self.tmp = tmp
+
+        global CACHED_ENV
+        CACHED_ENV = self
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -183,9 +204,5 @@ class ReacherEnv(gym.GoalEnv):
 
     def close(self):
         print('\033[91m' + 'Closing Env' + '\033[0m')
-        if self.ik:
-            print('\033[91m' + 'You are running with inverse kinematics. Sometimes the IK are not working and the '
-                               'action can not be carried out. In that case, \'Attempting to reach out of reach\' is '
-                               'printed.' + '\033[0m')
         self.pr.stop()
         self.pr.shutdown()
