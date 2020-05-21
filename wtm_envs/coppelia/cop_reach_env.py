@@ -1,8 +1,9 @@
 from pyrep.pyrep import PyRep
 from pyrep.robots.arms.arm import Arm
 from pyrep.objects.shape import Shape
-from pyrep.const import PrimitiveShape
+from pyrep.const import PrimitiveShape, ObjectType
 from pyrep.errors import IKError
+from pyrep.backend import sim
 import numpy as np
 from os.path import dirname, join, abspath
 import gym
@@ -67,6 +68,8 @@ class ReacherEnv(gym.GoalEnv):
         self.target = Shape('target')
         self.vis = {}
         self.agent_ee_tip = self.agent.get_tip()
+        self.agent_parts = self.pr.get_objects_in_tree(self.agent)
+        self.poses = [ap.get_pose() for ap in self.agent_parts]
         self.initial_joint_positions = self.agent.get_joint_positions()
 
         # define goal
@@ -112,7 +115,17 @@ class ReacherEnv(gym.GoalEnv):
         return pos
 
     def reset(self):
+        # reset the joint positions
         self.agent.set_joint_positions(self.initial_joint_positions)
+
+        # reset the robot-parts positions
+        for ap, pos in zip(self.agent_parts, self.poses):
+            t = ap.get_type()
+            if t == ObjectType.JOINT:
+                pass
+            else:
+                ap.set_pose(pos, reset_dynamics=True)
+
         self.goal = self._sample_goal()
         obs = self._get_obs()
         return obs
