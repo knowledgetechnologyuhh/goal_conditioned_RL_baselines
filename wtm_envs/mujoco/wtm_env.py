@@ -5,6 +5,8 @@ from queue import deque
 from mujoco_py import modder
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+import platform
+import os
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -225,11 +227,10 @@ class WTMEnv(robot_env.RobotEnv):
             ax.tick_params(axis='y', colors="C"+str(i))
             ax.plot(self.graph_values[key+'_x'], self.graph_values[key], color="C"+str(i))
         plt.tight_layout()
-        canvas.draw()
 
-        # convert to rgb array
+        canvas.draw()
         buf = canvas.tostring_rgb()
-        ncols, nrows = canvas.get_width_height()
+        ncols, nrows = fig.canvas.get_width_height()
         plt.close(fig)
         return np.fromstring(buf, dtype=np.uint8).reshape(nrows, ncols, 3)
 

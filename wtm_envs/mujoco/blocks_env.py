@@ -8,9 +8,7 @@ from wtm_envs.mujoco.blocks_env_pddl import *
 from wtm_envs.mujoco.blocks_env_pddl import PDDLBlocksEnv
 from wtm_envs.mujoco.wtm_env import goal_distance
 from wtm_envs.mujoco.wtm_env import WTMEnv
-
 import mujoco_py
-
 
 
 class BlocksEnv(WTMEnv, PDDLBlocksEnv):
@@ -24,7 +22,6 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
             gripper_goal, n_objects, table_height, obj_height, min_tower_height=None, max_tower_height=None,
     ):
         """Initializes a new Blocks environment.
-
         Args:
             model_path (string): path to the environments XML file
             n_substeps (int): number of substeps the simulation runs on every call to step
@@ -232,8 +229,8 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
                 for n_o in range(target_range):
                     # too_close = True
                     while True:
-                        target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range,
-                                                                                             self.target_range,
+                        target_goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.obj_range,
+                                                                                             self.obj_range,
                                                                                              size=3)
                         target_goal += self.target_offset
                         rnd_height = random.randint(self.min_tower_height, self.max_tower_height)
@@ -251,8 +248,8 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
                     goal[target_goal_start_idx:target_goal_start_idx + 3] = target_goal.copy()
                     target_goal_start_idx += 3
             else:
-                target_goal_xy = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.target_range,
-                                                                                        self.target_range,
+                target_goal_xy = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range,
+                                                                                        self.obj_range,
                                                                                         size=2)
                 self.goal_tower_height = self.n_objects
 
@@ -271,8 +268,8 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
                 if self.gripper_goal == 'gripper_above':
                     gripper_goal_pos[2] += (3 * self.obj_height)
                 elif self.gripper_goal == 'gripper_random':
-                    too_close = True
-                    while too_close and target_goal is not None:
+                    too_close = False
+                    while True:
                         gripper_goal_pos = self.initial_gripper_xpos[:3] + \
                                            self.np_random.uniform(-self.target_range,
                                                                   self.target_range, size=3)
@@ -280,8 +277,12 @@ class BlocksEnv(WTMEnv, PDDLBlocksEnv):
                         gripper_goal_pos[1] += self.random_gripper_goal_pos_offset[1]
                         gripper_goal_pos[2] += self.random_gripper_goal_pos_offset[2]
 
-                        if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) >= 0.1:
-                            too_close = False
+                        if target_goal is not None:
+                            if np.linalg.norm(gripper_goal_pos - target_goal, axis=-1) < 0.1:
+                                too_close = True
+                        if not too_close:
+                            break
+
                 goal[:3] = gripper_goal_pos
 
             return goal.copy()

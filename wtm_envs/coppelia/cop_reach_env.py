@@ -76,6 +76,10 @@ class ReacherEnv(gym.GoalEnv):
         self.goal = self._sample_goal()
         self.goal_hierarchy = {}  # for herhrl
 
+        self.distance_threshold = 0.05
+        self.step_ctr = 0
+        self.sim = self.pr
+
         # set action space
         if self.ik:
             self.action_space = spaces.Box(-1., 1., shape=(3,), dtype='float32')
@@ -115,6 +119,7 @@ class ReacherEnv(gym.GoalEnv):
         return pos
 
     def reset(self):
+        self.step_ctr = 0
         # reset the joint positions
         self.agent.set_joint_positions(self.initial_joint_positions)
 
@@ -137,7 +142,7 @@ class ReacherEnv(gym.GoalEnv):
             ax, ay, az = achieved_goal  # self.agent_ee_tip.get_position()
             tx, ty, tz = goal  # self.target.get_position()
             dist = np.sqrt((ax - tx) ** 2 + (ay - ty) ** 2 + (az - tz) ** 2)
-            if dist < 0.05:
+            if dist < self.distance_threshold:
                 reward = 0
             else:
                 reward = -1
@@ -147,6 +152,7 @@ class ReacherEnv(gym.GoalEnv):
         return self.compute_reward(achieved_goal, desired_goal, {}) == 0
 
     def _set_action(self, action):
+        self.step_ctr += 1
         if self.ik:
             pos = self.agent_ee_tip.get_position().copy()
             quat = self.agent_ee_tip.get_quaternion().copy()
@@ -179,6 +185,9 @@ class ReacherEnv(gym.GoalEnv):
 
     def add_graph_values(self, axis_name, val, x, reset=False):  # for herhrl
         pass  # not implemented yet
+
+    def _step_callback(self):
+        pass  # not needed here
 
     def _obs2goal(self, obs):
         if len(obs.shape) == 1:
