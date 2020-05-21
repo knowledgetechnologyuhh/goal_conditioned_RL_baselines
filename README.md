@@ -117,7 +117,9 @@ If you work on this repository and add a new feature, please proceed as follows:
 
     * If you develop a new algorithm, you should have added a respective subdir with the algorithm's name 
     (referred to here as <alg_name>) in the baselines folder.
-    In *baselines/templates/* you can find templates that you can use for your algorithm.
+    * In *baselines/example_algorithm/* you find an example algorithm with a dummy policy that
+    generates random actions and does not learn. You can use this as a starting point.
+    * In *baselines/templates/* you can find templates that you can use for your algorithm.
     * If your algorithm is finished, proceed as follows: 
         * In the `generate_testing_commands.py` script, add the <alg_name> to TestingConfig.algorithms, and 
         * add a function get_<alg_name>_cmds to this script. This function should generate a list of commandline-strings 
@@ -155,13 +157,15 @@ agent should solve in your environment. In it, create a class that inherits from
 environment class (the one that you have in *wtm_envs/mujoco/<environment_name>.py*) and
 set some task-specific parameters there.
 
+Then register your environment in *wtm_envs/register_envs.py*.
+You use the environment placed in *wtm_envs/mujoco/<environment_name>/<task_name>.py* for this.
+
 **If you want to use CoppeliaSim**, create your environment in *wtm_envs/coppelia/*.
 Look at the *cop_reach_env* to see which functions are needed so that the environment
 can be used by the algorithms. At the top of *cop_reach_env.py* a scene file is referenced.
 You will also need a CoppeliaSim scene file (ends with .ttt) for your environment. You can
 edit the .ttt file in the CoppeliaSim IDE. Use PyRep to control objects in the CoppeliaSim scene.
 
-**Independent of using MuJoCo or CoppeliaSim**, you'll have to register your environment in 
-*wtm_envs/register_envs.py*.
-You use the environment placed in *wtm_envs/mujoco/<environment_name>/<task_name>.py for this.
-
+Then add a handler class for your environment, like the `ReacherEnvHandler` in 
+*wtm_envs/coppelia/cop_reach_env*. 
+Register your environment-handler in *wtm_envs/register_envs.py*.
