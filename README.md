@@ -2,79 +2,37 @@
 We have some environments using the MuJoCo simulator and some with CoppeliaSim & PyRep.
 You can choose to use both or only one of them.
 
-If you want to use both:
-
-1. Download MuJoCo (mujoco.org) and obtain a license (as a student you can obtain a free one-year student license). 
+1. If you would like to use the MuJoCo-based environments:
+    1. Download MuJoCo (mujoco.org) and obtain a license (as a student you can obtain a free one-year student license). 
 Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the 
 registration to folders of your choice.
-2. Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
-3. Then `git clone https://github.com/stepjam/PyRep.git`. 
-If you don't want to have to adjust the paths in `set_paths.sh`, put 
-CoppeliaSim and PyRep in /data/*username*/.
-You are free to put them somewhere else, but you'll have to adjust the paths then.
-4. Set the environment variables for MuJoCo and CoppeliaSim in `set_paths.sh` according to the locations 
-where you saved the mjpro200_linux folder, mjkey.txt and CoppeliaSim. 
-If you are using an IDE, set the variables there as well. 
-(Note that PyCharm does not dynamically evaluate environment variables at all, so things like `$(whoami)` 
-or even `~/` will not work.)
-5. Set up a virtual environment using `virtualenv -p python3 venv`
-6. Activate the virtual environment using `source venv/bin/activate`
-7. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
-8. Pip install PyRep by running: 
-`pip install git+https://github.com/stepjam/PyRep.git` You can find some troubleshooting on the PyRep git-page.
-9. Now you can test the MuJoCo installation by running
-`experiment/train.py`
-and the CoppeliaSim & PyRep installation by running
-`experiment/train.py --env CopReacherEnv-ik1-v0 --algorithm baselines.her`
-
-If you want to use MuJoCo only:
- 
-1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to folders of your choice
-2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. 
-In `set_paths.sh`, comment out the lines below `#For CoppeliaSim`.
-If you are using an IDE, set the variables there as well. 
-(Note that PyCharm does not dynamically evaluate environment variables at all, so things like `$(whoami)` 
-or even `~/` will not work.)
+    2. Set the environment variables for MuJoCo in `set_paths.sh` according to the locations 
+where you saved the mjpro200_linux folder and mjkey.txt.
+1. If you would like to use the Coppelia-based environments: 
+    1. Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
+    1. Then `git clone https://github.com/stepjam/PyRep.git` to install PyRep.  
+    1. If you don't want to have to adjust the paths in `set_paths.sh`, put 
+CoppeliaSim and PyRep in /data/*username*/. You are free to put them somewhere else, but you'll have to adjust the paths in `set_paths.sh` then.
 3. Set up a virtual environment using `virtualenv -p python3 venv`
 4. Activate the virtual environment using `source venv/bin/activate`
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
-6. Run script with `experiment/train.py`
-
-If you want to use CoppeliaSim only:
-
-1. Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
-2. Then `git clone https://github.com/stepjam/PyRep.git`. 
-If you don't want to have to adjust the paths in `set_paths.sh`, put 
-CoppeliaSim and PyRep in /data/*username*/.
-You are free to put them somewhere else, but you'll have to adjust the paths then.
-3. In `set_paths.sh`, comment out the lines below `#For MuJoCo` and, if necessary, edit the lines below `#For CoppeliaSim`.
-If you are using an IDE, set the variables there as well. 
-(Note that PyCharm does not dynamically evaluate environment variables at all, so things like `$(whoami)` 
-or even `~/` will not work.)
-4. Set up a virtual environment using `virtualenv -p python3 venv`
-5. Activate the virtual environment using `source venv/bin/activate`
-6. Install python libraries using `pip3 install -r requirements_gpu.txt` 
-if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU, 
-but comment out `mujoco-py==2.0.2.5` in the respective requirements.txt before.
-7. Pip install PyRep by running: 
+6. Pip install PyRep by running: 
 `pip install git+https://github.com/stepjam/PyRep.git` You can find some troubleshooting on the PyRep git-page.
-8. Now you can test the MuJoCo installation by running
+7. You can test the MuJoCo installation by running
 `experiment/train.py`
 and the CoppeliaSim & PyRep installation by running
 `experiment/train.py --env CopReacherEnv-ik1-v0 --algorithm baselines.her`
-
-<br/><br/>
-<br/><br/>
 
 Logs will be stored in a directory according to the `--base_logdir` command line parameter (by default `data`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far.
 
 # Currently supported algorithms
 The algorithm can be selected using the command line option `--algorithm` (see below).
 
-Algorithm-specific implementation details are stored in `baselines/<alg name>`.
-We currently support `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results.
-We also support `baselines.herhrl` (Hindsight Experience Replay with Hierarchical Reinforcement Learning).
-We have experimental support for `baselines.model_based` which learns a model of the environment but does not yet generate useful actions.
+Algorithm-specific implementation details are stored in `baselines/<alg name>`. We currently support the following algorithms: 
+ 
+ * `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results.
+ * `baselines.herhrl` (Hindsight Experience Replay with Hierarchical Reinforcement Learning), but in its current implementation this is known to provide poor performance results. 
+ * `baselines.chac` (Curious Hierarchical Actor Critic). This extends the Hierarchical Actor Critic approach by Levy et al. (2019) with a curiosity-based mechanism (see https://arxiv.org/abs/2005.03420). In contrast to Levy's HAC which uses Tensorflow, our implementation is based on PyTorch. 
 
 # Command line options
 Command line options are realized using the *click* library. They should be more or less self-explanatory.
@@ -109,7 +67,7 @@ The most important options to consider are:
 - `--fw_hidden_layer 256,256,256` a comma-separated string to specify depth and size
 - `--eta 0.5` specifies how much of the intrinsic reward to use and external reward to keep
 
-For further details consider looking at [baselines/chac/README.md](./baselines/chac/README.md).
+For further details consider looking at the CHAC Readme [baselines/chac/README.md](./baselines/chac/README.md).
 
 # Adding new features to this repository
 If you work on this repository and add a new feature, please proceed as follows:
@@ -131,12 +89,8 @@ If you work on this repository and add a new feature, please proceed as follows:
       You find tips for adding a new environment further below.
 
 2. After you have finished working on your feature:
-    * merge the devel branch to your branch and
-    * run the testing script `run_testing.sh`. The script will create a folder testing_logs where all test results are stored.
+    * Run the testing script `run_testing.sh`. The script will create a folder testing_logs where all test results are stored.
     * Go through all logs and see if there are errors. If there are errors, fix them.
-3. If all errors are fixed, check if there are new updates on devel. 
-    * If there are, goto 2. 
-    * Else: merge your branch to devel. Done.   
 
 
 ## Tips for adding a new environment
