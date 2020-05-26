@@ -44,7 +44,7 @@ def prepare_params(kwargs):
     policy_params = dict()
 
     env_name = kwargs['env_name']
-    if env_name[:3] == 'Cop':  # use CoppeliaSim frontend if we want to render
+    if 'render' in registry.env_specs[env_name]._kwargs:
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
 
     def make_env():

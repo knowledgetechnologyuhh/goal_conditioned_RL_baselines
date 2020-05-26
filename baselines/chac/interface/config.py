@@ -58,7 +58,7 @@ def prepare_params(kwargs):
 
     kwargs['make_env'] = make_env
 
-    if env_name[:3] == 'Cop':
+    if 'render' in registry.env_specs[env_name]._kwargs:
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
 
     tmp_env = cached_make_env(kwargs['make_env'])

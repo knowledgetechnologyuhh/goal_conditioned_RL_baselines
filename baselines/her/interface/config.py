@@ -43,7 +43,7 @@ DEFAULT_PARAMS = {
     'random_eps': 0.3,  # percentage of time a random action is taken
     'noise_eps': 0.2,  # std of gaussian noise added to not-completely-random actions as a percentage of max_u
     # HER
-    'replay_strategy': 'future',  # supported modes: future, none
+    'replay_strategy': 'future',  # supported modes: future, none !Will be overridden by click options!
     'replay_k': 4,  # number of additional goals used for replay, only used if off_policy_data=future
     # normalization
     'norm_eps': 0.01,  # epsilon used for observation normalization
@@ -110,7 +110,7 @@ def prepare_params(kwargs):
     def make_env():
         return gym.make(env_name)
     kwargs['make_env'] = make_env
-    if env_name[:3] == 'Cop':
+    if 'render' in registry.env_specs[env_name]._kwargs:
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')

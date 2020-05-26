@@ -24,7 +24,7 @@ class ManipulatorPro (Arm):
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
 
 
-class ReacherEnvHandler:
+class ReacherEnvMaker:
     """
     Creates a Reacher Environment or returns an existing instance if one has already been created.
     """

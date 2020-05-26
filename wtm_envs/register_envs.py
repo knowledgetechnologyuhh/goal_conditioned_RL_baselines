@@ -129,11 +129,11 @@ register(id='AntReacherEnv-v0',
 
 # ReacherEnv using coppelia sim
 for IK in [0, 1]:  # whether to use inverse kinematics
-    kwargs = {'ik': IK}
+    kwargs = {'ik': IK, 'render': 1}
     register(id='CopReacherEnv-ik{}-v0'.format(kwargs['ik']),
-         entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnvHandler',
-         kwargs=kwargs,
-         max_episode_steps=200)
+             entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnvMaker',
+             kwargs=kwargs,
+             max_episode_steps=200)
 
 # UR5
 for obs_type in range(0, 4):

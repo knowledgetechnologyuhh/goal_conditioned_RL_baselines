@@ -1,5 +1,5 @@
-All CoppeliaSim environment-names have to start with 'Cop'. 
-They do not implement a render function, because you can look at the simulation when you don't run in headless mode,
+CoppeliaSim environments do not implement a render function, because you can look at 
+the simulation when you don't run in headless mode,
 so you can still choose whether to see the environment with the `--render` argument.
 The `CopReacherEnv` receives an argument ik (0 or 1), with which you can choose to use inverse
 kinematics. Note that sometimes, the inverse kinematics cannot be computed and the action is

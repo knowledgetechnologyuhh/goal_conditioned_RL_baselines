@@ -121,6 +121,6 @@ can be used by the algorithms. At the top of *cop_reach_env.py* a scene file is 
 You will also need a CoppeliaSim scene file (ends with .ttt) for your environment. You can
 edit the .ttt file in the CoppeliaSim IDE. Use PyRep to control objects in the CoppeliaSim scene.
 
-Then add a handler class for your environment, like the `ReacherEnvHandler` in 
-*wtm_envs/coppelia/cop_reach_env*. 
+Then add a handler class for your environment, like the `ReacherEnvMaker` in 
+*wtm_envs/coppelia/cop_reach_env*, that ensures your environment is only created once. 
 Register your environment-handler in *wtm_envs/register_envs.py*.
