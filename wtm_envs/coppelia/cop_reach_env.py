@@ -98,6 +98,9 @@ class ReacherEnv(gym.GoalEnv):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def render(self, mode='human'):
+        pass
+
     def _get_obs(self):
         achieved_goal = self.agent_ee_tip.get_position()
         if self.ik:
