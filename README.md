@@ -10,18 +10,17 @@ registration to folders of your choice.
 where you saved the mjpro200_linux folder and mjkey.txt.
 1. If you would like to use the Coppelia-based environments: 
     1. Download CoppeliaSim [here](https://www.coppeliarobotics.com/ubuntuVersions) and start it to check whether it works.
-    1. Then `git clone https://github.com/stepjam/PyRep.git` to install PyRep.  
-    1. If you don't want to have to adjust the paths in `set_paths.sh`, put 
-CoppeliaSim and PyRep in /data/*username*/. You are free to put them somewhere else, but you'll have to adjust the paths in `set_paths.sh` then.
+    1. Set the environment variable COPPELIASIM_ROOT in `set_paths.sh` according to the location of your CoppeliaSim installation.
+1. Run `source set_paths.sh`
 3. Set up a virtual environment using `virtualenv -p python3 venv`
 4. Activate the virtual environment using `source venv/bin/activate`
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
-6. Pip install PyRep by running: 
-`pip install git+https://github.com/stepjam/PyRep.git` You can find some troubleshooting on the PyRep git-page.
+6. If you would like to use the Coppelia-based environments, Pip install PyRep by running: 
+`pip install git+https://github.com/stepjam/PyRep.git`. You can find some troubleshooting on the PyRep git-page.
 7. You can test the MuJoCo installation by running
 `experiment/train.py`
 and the CoppeliaSim & PyRep installation by running
-`experiment/train.py --env CopReacherEnv-ik1-v0 --algorithm baselines.her`
+`experiment/train.py --env CopReacherEnv-ik0-v0 --algorithm baselines.her`
 
 Logs will be stored in a directory according to the `--base_logdir` command line parameter (by default `data`). It will create a subdirecory according to the git commit id and then a subdirectory according to the number of trials the experiment with the same parameters has been performed so far.
 
