@@ -7,7 +7,7 @@ If you want to merge your development branch with the overall devel branch, plea
 
 
 class TestingConfig:
-    algorithms = ['herhrl', 'her', 'chac']
+    algorithms = ['herhrl', 'her', 'chac', 'example_algorithm']
     environments = [
         'BlockStackMujocoEnv-gripper_random-o0-v1',
         'BlockStackMujocoEnv-gripper_above-o2-v1',
@@ -24,6 +24,9 @@ def get_her_cmds(base_cmd):
     cmd = base_cmd + " --algorithm baselines.her"
     return [cmd]
 
+def get_example_algorithm_cmds(base_cmd):
+    cmd = base_cmd + " --algorithm baselines.example_algorithm"
+    return [cmd]
 
 def get_herhrl_cmds(base_cmd):
     base_cmd += " --action_steps [4,20]"
