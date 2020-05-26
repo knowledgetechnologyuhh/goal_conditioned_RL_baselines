@@ -15,6 +15,7 @@ where you saved the mjpro200_linux folder and mjkey.txt.
 3. Set up a virtual environment using `virtualenv -p python3 venv`
 4. Activate the virtual environment using `source venv/bin/activate`
 5. Install python libraries using `pip3 install -r requirements_gpu.txt` if you have a GPU or `pip3 install -r requirements.txt` if you don't have a GPU.
+Comment out `mujoco-py` in the *requirements.txt* if you are not using MuJoCo.
 6. If you would like to use the Coppelia-based environments, Pip install PyRep by running: 
 `pip install git+https://github.com/stepjam/PyRep.git`. You can find some troubleshooting on the PyRep git-page.
 7. You can test the MuJoCo installation by running
