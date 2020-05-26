@@ -93,7 +93,6 @@ for n_objects in range(0, 5):
         kwargs = {'n_objects': n_objects, 'gripper_goal': gripper_goal}
         max_ep_steps = 50 * (n_objects)
         max_ep_steps = max(50, max_ep_steps)
-
         register(
             id='RockerMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
             entry_point='wtm_envs.mujoco.rocker.press_grasp:RockerMujocoEnv',
