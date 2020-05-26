@@ -9,7 +9,6 @@ from os.path import dirname, join, abspath
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.envs.registration import registry
 
 CACHED_ENV = None
 
@@ -50,8 +49,6 @@ class ReacherEnv(gym.GoalEnv):
     def __init__(self, render=1, ik=1):
         print('\033[92m' + 'Creating new Env' + '\033[0m')
         render = bool(render)
-        env_name = 'CopReacherEnv-ik{}-v0'.format(ik)
-        registry.env_specs[env_name]._kwargs['render'] = render
         self.ik = bool(ik)
 
         # PyRep initialization
