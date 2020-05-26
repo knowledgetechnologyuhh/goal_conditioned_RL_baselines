@@ -29,9 +29,10 @@ The algorithm can be selected using the command line option `--algorithm` (see b
 
 Algorithm-specific implementation details are stored in `baselines/<alg name>`. We currently support the following algorithms: 
  
- * `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results.
+ * `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results. The HER code is copied from the [OpenAI baselines repository](https://github.com/openai/baselines)
+ * `baselines.chac` (Curious Hierarchical Actor Critic). This extends the Hierarchical Actor Critic approach by Levy et al. (2019) with a curiosity-based mechanism (see https://arxiv.org/abs/2005.03420). In contrast to Levy's HAC which uses Tensorflow, our implementation is based on PyTorch.
+  
  * `baselines.herhrl` (Hindsight Experience Replay with Hierarchical Reinforcement Learning), but in its current implementation this is known to provide poor performance results. 
- * `baselines.chac` (Curious Hierarchical Actor Critic). This extends the Hierarchical Actor Critic approach by Levy et al. (2019) with a curiosity-based mechanism (see https://arxiv.org/abs/2005.03420). In contrast to Levy's HAC which uses Tensorflow, our implementation is based on PyTorch. 
 
 # Command line options
 Command line options are realized using the *click* library. They should be more or less self-explanatory.
