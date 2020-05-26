@@ -15,6 +15,11 @@ click.option('--time_scales', type=str, default='27,27', help='Steps per level f
 click.option('--subgoal_test_perc', type=float, default=0.3, help='The percentage of subgoals to test.'),
 click.option('--n_levels', type=int, default=2, help='Total number hierarchies'),
 
+click.option('--n_pre_episodes', type=int, default=30, help='Number of finished episodes before training networks'),
+click.option('--random_action_perc', type=float, default=0.3, help='Percentage of taking random actions'),
+click.option('--atomic_noise', type=float, default=0.2, help='Exploration noise added to atomic actions'),
+click.option('--subgoal_noise', type=float, default=0.2, help='Exploration noise added to subgoal actions'),
+
 # Forward model
 click.option('--fw', type=int, default=0, help='Enable forward model'),
 click.option('--fw_hidden_size', type=str, default='128,128,128', help='Size for each hidden layer of the forward model'),

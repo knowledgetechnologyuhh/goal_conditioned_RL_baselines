@@ -21,8 +21,6 @@ DEFAULT_PARAMS = {
     'time_scales': '27,27',
     'use_mpi': False,
     'rollout_batch_size': 1,  # per mpi thread
-    'atomic_noise': 0.1,
-    'subgoal_noise': 0.1
 }
 
 POLICY_ACTION_PARAMS = {}
@@ -93,6 +91,7 @@ def configure_policy(dims, params):
 
     agent_params = {
         "subgoal_test_perc": params['subgoal_test_perc'],
+        "random_action_perc": params["random_action_perc"],
         "subgoal_penalties": -1. * time_scales,
         "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
         "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
@@ -104,6 +103,7 @@ def configure_policy(dims, params):
         "q_hidden_size": params['q_hidden_size'],
         "mu_lr": params['mu_lr'],
         "mu_hidden_size": params['mu_hidden_size'],
+        "n_pre_episodes": params["n_pre_episodes"],
         # forward model
         "fw": params['fw'],
         "fw_params": {
