@@ -2,13 +2,7 @@ from collections import deque
 import numpy as np
 import pickle
 from baselines import logger
-from gym.envs.registration import registry
-
-logger.info("Now importing MujocoException. This sometimes causes an error. If system is stuck here, try to delete the following file:")
-logger.info("venv/lib/python3.5/site-packages/mujoco_py/generated/mujocopy-buildlock.lock")
-
 from baselines.template.util import convert_episode_to_batch_major, store_args
-
 
 class Rollout:
     @store_args
@@ -27,11 +21,7 @@ class Rollout:
             history_len (int): length of history for statistics smoothing
             render (boolean): whether or not to render the rollouts
         """
-        # check whether we use CoppeliaSim instead of MuJoCo
-        self.using_coppelia = kwargs['env_name'][:3] == 'Cop'
-        if not self.using_coppelia:
-            from mujoco_py import MujocoException
-            logger.info("done importing MujocoException")
+
         self.policy = policy
         self.dims = dims
         self.logger = logger
@@ -43,9 +33,6 @@ class Rollout:
 
         self.envs = [make_env() for _ in range(rollout_batch_size)]
         self.first_env = self.envs[0]
-        env_name = kwargs['env_name']
-        if env_name[:3] == 'Cop':
-            registry.env_specs[env_name]._kwargs['tmp'] = 0
         assert self.T > 0
 
         self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
@@ -122,7 +109,7 @@ class Rollout:
             success = np.zeros(self.rollout_batch_size)
             # compute new states and observations
             for i in range(self.rollout_batch_size):
-                if self.using_coppelia:
+                try:
                     # We fully ignore the reward here because it will have to be re-computed
                     # for HER.
                     curr_o_new, _, _, info = self.envs[i].step(u[i])
@@ -132,21 +119,10 @@ class Rollout:
                     ag_new[i] = curr_o_new['achieved_goal']
                     for idx, key in enumerate(self.info_keys):
                         info_values[idx][t, i] = info[key]
-                else:
-                    try:
-                        # We fully ignore the reward here because it will have to be re-computed
-                        # for HER.
-                        curr_o_new, _, _, info = self.envs[i].step(u[i])
-                        if 'is_success' in info:
-                            success[i] = info['is_success']
-                        o_new[i] = curr_o_new['observation']
-                        ag_new[i] = curr_o_new['achieved_goal']
-                        for idx, key in enumerate(self.info_keys):
-                            info_values[idx][t, i] = info[key]
-                        if self.render:
-                            self.envs[i].render()
-                    except MujocoException as e:
-                        return self.generate_rollouts()
+                    if self.render:
+                        self.envs[i].render()
+                except Exception as e:
+                    return self.generate_rollouts()
 
             if np.isnan(o_new).any():
                 self.logger.warn('NaN caught during rollout generation. Trying again...')

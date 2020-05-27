@@ -93,7 +93,6 @@ for n_objects in range(0, 5):
         kwargs = {'n_objects': n_objects, 'gripper_goal': gripper_goal}
         max_ep_steps = 50 * (n_objects)
         max_ep_steps = max(50, max_ep_steps)
-
         register(
             id='RockerMujocoEnv-{}-o{}-v1'.format(kwargs['gripper_goal'], kwargs['n_objects']),
             entry_point='wtm_envs.mujoco.rocker.press_grasp:RockerMujocoEnv',
@@ -129,11 +128,11 @@ register(id='AntReacherEnv-v0',
 
 # ReacherEnv using coppelia sim
 for IK in [0, 1]:  # whether to use inverse kinematics
-    kwargs = {'ik': IK}
+    kwargs = {'ik': IK, 'render': 1}
     register(id='CopReacherEnv-ik{}-v0'.format(kwargs['ik']),
-         entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnv',
-         kwargs=kwargs,
-         max_episode_steps=200)
+             entry_point='wtm_envs.coppelia.cop_reach_env:ReacherEnvMaker',
+             kwargs=kwargs,
+             max_episode_steps=200)
 
 # UR5
 for obs_type in range(0, 4):

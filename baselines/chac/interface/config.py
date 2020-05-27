@@ -56,16 +56,13 @@ def prepare_params(kwargs):
 
     kwargs['make_env'] = make_env
 
-    if env_name[:3] == 'Cop':
-        registry.env_specs[env_name]._kwargs['tmp'] = 3
+    if 'render' in registry.env_specs[env_name]._kwargs:
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
 
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    if env_name[:3] == 'Cop':
-        registry.env_specs[env_name]._kwargs['tmp'] = 1
     kwargs['gamma'] = 1. - 1. / kwargs['T']
     kwargs['chac_params'] = chac_params
 
@@ -128,9 +125,6 @@ def configure_policy(dims, params):
     policy = CHACPolicy(**chac_params)
     env.agent = policy
 
-    if params['env_name'][:3] == 'Cop':
-        env.reset()
-
     return policy
 
 
@@ -145,9 +139,6 @@ def configure_dims(params):
     env = cached_make_env(params['make_env'])
     env.reset()
     obs, _, _, info = env.step(env.action_space.sample())
-
-    if params['env_name'][:3] == 'Cop':
-        env.reset()
 
     dims = {
         'o': obs['observation'].shape[0],

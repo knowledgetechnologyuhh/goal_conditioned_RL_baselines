@@ -113,7 +113,7 @@ class RolloutWorker(Rollout):
         if self.h_level == 0:
             self.reset_all_rollouts()   # self.g is set here
             # self.subgoals_given[0].append(self.g.copy())
-            if self.render and self.env_name[:3] != 'Cop':
+            if self.render:
                 self.first_env.render(mode=self.render_mode)
         if self.is_leaf:
             self.first_env.env.goal = self.g.copy()
@@ -181,7 +181,7 @@ class RolloutWorker(Rollout):
                 this_success = self.first_env.env._is_success(ag_new, self.g)
 
             success = this_success
-            if self.render and self.env_name[:3] != 'Cop':
+            if self.render:
                 self.first_env.render(mode=self.render_mode)
 
                 # if t==0:

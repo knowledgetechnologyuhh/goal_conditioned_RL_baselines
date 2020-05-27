@@ -3,34 +3,18 @@ import gym
 import pickle
 
 from baselines import logger
-from baselines.random_dummy.random_policy import RandomPolicy
+from gym.envs.registration import registry
 
 
-DEFAULT_ENV_PARAMS = {
-    'FetchReach-v1': {
-        'n_cycles': 20
-    },
-}
+DEFAULT_ENV_PARAMS = {}
 
+DEFAULT_PARAMS = {}
 
-DEFAULT_PARAMS = {
-    # training
-    'n_cycles': 50,  # per epoch
-    'rollout_batch_size': 1,  # per mpi thread
-    'n_batches': 40,  # training batches per cycle
-    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
-    'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
-
-}
-
-POLICY_ACTION_PARAMS = {
-
-    }
+POLICY_ACTION_PARAMS = {}
 
 CACHED_ENVS = {}
 
 ROLLOUT_PARAMS = {
-        'T': 50,
         'policy_action_params': {}
     }
 
@@ -38,9 +22,9 @@ EVAL_PARAMS = {
         'policy_action_params': {}
     }
 
-OVERRIDE_PARAMS_LIST = ['rollout_batch_size']
+OVERRIDE_PARAMS_LIST = []
 
-ROLLOUT_PARAMS_LIST = ['T', 'rollout_batch_size', 'env_name']
+ROLLOUT_PARAMS_LIST = ['T', 'env_name']
 
 
 def cached_make_env(make_env):
@@ -57,9 +41,11 @@ def cached_make_env(make_env):
 
 def prepare_params(kwargs):
     # policy params
-    ddpg_params = dict()
+    policy_params = dict()
 
     env_name = kwargs['env_name']
+    if 'render' in registry.env_specs[env_name]._kwargs:
+        registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
 
     def make_env():
         return gym.make(env_name)
@@ -68,7 +54,7 @@ def prepare_params(kwargs):
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    kwargs['policy_params'] = ddpg_params
+    kwargs['policy_params'] = policy_params
 
     return kwargs
 
@@ -84,22 +70,10 @@ def simple_goal_subtract(a, b):
 
 
 def configure_policy(dims, params):
-
-    rollout_batch_size = params['rollout_batch_size']
-    policy_params = params['policy_params']
-    input_dims = dims.copy()
-
-    env = cached_make_env(params['make_env'])
-    env.reset()
-    policy_params.update({'input_dims': input_dims,  # agent takes an input observations
-                        'T': params['T'],
-                        'rollout_batch_size': rollout_batch_size,
-                        })
-    policy_params['info'] = {
-        'env_name': params['env_name'],
-    }
-    policy = RandomPolicy(**policy_params)
+    """configures the policy and returns it"""
+    policy = None  # SomePolicy(dims, params)
     return policy
+
 
 def load_policy(restore_policy_file, params):
     # Load policy.
@@ -107,7 +81,9 @@ def load_policy(restore_policy_file, params):
         policy = pickle.load(f)
     return policy
 
+
 def configure_dims(params):
+    """retrieves the dimensions for observation, action and goal from the environment"""
     env = cached_make_env(params['make_env'])
     env.reset()
     obs, _, _, info = env.step(env.action_space.sample())
