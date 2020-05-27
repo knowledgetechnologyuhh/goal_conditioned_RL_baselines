@@ -26,6 +26,8 @@ class Layer():
         self.current_state = None
         self.goal = None
 
+        self.random_action_perc = agent_params['random_action_perc']
+
         # Ceiling on buffer size
         self.buffer_size_ceiling = 10**7
 
@@ -129,20 +131,19 @@ class Layer():
         return action
 
     # Function selects action using an epsilon-greedy policy
+    @torch.no_grad()
     def choose_action(self, agent, env, subgoal_test):
 
         current_state_tensor = torch.FloatTensor(self.current_state).view(1, -1).to(self.device)
         goal_tensor = torch.FloatTensor(self.goal).view(1, -1).to(self.device)
         # If testing mode or testing subgoals, action is output of actor network without noise
         if agent.test_mode or subgoal_test:
-            with torch.no_grad():
-                action = self.actor(current_state_tensor, goal_tensor)[0].cpu().numpy()
+            action = self.actor(current_state_tensor, goal_tensor)[0].cpu().numpy()
             action_type = "Policy"
             next_subgoal_test = subgoal_test
         else:
-            if np.random.random_sample() > 0.2:
-                with torch.no_grad():
-                    action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].cpu().numpy(), env)
+            if np.random.random_sample() > self.random_action_perc:
+                action = self.add_noise(self.actor(current_state_tensor, goal_tensor)[0].cpu().numpy(), env)
                 action_type = "Noisy Policy"
             else:
                 action = self.get_random_action(env)
@@ -457,6 +458,7 @@ class Layer():
         if self.fw:
             learn_history['fw_bonus'] = []
             learn_history['fw_loss'] = []
+
         learn_summary = {}
 
         if self.replay_buffer.size <= 250:
