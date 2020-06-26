@@ -1,5 +1,7 @@
 # Getting started
 
+The following instructions are **optimized for Ubuntu version 18.04** or earlier (Python 3.7). Users with Ubuntu 19 and 20 have reported problems. 
+
 1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to folders of your choice
 2. Set the environment variables in `set_paths.sh` according to the locations where you saved the mjpro200_linux folder and the mjkey.txt. If you are using an IDE, set the variables there as well.
 3. Set up virtual environment using `virtualenv -p python3 venv`
