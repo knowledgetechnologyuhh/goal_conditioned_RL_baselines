@@ -23,6 +23,7 @@ class CHACPolicy(Policy):
 
         self.verbose = verbose
         self.n_levels = agent_params['n_levels']
+        self.pre_episodes = agent_params['n_pre_episodes']
         self.env = env
         self.fw = agent_params['fw']
         self._create_networks(agent_params)
@@ -119,8 +120,8 @@ class CHACPolicy(Policy):
             train(self, env, episode_num=episode_num, eval_data=eval_data)
 
         train_duration = 0
-        # Update actor/critic networks if not testing
-        if not self.test_mode:
+        # Update networks if not testing and enough episodes finished
+        if not self.test_mode and episode_num > self.pre_episodes:
             train_start = time.time()
             learn_summaries = self.learn(num_updates)
 

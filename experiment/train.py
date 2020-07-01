@@ -31,8 +31,9 @@ from queue import deque
 
 num_cpu = 0
 
+
 def mpi_average(value):
-    if value == []:
+    if not value:
         value = [0.]
     if not isinstance(value, list):
         value = [value]

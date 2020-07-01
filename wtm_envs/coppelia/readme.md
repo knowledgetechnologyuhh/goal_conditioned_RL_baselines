@@ -1,5 +1,5 @@
-All CoppeliaSim environment-names have to start with 'Cop'. 
-They do not implement a render function, because you can look at the simulation when you don't run in headless mode,
+CoppeliaSim environments do not implement a render function, because you can look at 
+the simulation when you don't run in headless mode,
 so you can still choose whether to see the environment with the `--render` argument.
 The `CopReacherEnv` receives an argument ik (0 or 1), with which you can choose to use inverse
 kinematics. Note that sometimes, the inverse kinematics cannot be computed and the action is
@@ -21,14 +21,14 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
 QT_QPA_PLATFORM_PLUGIN_PATH=EDIT/ME/PATH/TO/COPPELIASIM/INSTALL/DIR
 ```
 
-Pip install PyRep by activating you virtual environment and running: 
+Pip install PyRep by activating your virtual environment and running: 
 
 `pip install git+https://github.com/stepjam/PyRep.git`
 
 You can find some troubleshooting on the PyRep git-page.
 
 Now you can test the installation by running
-`--env CopReacherEnv-ik1-v0 --algorithm baselines.her`
+`experiment train.py --env CopReacherEnv-ik1-v0 --algorithm baselines.her`
 
 **Known issues**
 

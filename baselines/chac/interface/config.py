@@ -21,8 +21,6 @@ DEFAULT_PARAMS = {
     'time_scales': '27,27',
     'use_mpi': False,
     'rollout_batch_size': 1,  # per mpi thread
-    'atomic_noise': 0.1,
-    'subgoal_noise': 0.1
 }
 
 POLICY_ACTION_PARAMS = {}
@@ -58,16 +56,13 @@ def prepare_params(kwargs):
 
     kwargs['make_env'] = make_env
 
-    if env_name[:3] == 'Cop':
-        registry.env_specs[env_name]._kwargs['tmp'] = 3
+    if 'render' in registry.env_specs[env_name]._kwargs:
         registry.env_specs[env_name]._kwargs['render'] = kwargs['render']
 
     tmp_env = cached_make_env(kwargs['make_env'])
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
     tmp_env.reset()
-    if env_name[:3] == 'Cop':
-        registry.env_specs[env_name]._kwargs['tmp'] = 1
     kwargs['gamma'] = 1. - 1. / kwargs['T']
     kwargs['chac_params'] = chac_params
 
@@ -93,6 +88,7 @@ def configure_policy(dims, params):
 
     agent_params = {
         "subgoal_test_perc": params['subgoal_test_perc'],
+        "random_action_perc": params["random_action_perc"],
         "subgoal_penalties": -1. * time_scales,
         "atomic_noise": [params['atomic_noise'] for i in range(input_dims['u'])],
         "subgoal_noise": [params['subgoal_noise'] for i in range(len(env.sub_goal_thresholds))],
@@ -104,6 +100,7 @@ def configure_policy(dims, params):
         "q_hidden_size": params['q_hidden_size'],
         "mu_lr": params['mu_lr'],
         "mu_hidden_size": params['mu_hidden_size'],
+        "n_pre_episodes": params["n_pre_episodes"],
         # forward model
         "fw": params['fw'],
         "fw_params": {
@@ -128,9 +125,6 @@ def configure_policy(dims, params):
     policy = CHACPolicy(**chac_params)
     env.agent = policy
 
-    if params['env_name'][:3] == 'Cop':
-        env.reset()
-
     return policy
 
 
@@ -145,9 +139,6 @@ def configure_dims(params):
     env = cached_make_env(params['make_env'])
     env.reset()
     obs, _, _, info = env.step(env.action_space.sample())
-
-    if params['env_name'][:3] == 'Cop':
-        env.reset()
 
     dims = {
         'o': obs['observation'].shape[0],
