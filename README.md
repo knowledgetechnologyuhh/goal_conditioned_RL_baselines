@@ -1,4 +1,4 @@
-# Discplaimer and appreciation  
+# Disclaimer and appreciation  
 
 This repository contains a significant amount of code from OpenAI baselines. It builds on a snapshot of [OpenAI baselines](https://github.com/openai/baselines) taken in 2018. Since then, we have gone a separate path, but kept compatibility with [goal-based OpenAI gym environments]([https://openai.com/blog/ingredients-for-robotics-research/).  
 
