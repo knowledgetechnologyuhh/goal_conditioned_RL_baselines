@@ -13,27 +13,15 @@ Logs will be stored in a directory according to the `--base_logdir` command line
 The algorithm can be selected using the command line option `--algorithm` (see below).
 
 Algorithm-specific implementation details are stored in `baselines/<alg name>`.
+We have support curious hierarchical actor-critic (CHAC) `baselines.chac` which learns a model of the environment to enable curiosity for the agent (see https://arxiv.org/abs/2005.03420).
 We currently support `baselines.her` (Hindsight Experience Replay) as comparison and baseline to our results.
 We also support `baselines.herhrl` (Hindsight Experience Replay with Hierarchical Reinforcement Learning).
-We have experimental support for `baselines.model_based` which learns a model of the environment but does not yet generate useful actions.
 
 # Command line options
 Command line options are realized using the *click* library. They should be more or less self-explanatory.
 General command line options can be found in `experiment/click_options.py`
 
 Algorithm-specific command line options can be found in `baselines/<alg name>/interface/click_options.py`
-
-
-# herhrl algorithm
-This is adapted from the implementation by Levy et al. 2018. We extended it with the possibility to also use a high-level PDDL planner to generate subgoals. However, PDDL requires the implementation of an environment-specific file to generate planning domains. An example is `wtm_envs/mujoco/blocks_env_pddl.py`, which extends `wtm_envs/mujoco/blocks_env.py` with PDDL capabilities. We also support a mixed HRL/PDDL policy which switches over from PDDL to HRL when PDDL does not continue to improve the success rate. The following parameters are most important:
-
-* `--policies_layers` determines the layers above the lower level layer. The low-level layer is always `DDPG_HER_HRL_POLICY`. That is, if you define `--policies_layers [DDPG_HER_HRL_POLICY]` then this means that you have a two-layer HRL agent with the high level layer being DDPG_HER_HRL_POLICY and the low-level layer also DDPG_HER_HRL_POLICY. If you set `--policies_layers [PDDL_POLICY,DDPG_HER_HRL_POLICY]` then you have a three-layer HRL agent with the high level layer being PDDL, the mid-level layer being  DDPG_HER_HRL_POLICY and the low-level layer also being DDPG_HER_HRL_POLICY. However, we have not yet tested more than two layers. It is, therefore, highly recommended to use no more than two layers in total at this point of the implementation, i.e., either set `--policies_layers [DDPG_HER_HRL_POLICY]` or `--policies_layers [PDDL_POLICY]`
-
-* `--n subgoals_layers` determines the max. amount of steps allowed for all layers except for the lowest layer. For example, `--n subgoals_layers [10]` means that you have a two-layer agent where the high-level layer has at most 10 steps.
-
-* `--penalty_magnitude` determines the penalty score when the subgoal is missed, as described in Levy et al. 2018
-
-* `--test_subgoal_perc` determines the probability that a penalty is applied to a specific high-level policy step (also see Levy et al. 2018).
 
 
 # chac algorithm
@@ -51,6 +39,17 @@ The most important options to consider are:
 - `--eta 0.5` specifies how much of the intrinsic reward to use and external reward to keep
 
 For further details consider looking at [baselines/chac/README.md](./baselines/chac/README.md).
+
+# herhrl algorithm
+This is adapted from the implementation by Levy et al. 2018. We extended it with the possibility to also use a high-level PDDL planner to generate subgoals. However, PDDL requires the implementation of an environment-specific file to generate planning domains. An example is `wtm_envs/mujoco/blocks_env_pddl.py`, which extends `wtm_envs/mujoco/blocks_env.py` with PDDL capabilities. We also support a mixed HRL/PDDL policy which switches over from PDDL to HRL when PDDL does not continue to improve the success rate. The following parameters are most important:
+
+* `--policies_layers` determines the layers above the lower level layer. The low-level layer is always `DDPG_HER_HRL_POLICY`. That is, if you define `--policies_layers [DDPG_HER_HRL_POLICY]` then this means that you have a two-layer HRL agent with the high level layer being DDPG_HER_HRL_POLICY and the low-level layer also DDPG_HER_HRL_POLICY. If you set `--policies_layers [PDDL_POLICY,DDPG_HER_HRL_POLICY]` then you have a three-layer HRL agent with the high level layer being PDDL, the mid-level layer being  DDPG_HER_HRL_POLICY and the low-level layer also being DDPG_HER_HRL_POLICY. However, we have not yet tested more than two layers. It is, therefore, highly recommended to use no more than two layers in total at this point of the implementation, i.e., either set `--policies_layers [DDPG_HER_HRL_POLICY]` or `--policies_layers [PDDL_POLICY]`
+
+* `--n subgoals_layers` determines the max. amount of steps allowed for all layers except for the lowest layer. For example, `--n subgoals_layers [10]` means that you have a two-layer agent where the high-level layer has at most 10 steps.
+
+* `--penalty_magnitude` determines the penalty score when the subgoal is missed, as described in Levy et al. 2018
+
+* `--test_subgoal_perc` determines the probability that a penalty is applied to a specific high-level policy step (also see Levy et al. 2018).
 
 # Adding new features to this repository
 If you work on this repository and add a new feature, please proceed as follows:
