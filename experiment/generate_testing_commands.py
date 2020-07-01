@@ -10,7 +10,7 @@ class TestingConfig:
     algorithms = ['herhrl', 'her', 'chac', 'example_algorithm']
     environments = [
         'BlockStackMujocoEnv-gripper_random-o0-v1',
-        'BlockStackMujocoEnv-gripper_above-o2-v1',
+        'BlockStackMujocoEnv-gripper_random-o2-v1',
         'BlockStackMujocoEnv-gripper_above-o1-v1',
         'AntFourRoomsEnv-v0', 'AntReacherEnv-v0',
         'HookMujocoEnv-gripper_above-e1-v1',
