@@ -2,6 +2,10 @@
 
 This repository contains a significant amount of code from OpenAI baselines. It builds on a snapshot of [OpenAI baselines](https://github.com/openai/baselines) taken in 2018. Since then, we have gone a separate path, but kept compatibility with [goal-based OpenAI gym environments]([https://openai.com/blog/ingredients-for-robotics-research/).  
 
+# Known issues
+
+This code is optimized for Ubuntu 18 (Python 3.7). You can also run it on Ubuntu 20, but this requires you to install Python3.7. Other users have reported some additional minor issues with Ubuntu 20.
+
 # Getting started
 
 1. Download MuJoCo (mujoco.org) and obtain a license (as student you can obtain a free one-year student license). Copy the mjpro200_linux folder from the downloaded archive as well as mjkey.txt that you will obtain from the registration to folders of your choice
