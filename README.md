@@ -4,7 +4,7 @@ This repository contains a significant amount of code from OpenAI baselines. It 
 
 # Known issues
 
-This code is optimized for Ubuntu 18 (Python 3.7). You can also run it on Ubuntu 20, but this requires you to install Python3.7. Other users have reported some additional minor issues with Ubuntu 20.
+This code is optimized for Ubuntu 18 (Python 3.6). You can also run it on Ubuntu 20, but this requires you to install Python3.7. Other users have reported some additional minor issues with Ubuntu 20.
 
 # Getting started
 
